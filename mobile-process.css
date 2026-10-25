@@ -12,3 +12,17 @@ body.mobile-process-focus #panel-chapters>#chapters-content>#bm-progress{display
 }
 @media(max-width:380px){.mobile-process-fab{right:12px;width:52px;height:52px}.mobile-process-dock{right:12px;bottom:calc(136px + env(safe-area-inset-bottom,0px));width:calc(100vw - 24px);padding:11px;gap:8px}.mobile-process-actions .btn{font-size:.74rem;padding-inline:7px}}
 @media(prefers-reduced-motion:reduce){.mobile-process-dock{animation:none}.mobile-process-fill{transition:none}}
+
+/* Keep the completed state quiet and keep app notifications clear of the footer. */
+@media(max-width:900px){
+  .mobile-process-fab{width:46px;height:46px;right:14px;bottom:calc(72px + env(safe-area-inset-bottom,0px));}
+  .mobile-process-fab-inner{gap:0}
+  .mobile-process-fab-icon{font-size:21px}
+  .mobile-process-fab.ready .mobile-process-fab-percent{display:none}
+  .mobile-process-fab.ready .mobile-process-fab-icon{font-size:23px}
+  .status{right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px);padding:10px 13px;font-size:.82rem}
+}
+@media(max-width:380px){
+  .mobile-process-fab{width:44px;height:44px;right:12px;bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+  .status{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+}
