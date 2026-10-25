@@ -21,6 +21,11 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231e6b3a'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='%23c9a227'%3E📄%3C/text%3E%3C/svg%3E" />
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231e6b3a'/%3E%3Ctext x='90' y='120' font-size='90' text-anchor='middle' fill='%23c9a227'%3E📄%3C/text%3E%3C/svg%3E" />
 
+  <!-- StudyMats fonts (same as mdfl212.studymats.io) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;1,0..60,300;1,0..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
@@ -47,11 +52,24 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      line-height: 1.5;
+      line-height: 1.55;
+    }
+
+    h1, h2, h3, .logo {
+      font-family: 'Playfair Display', Georgia, serif;
+    }
+
+    code, kbd, .bm-page, .file-meta, .ri-meta, input, select, textarea, .btn, .tool-btn, .badge {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    .btn, .tool-btn {
+      font-size: 0.82rem;
+      letter-spacing: 0.01em;
     }
 
     header {
@@ -661,29 +679,166 @@
       font-size: 1rem;
     }
 
+    /* Bottom tab bar — mobile only */
+    .mobile-tabbar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 150;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+      justify-content: space-around;
+      align-items: stretch;
+      gap: 4px;
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 8px 4px;
+      min-height: 48px;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mobile-tab svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+    .mobile-tab.active {
+      color: var(--accent);
+      background: var(--accent-green-soft);
+    }
+
+    /* Mobile tools sheet */
+    .mobile-tools-sheet {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 140;
+      background: rgba(0,0,0,0.55);
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .mobile-tools-sheet.open { display: flex; }
+    .mobile-tools-panel {
+      width: 100%;
+      max-height: 78vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-radius: 16px 16px 0 0;
+      padding: 12px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid var(--border);
+    }
+    .mobile-tools-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 4px auto 14px;
+    }
+    .mobile-tools-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .mobile-tool-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 0.78rem;
+      text-align: center;
+      cursor: pointer;
+      font-family: 'Source Serif 4', serif;
+      min-height: 88px;
+    }
+    .mobile-tool-card:hover,
+    .mobile-tool-card:active {
+      border-color: var(--accent);
+      background: rgba(201, 162, 39, 0.08);
+    }
+    .mobile-tool-card svg {
+      width: 26px;
+      height: 26px;
+      stroke: var(--accent);
+      fill: none;
+      stroke-width: 2;
+    }
+
     @media (max-width: 900px) {
-      .app { grid-template-columns: 1fr; }
-      aside {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        overflow-x: auto;
-        padding: 12px;
-        gap: 4px;
+      .app {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
       }
-      .tool-section { margin-bottom: 0; display: flex; gap: 4px; }
-      .tool-section h3 { display: none; }
-      .tool-btn { white-space: nowrap; margin-bottom: 0; }
+      aside { display: none !important; }
+      .mobile-tabbar { display: flex; }
       .header-hint { display: none; }
-      header { padding: 12px 16px; }
+      header {
+        padding: 10px 14px;
+        position: sticky;
+        top: 0;
+      }
+      main { padding: 16px 14px 24px; }
+      h2 { font-size: 1.25rem; }
+      .drop-zone { padding: 32px 16px; }
+      .page-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .controls {
+        padding: 12px;
+        gap: 10px;
+      }
+      .btn {
+        min-height: 44px;
+        padding: 10px 14px;
+      }
+      .btn-sm { min-height: 40px; }
+      .status {
+        left: 12px;
+        right: 12px;
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        max-width: none;
+      }
+      .batch-table-wrap { font-size: 0.8rem; }
+      .rotate-opt { min-width: 88px; flex: 1; }
+      .app-footer {
+        padding-bottom: calc(18px + 64px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .logo { font-size: 1.05rem; }
+      .badge { display: none; }
     }
 
     /* Safe area for notched phones when installed as PWA */
     @supports (padding: env(safe-area-inset-top)) {
       header {
-        padding-top: calc(16px + env(safe-area-inset-top));
-        padding-left: calc(28px + env(safe-area-inset-left));
-        padding-right: calc(28px + env(safe-area-inset-right));
+        padding-top: calc(12px + env(safe-area-inset-top));
+        padding-left: calc(14px + env(safe-area-inset-left));
+        padding-right: calc(14px + env(safe-area-inset-right));
       }
     }
 
@@ -738,6 +893,148 @@
       .app-footer { padding: 14px 16px 18px; }
       .footer-inner { flex-direction: column; align-items: flex-start; gap: 8px; }
     }
+
+    /* Rotation option pills */
+    .rotate-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .rotate-opt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 100px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .rotate-opt:hover {
+      border-color: var(--accent);
+      background: rgba(201, 162, 39, 0.06);
+    }
+    .rotate-opt.active {
+      border-color: var(--accent);
+      background: rgba(30, 107, 58, 0.22);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .rotate-opt-icon {
+      font-size: 1.4rem;
+      line-height: 1.2;
+      color: var(--accent);
+    }
+    .rotate-opt-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .rotate-opt-hint {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: 'Source Serif 4', serif;
+    }
+
+    /* QGIS-style batch table */
+    .batch-source-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 36px;
+    }
+    .batch-source-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-family: 'JetBrains Mono', monospace;
+      max-width: 280px;
+    }
+    .batch-source-chip span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .batch-source-chip button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .batch-source-chip button:hover { color: var(--danger); }
+    .batch-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .batch-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .batch-table th {
+      background: var(--surface2);
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .batch-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .batch-table tr:last-child td { border-bottom: none; }
+    .batch-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .batch-table input[type="text"],
+    .batch-table select {
+      width: 100%;
+      min-width: 90px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .batch-table .batch-row-num {
+      color: var(--text-muted);
+      width: 36px;
+      text-align: center;
+    }
+    .batch-table .batch-row-status {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .batch-table .batch-row-status.ok { color: var(--success); }
+    .batch-table .batch-row-status.err { color: var(--danger); }
+    .batch-table .batch-row-status.run { color: var(--accent); }
+    .batch-rm-row {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+    .batch-rm-row:hover { color: var(--danger); }
   </style>
 </head>
 <body>
@@ -799,6 +1096,13 @@
         <button class="tool-btn" data-panel="metadata">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           Metadata
+        </button>
+      </div>
+      <div class="tool-section">
+        <h3>Advanced</h3>
+        <button class="tool-btn primary-tool" data-panel="batch" style="margin-bottom:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Batch Processing
         </button>
       </div>
     </aside>
@@ -919,7 +1223,7 @@
       <!-- ==================== SPLIT ==================== -->
       <div class="panel" id="panel-split">
         <h2>Split / Extract Pages</h2>
-        <p class="subtitle">Extract specific pages or page ranges from a PDF.</p>
+        <p class="subtitle">Click pages or type ranges (e.g. 1-3, 5, 8-10). Extract those pages into one PDF, or split every page into its own file.</p>
 
         <div class="drop-zone" id="split-drop">
           <div class="drop-icon">✂️</div>
@@ -928,13 +1232,25 @@
         </div>
 
         <div id="split-content" style="display:none">
-          <div class="controls">
-            <div class="control-group">
-              <label>Page ranges (e.g. 1-3, 5, 8-10)</label>
-              <input type="text" id="split-ranges" placeholder="1-3, 5, 8-10" style="min-width:220px">
+          <div class="controls" style="flex-direction:column;align-items:stretch;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="control-group" style="flex:1;min-width:220px">
+                <label>Pages to extract</label>
+                <input type="text" id="split-ranges" placeholder="e.g. 1-3, 5, 8-10" style="min-width:100%;font-family:'JetBrains Mono',monospace">
+              </div>
+              <div class="control-group">
+                <label>Selection</label>
+                <div style="display:flex;gap:6px">
+                  <button type="button" class="btn btn-secondary btn-sm" id="split-select-all">All</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="split-clear-sel">Clear</button>
+                </div>
+              </div>
             </div>
-            <button class="btn btn-primary" id="split-btn">Extract & Download</button>
-            <button class="btn btn-secondary" id="split-all-btn">Split into single pages</button>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <button class="btn btn-primary" id="split-btn">✂ Extract & Download</button>
+              <button class="btn btn-secondary" id="split-all-btn">Split into single pages</button>
+              <span id="split-summary" style="color:var(--text-muted);font-size:0.88rem;font-family:'JetBrains Mono',monospace"></span>
+            </div>
           </div>
           <div class="page-grid" id="split-pages"></div>
         </div>
@@ -943,7 +1259,7 @@
       <!-- ==================== DELETE ==================== -->
       <div class="panel" id="panel-delete">
         <h2>Delete Pages</h2>
-        <p class="subtitle">Select pages to remove from the document.</p>
+        <p class="subtitle">Click pages or type ranges to remove. Everything else is kept in the downloaded PDF.</p>
 
         <div class="drop-zone" id="delete-drop">
           <div class="drop-icon">🗑️</div>
@@ -952,11 +1268,24 @@
         </div>
 
         <div id="delete-content" style="display:none">
-          <div class="controls">
-            <button class="btn btn-primary" id="delete-btn" disabled>Delete selected & Download</button>
-            <button class="btn btn-secondary" id="delete-select-all">Select all</button>
-            <button class="btn btn-secondary" id="delete-deselect">Deselect all</button>
-            <span style="color:var(--text-muted);font-size:0.9rem" id="delete-count">0 pages selected</span>
+          <div class="controls" style="flex-direction:column;align-items:stretch;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="control-group" style="flex:1;min-width:220px">
+                <label>Pages to delete</label>
+                <input type="text" id="delete-pages-input" placeholder="e.g. 2, 5-7, 12" style="min-width:100%;font-family:'JetBrains Mono',monospace">
+              </div>
+              <div class="control-group">
+                <label>Selection</label>
+                <div style="display:flex;gap:6px">
+                  <button type="button" class="btn btn-secondary btn-sm" id="delete-select-all">All</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="delete-deselect">Clear</button>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <button class="btn btn-primary" id="delete-btn" disabled>🗑 Delete selected & Download</button>
+              <span id="delete-count" style="color:var(--text-muted);font-size:0.88rem;font-family:'JetBrains Mono',monospace">0 pages selected</span>
+            </div>
           </div>
           <div class="page-grid" id="delete-pages"></div>
         </div>
@@ -965,7 +1294,7 @@
       <!-- ==================== ROTATE ==================== -->
       <div class="panel" id="panel-rotate">
         <h2>Rotate Pages</h2>
-        <p class="subtitle">Rotate individual pages or the entire document.</p>
+        <p class="subtitle">Click pages to select them, or type ranges below. Choose a rotation, then apply.</p>
 
         <div class="drop-zone" id="rotate-drop">
           <div class="drop-icon">🔄</div>
@@ -974,18 +1303,49 @@
         </div>
 
         <div id="rotate-content" style="display:none">
-          <div class="controls">
+          <div class="controls" style="flex-direction:column;align-items:stretch;gap:14px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="control-group" style="flex:1;min-width:200px">
+                <label>Pages to rotate</label>
+                <input type="text" id="rotate-pages-input" placeholder="e.g. 1-5, 8, 9-10" style="min-width:100%;font-family:'JetBrains Mono',monospace">
+              </div>
+              <div class="control-group">
+                <label>Selection</label>
+                <div style="display:flex;gap:6px">
+                  <button type="button" class="btn btn-secondary btn-sm" id="rotate-select-all">All</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="rotate-clear-sel">Clear</button>
+                </div>
+              </div>
+            </div>
+
             <div class="control-group">
               <label>Rotation</label>
-              <select id="rotate-angle">
-                <option value="90">90° Clockwise</option>
-                <option value="180">180°</option>
-                <option value="270">90° Counter-clockwise</option>
-              </select>
+              <div class="rotate-options" id="rotate-options" role="radiogroup" aria-label="Rotation angle">
+                <button type="button" class="rotate-opt active" data-angle="90" title="90° clockwise">
+                  <span class="rotate-opt-icon">↻</span>
+                  <span class="rotate-opt-label">90°</span>
+                  <span class="rotate-opt-hint">clockwise</span>
+                </button>
+                <button type="button" class="rotate-opt" data-angle="180" title="180°">
+                  <span class="rotate-opt-icon">⟳</span>
+                  <span class="rotate-opt-label">180°</span>
+                  <span class="rotate-opt-hint">upside down</span>
+                </button>
+                <button type="button" class="rotate-opt" data-angle="270" title="90° counter-clockwise">
+                  <span class="rotate-opt-icon">↺</span>
+                  <span class="rotate-opt-label">270°</span>
+                  <span class="rotate-opt-hint">counter-clockwise</span>
+                </button>
+              </div>
+              <input type="hidden" id="rotate-angle" value="90">
             </div>
-            <button class="btn btn-primary" id="rotate-all-btn">Rotate all pages</button>
-            <button class="btn btn-primary" id="rotate-selected-btn" disabled>Rotate selected</button>
-            <button class="btn btn-secondary" id="rotate-download">Download</button>
+
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <button class="btn btn-primary" id="rotate-selected-btn" disabled>Rotate selected pages</button>
+              <button class="btn btn-secondary" id="rotate-all-btn">Rotate all pages</button>
+              <button class="btn btn-secondary" id="rotate-download">Download PDF</button>
+              <span id="rotate-summary" style="color:var(--text-muted);font-size:0.88rem;font-family:'JetBrains Mono',monospace"></span>
+            </div>
           </div>
           <div class="page-grid" id="rotate-pages"></div>
         </div>
@@ -994,7 +1354,7 @@
       <!-- ==================== REORDER ==================== -->
       <div class="panel" id="panel-reorder">
         <h2>Reorder Pages</h2>
-        <p class="subtitle">Drag and drop page thumbnails to change their order.</p>
+        <p class="subtitle">Drag thumbnails to rearrange. The order line below always shows the current sequence (1-based original page numbers).</p>
 
         <div class="drop-zone" id="reorder-drop">
           <div class="drop-icon">↕️</div>
@@ -1003,9 +1363,16 @@
         </div>
 
         <div id="reorder-content" style="display:none">
-          <div class="controls">
-            <button class="btn btn-primary" id="reorder-download">Download reordered PDF</button>
-            <span style="color:var(--text-muted);font-size:0.9rem">Drag pages to rearrange</span>
+          <div class="controls" style="flex-direction:column;align-items:stretch;gap:12px">
+            <div class="control-group">
+              <label>Current order (original page numbers)</label>
+              <input type="text" id="reorder-order-input" readonly placeholder="1, 2, 3…" style="min-width:100%;font-family:'JetBrains Mono',monospace;opacity:0.95">
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <button class="btn btn-primary" id="reorder-download">↕ Download reordered PDF</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="reorder-reset">Reset order</button>
+              <span style="color:var(--text-muted);font-size:0.88rem">Drag pages to rearrange</span>
+            </div>
           </div>
           <div class="page-grid" id="reorder-pages"></div>
         </div>
@@ -1014,7 +1381,7 @@
       <!-- ==================== WATERMARK ==================== -->
       <div class="panel" id="panel-watermark">
         <h2>Add Text Watermark</h2>
-        <p class="subtitle">Overlay text across every page of the PDF.</p>
+        <p class="subtitle">Diagonal text overlay. Leave pages blank for all pages, or type ranges (e.g. 1-3, 10).</p>
 
         <div class="drop-zone" id="watermark-drop">
           <div class="drop-icon">💧</div>
@@ -1024,22 +1391,31 @@
 
         <div id="watermark-content" style="display:none">
           <div class="note">
-            Watermark is applied diagonally across each page. Opacity and size can be adjusted below.
+            Watermark is drawn diagonally. Use page ranges to mark only part of a syllabus PDF (e.g. practice questions only).
           </div>
-          <div class="controls">
-            <div class="control-group">
-              <label>Watermark text</label>
-              <input type="text" id="wm-text" value="CONFIDENTIAL" style="min-width:180px">
+          <div class="controls" style="flex-direction:column;align-items:stretch;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+              <div class="control-group" style="flex:1;min-width:160px">
+                <label>Watermark text</label>
+                <input type="text" id="wm-text" value="CONFIDENTIAL" style="min-width:100%">
+              </div>
+              <div class="control-group">
+                <label>Opacity</label>
+                <input type="number" id="wm-opacity" value="0.25" min="0.05" max="1" step="0.05" style="width:100px">
+              </div>
+              <div class="control-group">
+                <label>Font size</label>
+                <input type="number" id="wm-size" value="48" min="12" max="120" style="width:100px">
+              </div>
             </div>
             <div class="control-group">
-              <label>Opacity (0.1 – 1)</label>
-              <input type="number" id="wm-opacity" value="0.25" min="0.05" max="1" step="0.05" style="width:100px">
+              <label>Pages (blank = all)</label>
+              <input type="text" id="wm-pages" placeholder="all pages · or e.g. 1-5, 12" style="min-width:100%;font-family:'JetBrains Mono',monospace">
             </div>
-            <div class="control-group">
-              <label>Font size</label>
-              <input type="number" id="wm-size" value="48" min="12" max="120" style="width:100px">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <button class="btn btn-primary" id="wm-apply">💧 Apply & Download</button>
+              <span id="wm-summary" style="color:var(--text-muted);font-size:0.88rem;font-family:'JetBrains Mono',monospace"></span>
             </div>
-            <button class="btn btn-primary" id="wm-apply">Apply & Download</button>
           </div>
         </div>
       </div>
@@ -1061,7 +1437,101 @@
           </table>
         </div>
       </div>
+
+      <!-- ==================== BATCH PROCESSING (QGIS-style) ==================== -->
+      <div class="panel" id="panel-batch">
+        <h2>Batch Processing</h2>
+        <p class="subtitle">
+          QGIS-style table: each row is one job. Reuse the same source PDF in multiple rows with different parameters.
+        </p>
+
+        <div class="note">
+          1) Add source PDFs to the pool · 2) Choose an algorithm · 3) Fill the table (same file can appear on many rows) · 4) Run batch → ZIP of results
+        </div>
+
+        <div class="controls" style="flex-direction:column;align-items:stretch;gap:14px">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+            <div class="control-group" style="flex:1;min-width:200px">
+              <label>Algorithm</label>
+              <select id="batch-algorithm">
+                <option value="extract">✂ Extract pages</option>
+                <option value="delete">🗑 Delete pages</option>
+                <option value="rotate">↻ Rotate pages</option>
+                <option value="watermark">💧 Watermark</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Sources</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary btn-sm" id="batch-add-sources">＋ Add PDFs</button>
+                <input type="file" accept=".pdf,application/pdf" multiple hidden id="batch-source-input">
+                <button type="button" class="btn btn-secondary btn-sm" id="batch-clear-sources">Clear pool</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="batch-source-pool" class="batch-source-pool"></div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <button type="button" class="btn btn-secondary btn-sm" id="batch-add-row">＋ Add row</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="batch-add-row-per-source">＋ One row per source</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="batch-fill-down">Fill down parameters</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="batch-remove-rows">Remove empty rows</button>
+          </div>
+
+          <div class="batch-table-wrap">
+            <table class="batch-table" id="batch-table">
+              <thead id="batch-thead"></thead>
+              <tbody id="batch-tbody"></tbody>
+            </table>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button class="btn btn-primary" id="batch-run" disabled>▶ Run batch</button>
+            <button class="btn btn-secondary" id="batch-download-zip" style="display:none">⬇ Download ZIP</button>
+            <span id="batch-status" style="color:var(--text-muted);font-size:0.88rem;font-family:'JetBrains Mono',monospace"></span>
+          </div>
+          <div class="progress-bar" id="batch-progress-wrap" style="display:none">
+            <div class="fill" id="batch-progress-fill"></div>
+          </div>
+        </div>
+      </div>
     </main>
+  </div>
+
+  <!-- Mobile bottom tabs: Home · Tools · Batch -->
+  <nav class="mobile-tabbar" aria-label="Primary">
+    <button type="button" class="mobile-tab active" data-tab="home" aria-label="Home">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5z"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="mobile-tab" data-tab="tools" aria-label="Tools">
+      <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <span>Tools</span>
+    </button>
+    <button type="button" class="mobile-tab" data-tab="batch" aria-label="Batch">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Batch</span>
+    </button>
+  </nav>
+
+  <!-- Mobile tools sheet -->
+  <div class="mobile-tools-sheet" id="mobile-tools-sheet" aria-hidden="true">
+    <div class="mobile-tools-panel" role="dialog" aria-label="Tools">
+      <div class="mobile-tools-handle"></div>
+      <p style="font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:12px;color:var(--accent)">Tools</p>
+      <div class="mobile-tools-grid" id="mobile-tools-grid">
+        <button type="button" class="mobile-tool-card" data-panel="merge"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Merge</button>
+        <button type="button" class="mobile-tool-card" data-panel="split"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Split</button>
+        <button type="button" class="mobile-tool-card" data-panel="delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button>
+        <button type="button" class="mobile-tool-card" data-panel="rotate"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Rotate</button>
+        <button type="button" class="mobile-tool-card" data-panel="reorder"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>Reorder</button>
+        <button type="button" class="mobile-tool-card" data-panel="watermark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Watermark</button>
+        <button type="button" class="mobile-tool-card" data-panel="metadata"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Metadata</button>
+        <button type="button" class="mobile-tool-card" data-panel="chapters"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Chapters</button>
+        <button type="button" class="mobile-tool-card" data-panel="batch"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Batch</button>
+      </div>
+    </div>
   </div>
 
   <footer class="app-footer">
@@ -1179,13 +1649,100 @@
       return Array.from(pages).sort((a, b) => a - b);
     }
 
+    /** Convert 0-based page index Set → "1-5,8,9-10" */
+    function selectedToRangeString(selectedSet) {
+      const pages = Array.from(selectedSet).map(i => i + 1).sort((a, b) => a - b);
+      if (!pages.length) return '';
+      const ranges = [];
+      let start = pages[0], end = pages[0];
+      for (let i = 1; i < pages.length; i++) {
+        if (pages[i] === end + 1) end = pages[i];
+        else {
+          ranges.push(start === end ? String(start) : `${start}-${end}`);
+          start = end = pages[i];
+        }
+      }
+      ranges.push(start === end ? String(start) : `${start}-${end}`);
+      return ranges.join(',');
+    }
+
+    function syncSelectionFromRangeInput(inputId, gridSelector) {
+      const input = document.getElementById(inputId);
+      if (!input || !state.currentPdfDoc) return;
+      const maxPage = state.currentPdfDoc.getPageCount();
+      const pages = parseRanges(input.value, maxPage);
+      state.selectedPages.clear();
+      pages.forEach(p => state.selectedPages.add(p - 1));
+      document.querySelectorAll(gridSelector + ' .page-card').forEach(card => {
+        const idx = parseInt(card.dataset.page, 10);
+        card.classList.toggle('selected', state.selectedPages.has(idx));
+      });
+    }
+
+    function notifyPageSelectionChanged() {
+      if (typeof updateDeleteCount === 'function') updateDeleteCount();
+      if (typeof updateRotateSelectedBtn === 'function') updateRotateSelectedBtn();
+      if (typeof updateSplitSelection === 'function') updateSplitSelection();
+    }
+
     // ===================== NAVIGATION =====================
+    function showPanel(panelId) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('panel-' + panelId);
+      if (panel) panel.classList.add('active');
+      document.querySelectorAll('.tool-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.panel === panelId);
+      });
+      // Sync mobile tabs
+      const tab = panelId === 'chapters' ? 'home' : panelId === 'batch' ? 'batch' : 'tools';
+      document.querySelectorAll('.mobile-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+      });
+    }
+
     document.querySelectorAll('.tool-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+      btn.addEventListener('click', () => showPanel(btn.dataset.panel));
+    });
+
+    // Mobile bottom tabs
+    document.querySelectorAll('.mobile-tab').forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        const tab = tabBtn.dataset.tab;
+        if (tab === 'home') {
+          closeMobileTools();
+          showPanel('chapters');
+        } else if (tab === 'batch') {
+          closeMobileTools();
+          showPanel('batch');
+        } else if (tab === 'tools') {
+          openMobileTools();
+          document.querySelectorAll('.mobile-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.tab === 'tools');
+          });
+        }
+      });
+    });
+
+    function openMobileTools() {
+      const sheet = document.getElementById('mobile-tools-sheet');
+      sheet.classList.add('open');
+      sheet.setAttribute('aria-hidden', 'false');
+    }
+    function closeMobileTools() {
+      const sheet = document.getElementById('mobile-tools-sheet');
+      sheet.classList.remove('open');
+      sheet.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('mobile-tools-sheet').addEventListener('click', (e) => {
+      if (e.target.id === 'mobile-tools-sheet') closeMobileTools();
+    });
+
+    document.querySelectorAll('.mobile-tool-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const panel = card.dataset.panel;
+        closeMobileTools();
+        showPanel(panel);
       });
     });
 
@@ -1911,8 +2468,7 @@
             if (state.selectedPages.has(i)) state.selectedPages.delete(i);
             else state.selectedPages.add(i);
             card.classList.toggle('selected');
-            updateDeleteCount();
-            updateRotateSelectedBtn();
+            notifyPageSelectionChanged();
           });
         }
 
@@ -1933,23 +2489,64 @@
               const [moved] = order.splice(from, 1);
               order.splice(to, 0, moved);
               state.pageOrder = order;
-              renderPageGrid(containerId, { reorderable: true });
+              renderPageGrid(containerId, { reorderable: true }).then(() => updateReorderOrderDisplay());
             }
           });
         }
       }
+      if (reorderable) updateReorderOrderDisplay();
     }
 
     // ===================== SPLIT =====================
+    function updateSplitSelection() {
+      const input = document.getElementById('split-ranges');
+      const summary = document.getElementById('split-summary');
+      if (!input || !summary) return;
+      if (document.activeElement !== input) {
+        input.value = selectedToRangeString(state.selectedPages);
+      }
+      const n = state.selectedPages.size;
+      summary.textContent = n === 0
+        ? 'No pages selected — click thumbnails or type ranges'
+        : `${n} page${n === 1 ? '' : 's'}: ${selectedToRangeString(state.selectedPages)}`;
+    }
+
     setupDropZone('split-drop', 'split-input', async (file) => {
-      await loadSingle(file, 'split-content', 'split-pages');
+      await loadSingle(file, 'split-content', 'split-pages', { selectable: true });
+      updateSplitSelection();
+    });
+
+    document.getElementById('split-ranges').addEventListener('change', () => {
+      syncSelectionFromRangeInput('split-ranges', '#split-pages');
+      updateSplitSelection();
+    });
+    document.getElementById('split-ranges').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        syncSelectionFromRangeInput('split-ranges', '#split-pages');
+        updateSplitSelection();
+      }
+    });
+
+    document.getElementById('split-select-all').addEventListener('click', () => {
+      if (!state.currentPdfDoc) return;
+      const total = state.currentPdfDoc.getPageCount();
+      state.selectedPages.clear();
+      for (let i = 0; i < total; i++) state.selectedPages.add(i);
+      document.querySelectorAll('#split-pages .page-card').forEach(c => c.classList.add('selected'));
+      updateSplitSelection();
+    });
+    document.getElementById('split-clear-sel').addEventListener('click', () => {
+      state.selectedPages.clear();
+      document.querySelectorAll('#split-pages .page-card').forEach(c => c.classList.remove('selected'));
+      updateSplitSelection();
     });
 
     document.getElementById('split-btn').addEventListener('click', async () => {
-      const ranges = document.getElementById('split-ranges').value;
-      const pages = parseRanges(ranges, state.currentPdfDoc.getPageCount());
+      syncSelectionFromRangeInput('split-ranges', '#split-pages');
+      const pages = Array.from(state.selectedPages).map(i => i + 1).sort((a, b) => a - b);
       if (pages.length === 0) {
-        showStatus('Enter valid page ranges', 'error');
+        showStatus('Select or type page ranges first', 'error');
         return;
       }
       try {
@@ -1958,7 +2555,7 @@
         copied.forEach(p => newDoc.addPage(p));
         const out = await newDoc.save();
         downloadBytes(out, 'extracted-pages.pdf');
-        showStatus(`Extracted ${pages.length} page(s)`);
+        showStatus(`Extracted ${selectedToRangeString(state.selectedPages)} (${pages.length} page${pages.length === 1 ? '' : 's'})`);
       } catch (err) {
         showStatus('Extract failed: ' + err.message, 'error');
       }
@@ -1974,7 +2571,7 @@
           const out = await newDoc.save();
           downloadBytes(out, `page-${i + 1}.pdf`);
         }
-        showStatus(`Split into ${count} files`);
+        showStatus(`Split into ${count} single-page files`);
       } catch (err) {
         showStatus('Split failed: ' + err.message, 'error');
       }
@@ -1988,12 +2585,35 @@
 
     function updateDeleteCount() {
       const n = state.selectedPages.size;
-      document.getElementById('delete-count').textContent = `${n} page${n !== 1 ? 's' : ''} selected`;
-      document.getElementById('delete-btn').disabled = n === 0;
+      const input = document.getElementById('delete-pages-input');
+      const countEl = document.getElementById('delete-count');
+      const btn = document.getElementById('delete-btn');
+      if (input && document.activeElement !== input) {
+        input.value = selectedToRangeString(state.selectedPages);
+      }
+      if (countEl) {
+        countEl.textContent = n === 0
+          ? 'No pages selected'
+          : `${n} page${n !== 1 ? 's' : ''} to delete: ${selectedToRangeString(state.selectedPages)}`;
+      }
+      if (btn) btn.disabled = n === 0;
     }
+
+    document.getElementById('delete-pages-input').addEventListener('change', () => {
+      syncSelectionFromRangeInput('delete-pages-input', '#delete-pages');
+      updateDeleteCount();
+    });
+    document.getElementById('delete-pages-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        syncSelectionFromRangeInput('delete-pages-input', '#delete-pages');
+        updateDeleteCount();
+      }
+    });
 
     document.getElementById('delete-select-all').addEventListener('click', () => {
       const total = state.currentPdfDoc.getPageCount();
+      state.selectedPages.clear();
       for (let i = 0; i < total; i++) state.selectedPages.add(i);
       document.querySelectorAll('#delete-pages .page-card').forEach(c => c.classList.add('selected'));
       updateDeleteCount();
@@ -2006,6 +2626,7 @@
     });
 
     document.getElementById('delete-btn').addEventListener('click', async () => {
+      syncSelectionFromRangeInput('delete-pages-input', '#delete-pages');
       if (state.selectedPages.size === 0) return;
       try {
         const keep = state.currentPdfDoc.getPageIndices().filter(i => !state.selectedPages.has(i));
@@ -2013,26 +2634,98 @@
           showStatus('Cannot delete all pages', 'error');
           return;
         }
+        const removed = selectedToRangeString(state.selectedPages);
         const newDoc = await PDFDocument.create();
         const pages = await newDoc.copyPages(state.currentPdfDoc, keep);
         pages.forEach(p => newDoc.addPage(p));
         const out = await newDoc.save();
         downloadBytes(out, 'pages-removed.pdf');
-        showStatus(`Deleted ${state.selectedPages.size} page(s)`);
+        showStatus(`Deleted ${removed} · kept ${keep.length} page(s)`);
       } catch (err) {
         showStatus('Delete failed: ' + err.message, 'error');
       }
     });
 
     // ===================== ROTATE =====================
+    function angleLabel(angle) {
+      if (angle === 90) return '↻ 90° clockwise';
+      if (angle === 180) return '⟳ 180°';
+      if (angle === 270) return '↺ 270° (90° counter-clockwise)';
+      return `${angle}°`;
+    }
+
+    function updateRotateSelectedBtn() {
+      const n = state.selectedPages.size;
+      const btn = document.getElementById('rotate-selected-btn');
+      const input = document.getElementById('rotate-pages-input');
+      const summary = document.getElementById('rotate-summary');
+      const angle = parseInt(document.getElementById('rotate-angle').value, 10) || 90;
+
+      if (btn) btn.disabled = n === 0;
+      if (input && document.activeElement !== input) {
+        input.value = selectedToRangeString(state.selectedPages);
+      }
+      if (summary) {
+        if (n === 0) {
+          summary.textContent = 'No pages selected';
+        } else {
+          summary.textContent = `${n} page${n === 1 ? '' : 's'}: ${selectedToRangeString(state.selectedPages)} · ${angleLabel(angle)}`;
+        }
+      }
+    }
+
+    function applyRotateRangeInput() {
+      const input = document.getElementById('rotate-pages-input');
+      if (!input || !state.currentPdfDoc) return;
+      const maxPage = state.currentPdfDoc.getPageCount();
+      const pages = parseRanges(input.value, maxPage); // 1-based
+      state.selectedPages.clear();
+      pages.forEach(p => state.selectedPages.add(p - 1));
+      // Refresh selection visuals without full re-render if possible
+      document.querySelectorAll('#rotate-pages .page-card').forEach(card => {
+        const idx = parseInt(card.dataset.page, 10);
+        card.classList.toggle('selected', state.selectedPages.has(idx));
+      });
+      updateRotateSelectedBtn();
+    }
+
     setupDropZone('rotate-drop', 'rotate-input', async (file) => {
       await loadSingle(file, 'rotate-content', 'rotate-pages', { selectable: true, showRotate: true });
       updateRotateSelectedBtn();
     });
 
-    function updateRotateSelectedBtn() {
-      document.getElementById('rotate-selected-btn').disabled = state.selectedPages.size === 0;
-    }
+    // Rotation option pills
+    document.querySelectorAll('.rotate-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.rotate-opt').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('rotate-angle').value = btn.dataset.angle;
+        updateRotateSelectedBtn();
+      });
+    });
+
+    document.getElementById('rotate-pages-input').addEventListener('change', applyRotateRangeInput);
+    document.getElementById('rotate-pages-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyRotateRangeInput();
+      }
+    });
+
+    document.getElementById('rotate-select-all').addEventListener('click', () => {
+      if (!state.currentPdfDoc) return;
+      const total = state.currentPdfDoc.getPageCount();
+      state.selectedPages.clear();
+      for (let i = 0; i < total; i++) state.selectedPages.add(i);
+      document.querySelectorAll('#rotate-pages .page-card').forEach(c => c.classList.add('selected'));
+      updateRotateSelectedBtn();
+    });
+
+    document.getElementById('rotate-clear-sel').addEventListener('click', () => {
+      state.selectedPages.clear();
+      document.querySelectorAll('#rotate-pages .page-card').forEach(c => c.classList.remove('selected'));
+      updateRotateSelectedBtn();
+    });
 
     document.getElementById('rotate-all-btn').addEventListener('click', async () => {
       const angle = parseInt(document.getElementById('rotate-angle').value, 10);
@@ -2042,17 +2735,26 @@
         state.currentPdfDoc.getPage(i).setRotation(degrees(state.rotations[i]));
       }
       await renderPageGrid('rotate-pages', { selectable: true, showRotate: true });
-      showStatus(`Rotated all pages by ${angle}°`);
+      updateRotateSelectedBtn();
+      showStatus(`Rotated all pages · ${angleLabel(angle)}`);
     });
 
     document.getElementById('rotate-selected-btn').addEventListener('click', async () => {
+      // Sync from text box first in case user typed ranges without pressing Enter
+      applyRotateRangeInput();
+      if (state.selectedPages.size === 0) {
+        showStatus('Select or type pages first', 'error');
+        return;
+      }
       const angle = parseInt(document.getElementById('rotate-angle').value, 10);
+      const rangeStr = selectedToRangeString(state.selectedPages);
       for (const i of state.selectedPages) {
         state.rotations[i] = ((state.rotations[i] || 0) + angle) % 360;
         state.currentPdfDoc.getPage(i).setRotation(degrees(state.rotations[i]));
       }
       await renderPageGrid('rotate-pages', { selectable: true, showRotate: true });
-      showStatus(`Rotated ${state.selectedPages.size} page(s)`);
+      updateRotateSelectedBtn();
+      showStatus(`Rotated ${rangeStr} · ${angleLabel(angle)}`);
     });
 
     document.getElementById('rotate-download').addEventListener('click', async () => {
@@ -2062,8 +2764,24 @@
     });
 
     // ===================== REORDER =====================
+    function updateReorderOrderDisplay() {
+      const input = document.getElementById('reorder-order-input');
+      if (!input || !state.pageOrder) return;
+      // pageOrder holds 0-based original indices in display order
+      input.value = state.pageOrder.map(i => i + 1).join(', ');
+    }
+
     setupDropZone('reorder-drop', 'reorder-input', async (file) => {
       await loadSingle(file, 'reorder-content', 'reorder-pages', { reorderable: true });
+      updateReorderOrderDisplay();
+    });
+
+    document.getElementById('reorder-reset').addEventListener('click', async () => {
+      if (!state.currentPdfDoc) return;
+      state.pageOrder = state.currentPdfDoc.getPageIndices();
+      await renderPageGrid('reorder-pages', { reorderable: true });
+      updateReorderOrderDisplay();
+      showStatus('Order reset to original');
     });
 
     document.getElementById('reorder-download').addEventListener('click', async () => {
@@ -2073,17 +2791,44 @@
         pages.forEach(p => newDoc.addPage(p));
         const out = await newDoc.save();
         downloadBytes(out, 'reordered.pdf');
-        showStatus('Reordered PDF downloaded');
+        showStatus('Reordered PDF downloaded · order ' + state.pageOrder.map(i => i + 1).join(','));
       } catch (err) {
         showStatus('Reorder failed: ' + err.message, 'error');
       }
     });
 
     // ===================== WATERMARK =====================
+    function updateWmSummary() {
+      const summary = document.getElementById('wm-summary');
+      const pagesInput = document.getElementById('wm-pages');
+      if (!summary || !pagesInput) return;
+      const raw = (pagesInput.value || '').trim();
+      if (!raw) {
+        summary.textContent = 'Apply to: all pages';
+        return;
+      }
+      if (!state.currentPdfDoc) {
+        summary.textContent = raw;
+        return;
+      }
+      const pages = parseRanges(raw, state.currentPdfDoc.getPageCount());
+      summary.textContent = pages.length
+        ? `Apply to ${pages.length} page(s): ${pages.join(',').replace(/,/g, ', ') === pages.join(', ') ? selectedToRangeString(new Set(pages.map(p => p - 1))) : pages.join(', ')}`
+        : 'Invalid page range';
+      // Prefer compact range string
+      if (pages.length) {
+        summary.textContent = `Apply to ${pages.length} page(s): ${selectedToRangeString(new Set(pages.map(p => p - 1)))}`;
+      }
+    }
+
     setupDropZone('watermark-drop', 'watermark-input', async (file) => {
       await loadSingle(file, 'watermark-content', null);
       document.getElementById('watermark-content').style.display = 'block';
+      document.getElementById('wm-pages').value = '';
+      updateWmSummary();
     });
+
+    document.getElementById('wm-pages').addEventListener('input', updateWmSummary);
 
     document.getElementById('wm-apply').addEventListener('click', async () => {
       try {
@@ -2091,8 +2836,21 @@
         const opacity = parseFloat(document.getElementById('wm-opacity').value) || 0.25;
         const fontSize = parseInt(document.getElementById('wm-size').value, 10) || 48;
         const font = await state.currentPdfDoc.embedFont(StandardFonts.HelveticaBold);
-        const pages = state.currentPdfDoc.getPages();
-        for (const page of pages) {
+        const allPages = state.currentPdfDoc.getPages();
+        const raw = (document.getElementById('wm-pages').value || '').trim();
+        let targets;
+        if (!raw) {
+          targets = allPages.map((_, i) => i);
+        } else {
+          const parsed = parseRanges(raw, allPages.length);
+          if (!parsed.length) {
+            showStatus('Invalid page range for watermark', 'error');
+            return;
+          }
+          targets = parsed.map(p => p - 1);
+        }
+        for (const i of targets) {
+          const page = allPages[i];
           const { width, height } = page.getSize();
           page.drawText(text, {
             x: width / 2 - (text.length * fontSize * 0.3),
@@ -2106,7 +2864,8 @@
         }
         const out = await state.currentPdfDoc.save();
         downloadBytes(out, 'watermarked.pdf');
-        showStatus('Watermark applied');
+        const label = raw ? selectedToRangeString(new Set(targets)) : 'all pages';
+        showStatus(`Watermark applied to ${label}`);
       } catch (err) {
         showStatus('Watermark failed: ' + err.message, 'error');
       }
@@ -2144,6 +2903,391 @@
         showStatus('Failed to read metadata: ' + err.message, 'error');
       }
     });
+
+    // ===================== BATCH PROCESSING (QGIS-style) =====================
+    const batchState = {
+      sources: [], // { id, file, name }
+      rows: [],    // { id, sourceId, params, output, status, error, bytes }
+      results: [], // { name, bytes }
+      nextId: 1,
+    };
+
+    function batchNewId() { return 'b' + (batchState.nextId++); }
+
+    function batchDefaultParams(algo) {
+      switch (algo) {
+        case 'extract': return { pages: '1' };
+        case 'delete': return { pages: '' };
+        case 'rotate': return { pages: '', angle: '90' };
+        case 'watermark': return { pages: '', text: 'CONFIDENTIAL', opacity: '0.25', size: '48' };
+        default: return {};
+      }
+    }
+
+    function batchParamColumns(algo) {
+      switch (algo) {
+        case 'extract': return [{ key: 'pages', label: 'Pages to extract', ph: '1-5,8' }];
+        case 'delete': return [{ key: 'pages', label: 'Pages to delete', ph: '2,5-7' }];
+        case 'rotate': return [
+          { key: 'pages', label: 'Pages (blank=all)', ph: '1-3 or blank' },
+          { key: 'angle', label: 'Angle', type: 'select', options: [
+            { v: '90', t: '↻ 90°' }, { v: '180', t: '⟳ 180°' }, { v: '270', t: '↺ 270°' }
+          ]},
+        ];
+        case 'watermark': return [
+          { key: 'pages', label: 'Pages (blank=all)', ph: 'blank = all' },
+          { key: 'text', label: 'Text', ph: 'CONFIDENTIAL' },
+          { key: 'opacity', label: 'Opacity', ph: '0.25' },
+          { key: 'size', label: 'Size', ph: '48' },
+        ];
+        default: return [];
+      }
+    }
+
+    function renderBatchSourcePool() {
+      const el = document.getElementById('batch-source-pool');
+      if (!batchState.sources.length) {
+        el.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem">No sources yet — add PDFs to the pool. The same file can be used on many rows.</span>';
+        return;
+      }
+      el.innerHTML = batchState.sources.map(s => `
+        <div class="batch-source-chip" title="${s.name}">
+          <span>📄 ${s.name}</span>
+          <button type="button" data-rm-src="${s.id}" aria-label="Remove">×</button>
+        </div>
+      `).join('');
+      el.querySelectorAll('[data-rm-src]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-rm-src');
+          batchState.sources = batchState.sources.filter(s => s.id !== id);
+          batchState.rows.forEach(r => { if (r.sourceId === id) r.sourceId = ''; });
+          renderBatchSourcePool();
+          renderBatchTable();
+        });
+      });
+    }
+
+    function renderBatchTable() {
+      const algo = document.getElementById('batch-algorithm').value;
+      const cols = batchParamColumns(algo);
+      const thead = document.getElementById('batch-thead');
+      const tbody = document.getElementById('batch-tbody');
+
+      thead.innerHTML = `<tr>
+        <th>#</th>
+        <th>Input layer (source)</th>
+        ${cols.map(c => `<th>${c.label}</th>`).join('')}
+        <th>Output name</th>
+        <th>Status</th>
+        <th></th>
+      </tr>`;
+
+      if (!batchState.rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${5 + cols.length}" style="color:var(--text-muted);padding:16px">No rows — click “Add row” or “One row per source”.</td></tr>`;
+      } else {
+        tbody.innerHTML = batchState.rows.map((row, idx) => {
+          const srcOpts = batchState.sources.map(s =>
+            `<option value="${s.id}" ${row.sourceId === s.id ? 'selected' : ''}>${s.name}</option>`
+          ).join('');
+          const paramCells = cols.map(c => {
+            if (c.type === 'select') {
+              const opts = c.options.map(o =>
+                `<option value="${o.v}" ${(row.params[c.key] || '') === o.v ? 'selected' : ''}>${o.t}</option>`
+              ).join('');
+              return `<td><select data-row="${row.id}" data-key="${c.key}">${opts}</select></td>`;
+            }
+            return `<td><input type="text" data-row="${row.id}" data-key="${c.key}" value="${row.params[c.key] ?? ''}" placeholder="${c.ph || ''}"></td>`;
+          }).join('');
+          const st = row.status || '';
+          const stClass = st === 'Done' ? 'ok' : st === 'Failed' ? 'err' : st === 'Running' ? 'run' : '';
+          return `<tr data-row-id="${row.id}">
+            <td class="batch-row-num">${idx + 1}</td>
+            <td>
+              <select data-row="${row.id}" data-key="__source">
+                <option value="">— choose source —</option>
+                ${srcOpts}
+              </select>
+            </td>
+            ${paramCells}
+            <td><input type="text" data-row="${row.id}" data-key="__output" value="${row.output || ''}" placeholder="auto"></td>
+            <td class="batch-row-status ${stClass}">${st || '—'}${row.error ? ': ' + row.error : ''}</td>
+            <td><button type="button" class="batch-rm-row" data-rm-row="${row.id}" title="Remove row">×</button></td>
+          </tr>`;
+        }).join('');
+      }
+
+      tbody.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', () => {
+          const id = el.getAttribute('data-row');
+          const key = el.getAttribute('data-key');
+          const row = batchState.rows.find(r => r.id === id);
+          if (!row) return;
+          if (key === '__source') row.sourceId = el.value;
+          else if (key === '__output') row.output = el.value;
+          else row.params[key] = el.value;
+        });
+      });
+      tbody.querySelectorAll('[data-rm-row]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          batchState.rows = batchState.rows.filter(r => r.id !== btn.getAttribute('data-rm-row'));
+          renderBatchTable();
+          updateBatchRunEnabled();
+        });
+      });
+      updateBatchRunEnabled();
+    }
+
+    function updateBatchRunEnabled() {
+      const ok = batchState.rows.some(r => r.sourceId);
+      document.getElementById('batch-run').disabled = !ok;
+      document.getElementById('batch-status').textContent =
+        `${batchState.sources.length} source(s) · ${batchState.rows.length} row(s)`;
+    }
+
+    function batchAddSources(files) {
+      for (const file of files) {
+        batchState.sources.push({ id: batchNewId(), file, name: file.name });
+      }
+      renderBatchSourcePool();
+      updateBatchRunEnabled();
+      showStatus(`Added ${files.length} source(s) to batch pool`);
+    }
+
+    document.getElementById('batch-add-sources').addEventListener('click', () => {
+      document.getElementById('batch-source-input').click();
+    });
+    document.getElementById('batch-source-input').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []).filter(f =>
+        f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+      if (files.length) batchAddSources(files);
+      e.target.value = '';
+    });
+    document.getElementById('batch-clear-sources').addEventListener('click', () => {
+      batchState.sources = [];
+      batchState.rows.forEach(r => { r.sourceId = ''; });
+      renderBatchSourcePool();
+      renderBatchTable();
+    });
+
+    document.getElementById('batch-algorithm').addEventListener('change', () => {
+      const algo = document.getElementById('batch-algorithm').value;
+      const defaults = batchDefaultParams(algo);
+      batchState.rows.forEach(r => {
+        r.params = { ...defaults };
+        r.status = '';
+        r.error = '';
+      });
+      renderBatchTable();
+    });
+
+    document.getElementById('batch-add-row').addEventListener('click', () => {
+      const algo = document.getElementById('batch-algorithm').value;
+      batchState.rows.push({
+        id: batchNewId(),
+        sourceId: batchState.sources[0]?.id || '',
+        params: batchDefaultParams(algo),
+        output: '',
+        status: '',
+        error: '',
+      });
+      renderBatchTable();
+    });
+
+    document.getElementById('batch-add-row-per-source').addEventListener('click', () => {
+      if (!batchState.sources.length) {
+        showStatus('Add sources to the pool first', 'error');
+        return;
+      }
+      const algo = document.getElementById('batch-algorithm').value;
+      for (const s of batchState.sources) {
+        batchState.rows.push({
+          id: batchNewId(),
+          sourceId: s.id,
+          params: batchDefaultParams(algo),
+          output: '',
+          status: '',
+          error: '',
+        });
+      }
+      renderBatchTable();
+    });
+
+    document.getElementById('batch-fill-down').addEventListener('click', () => {
+      if (batchState.rows.length < 2) return;
+      const first = batchState.rows[0];
+      for (let i = 1; i < batchState.rows.length; i++) {
+        batchState.rows[i].params = { ...first.params };
+      }
+      renderBatchTable();
+      showStatus('Filled parameters down from row 1');
+    });
+
+    document.getElementById('batch-remove-rows').addEventListener('click', () => {
+      batchState.rows = batchState.rows.filter(r => r.sourceId);
+      renderBatchTable();
+    });
+
+    async function runBatchJob(row, algo) {
+      const src = batchState.sources.find(s => s.id === row.sourceId);
+      if (!src) throw new Error('No source');
+      const data = await loadPdf(src.file);
+      const doc = data.pdfLibDoc;
+      const pageCount = doc.getPageCount();
+      let outBytes;
+      let outName = (row.output || '').trim();
+
+      if (algo === 'extract') {
+        const pages = parseRanges(row.params.pages || '', pageCount);
+        if (!pages.length) throw new Error('No pages');
+        const newDoc = await PDFDocument.create();
+        const copied = await newDoc.copyPages(doc, pages.map(p => p - 1));
+        copied.forEach(p => newDoc.addPage(p));
+        outBytes = await newDoc.save();
+        if (!outName) outName = src.name.replace(/\.pdf$/i, '') + '_extract_' + selectedToRangeString(new Set(pages.map(p => p - 1))) + '.pdf';
+      } else if (algo === 'delete') {
+        const del = parseRanges(row.params.pages || '', pageCount);
+        if (!del.length) throw new Error('No pages to delete');
+        const delSet = new Set(del.map(p => p - 1));
+        const keep = doc.getPageIndices().filter(i => !delSet.has(i));
+        if (!keep.length) throw new Error('Would delete all pages');
+        const newDoc = await PDFDocument.create();
+        const copied = await newDoc.copyPages(doc, keep);
+        copied.forEach(p => newDoc.addPage(p));
+        outBytes = await newDoc.save();
+        if (!outName) outName = src.name.replace(/\.pdf$/i, '') + '_deleted.pdf';
+      } else if (algo === 'rotate') {
+        const angle = parseInt(row.params.angle || '90', 10);
+        const raw = (row.params.pages || '').trim();
+        const targets = raw
+          ? parseRanges(raw, pageCount).map(p => p - 1)
+          : doc.getPageIndices();
+        if (!targets.length) throw new Error('No pages');
+        for (const i of targets) {
+          const page = doc.getPage(i);
+          const cur = page.getRotation().angle || 0;
+          page.setRotation(degrees((cur + angle) % 360));
+        }
+        outBytes = await doc.save();
+        if (!outName) outName = src.name.replace(/\.pdf$/i, '') + `_rot${angle}.pdf`;
+      } else if (algo === 'watermark') {
+        const text = row.params.text || 'CONFIDENTIAL';
+        const opacity = parseFloat(row.params.opacity) || 0.25;
+        const fontSize = parseInt(row.params.size, 10) || 48;
+        const font = await doc.embedFont(StandardFonts.HelveticaBold);
+        const raw = (row.params.pages || '').trim();
+        const targets = raw
+          ? parseRanges(raw, pageCount).map(p => p - 1)
+          : doc.getPageIndices();
+        if (!targets.length) throw new Error('No pages');
+        const pages = doc.getPages();
+        for (const i of targets) {
+          const page = pages[i];
+          const { width, height } = page.getSize();
+          page.drawText(text, {
+            x: width / 2 - (text.length * fontSize * 0.3),
+            y: height / 2,
+            size: fontSize,
+            font,
+            color: rgb(0.6, 0.6, 0.6),
+            opacity,
+            rotate: degrees(-45),
+          });
+        }
+        outBytes = await doc.save();
+        if (!outName) outName = src.name.replace(/\.pdf$/i, '') + '_wm.pdf';
+      } else {
+        throw new Error('Unknown algorithm');
+      }
+
+      if (!outName.toLowerCase().endsWith('.pdf')) outName += '.pdf';
+      return { name: outName, bytes: outBytes };
+    }
+
+    document.getElementById('batch-run').addEventListener('click', async () => {
+      const algo = document.getElementById('batch-algorithm').value;
+      const jobs = batchState.rows.filter(r => r.sourceId);
+      if (!jobs.length) {
+        showStatus('Add rows with a source first', 'error');
+        return;
+      }
+
+      batchState.results = [];
+      const wrap = document.getElementById('batch-progress-wrap');
+      const fill = document.getElementById('batch-progress-fill');
+      const zipBtn = document.getElementById('batch-download-zip');
+      wrap.style.display = 'block';
+      fill.style.width = '0%';
+      zipBtn.style.display = 'none';
+      document.getElementById('batch-run').disabled = true;
+
+      let done = 0;
+      for (const row of jobs) {
+        row.status = 'Running';
+        row.error = '';
+        renderBatchTable();
+        try {
+          const result = await runBatchJob(row, algo);
+          row.status = 'Done';
+          row.bytes = result.bytes;
+          batchState.results.push(result);
+        } catch (err) {
+          row.status = 'Failed';
+          row.error = err.message || String(err);
+        }
+        done++;
+        fill.style.width = Math.round((done / jobs.length) * 100) + '%';
+        document.getElementById('batch-status').textContent =
+          `Running ${done}/${jobs.length}…`;
+        renderBatchTable();
+      }
+
+      document.getElementById('batch-run').disabled = false;
+      const ok = batchState.results.length;
+      const fail = jobs.length - ok;
+      document.getElementById('batch-status').textContent =
+        `Done — ${ok} ok${fail ? `, ${fail} failed` : ''}`;
+      if (ok) {
+        zipBtn.style.display = 'inline-flex';
+        zipBtn.disabled = false;
+        showStatus(`Batch complete: ${ok} file(s)`);
+      } else {
+        showStatus('Batch finished with no successful outputs', 'error');
+      }
+    });
+
+    document.getElementById('batch-download-zip').addEventListener('click', async () => {
+      if (!batchState.results.length) return;
+      try {
+        const zip = new JSZip();
+        const used = new Map();
+        for (const r of batchState.results) {
+          let name = r.name;
+          if (used.has(name)) {
+            const n = used.get(name) + 1;
+            used.set(name, n);
+            name = name.replace(/\.pdf$/i, '') + `_${n}.pdf`;
+          } else used.set(name, 1);
+          zip.file(name, r.bytes);
+        }
+        const blob = await zip.generateAsync({ type: 'blob' }, meta => {
+          document.getElementById('batch-progress-fill').style.width =
+            Math.round(30 + (meta.percent || 0) * 0.65) + '%';
+        });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'batch-results.zip';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        document.getElementById('batch-progress-fill').style.width = '100%';
+        showStatus('Batch ZIP download started');
+      } catch (err) {
+        showStatus('ZIP failed: ' + err.message, 'error');
+      }
+    });
+
+    // Initial empty UI
+    renderBatchSourcePool();
+    renderBatchTable();
 
     // ===================== PWA: Manifest + Service Worker + Install =====================
     (function initPWA() {
