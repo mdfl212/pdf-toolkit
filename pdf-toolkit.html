@@ -2055,11 +2055,22 @@
     // ===================== HELPERS =====================
     function showStatus(msg, type = 'success') {
       const el = document.getElementById('status');
+      if (type !== 'error') {
+        // Keep routine success/ready messages out of the way; only surface errors.
+        el.classList.remove('show');
+        return;
+      }
       document.getElementById('status-text').textContent = msg;
-      document.getElementById('status-icon').textContent = type === 'success' ? '✓' : '✕';
-      el.className = 'status show ' + type;
+      document.getElementById('status-icon').textContent = '✕';
+      el.className = 'status show error';
       setTimeout(() => el.classList.remove('show'), 3500);
     }
+
+    // If a startup script briefly displays the default "✓ Ready" toast, dismiss it after 2 seconds.
+    window.addEventListener('DOMContentLoaded', () => {
+      const initialStatus = document.getElementById('status');
+      if (initialStatus) setTimeout(() => initialStatus.classList.remove('show'), 2000);
+    }, { once: true });
 
     function downloadBytes(bytes, filename) {
       const blob = new Blob([bytes], { type: 'application/pdf' });
