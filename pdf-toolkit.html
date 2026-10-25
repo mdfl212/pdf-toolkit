@@ -452,6 +452,7 @@
       box-shadow: var(--shadow);
       transform: translateY(120px);
       opacity: 0;
+      visibility: hidden;
       transition: all 0.3s ease;
       z-index: 200;
       box-sizing: border-box;
@@ -478,6 +479,8 @@
     .status-close:hover { background: var(--surface-hover, rgba(127,127,127,.12)); color: var(--text); }
 
     .status.show { transform: translateY(0); opacity: 1; }
+    /* The toast is allowed to become visible only for an error/problem. */
+    .status.show.error { visibility: visible; }
     .status.success { border-color: var(--success); }
     .status.error { border-color: var(--danger); }
 
@@ -2085,17 +2088,15 @@
       status?.setAttribute('aria-hidden', 'true');
     });
 
-    function showStatus(msg, type = 'success') {
+    function showStatus(msg, type = 'info') {
       const el = document.getElementById('status');
+      // Routine progress and success messages never open the toast.
       if (type !== 'error') {
-        // Keep routine success/ready messages out of the way; only surface errors.
-        el.classList.remove('show');
+        el.classList.remove('show', 'error', 'success');
         el.setAttribute('aria-hidden', 'true');
         return;
       }
       document.getElementById('status-text').textContent = msg;
-      const statusIcon = document.getElementById('status-icon');
-      if (statusIcon) statusIcon.textContent = '✕';
       el.setAttribute('aria-hidden', 'false');
       el.className = 'status show error';
       setTimeout(() => {
@@ -2103,12 +2104,6 @@
         el.setAttribute('aria-hidden', 'true');
       }, 3500);
     }
-
-    // Keep the status notification hidden until an error needs to be shown.
-    window.addEventListener('DOMContentLoaded', () => {
-      const initialStatus = document.getElementById('status');
-      if (initialStatus) setTimeout(() => initialStatus.classList.remove('show'), 2000);
-    }, { once: true });
 
     function downloadBytes(bytes, filename) {
       const blob = new Blob([bytes], { type: 'application/pdf' });
