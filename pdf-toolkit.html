@@ -2050,7 +2050,7 @@
   <div class="status" id="status" role="status" aria-live="polite">
     <span id="status-icon" aria-hidden="true">✓</span>
     <span id="status-text">Ready</span>
-    <button type="button" class="status-close" aria-label="Dismiss notification" title="Close" onclick="document.getElementById('status').classList.remove('show')">×</button>
+    <button type="button" class="status-close" id="status-close" aria-label="Dismiss notification" title="Close">×</button>
   </div>
 
   <script type="module">
@@ -2077,17 +2077,31 @@
     };
 
     // ===================== HELPERS =====================
+    // Use an explicit listener instead of inline HTML handlers (which may be blocked by CSP).
+    document.getElementById('status-close')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const status = document.getElementById('status');
+      status?.classList.remove('show');
+      status?.setAttribute('aria-hidden', 'true');
+    });
+
     function showStatus(msg, type = 'success') {
       const el = document.getElementById('status');
       if (type !== 'error') {
         // Keep routine success/ready messages out of the way; only surface errors.
         el.classList.remove('show');
+        el.setAttribute('aria-hidden', 'true');
         return;
       }
       document.getElementById('status-text').textContent = msg;
       document.getElementById('status-icon').textContent = '✕';
+      el.setAttribute('aria-hidden', 'false');
       el.className = 'status show error';
-      setTimeout(() => el.classList.remove('show'), 3500);
+      setTimeout(() => {
+        el.classList.remove('show');
+        el.setAttribute('aria-hidden', 'true');
+      }, 3500);
     }
 
     // If a startup script briefly displays the default "✓ Ready" toast, dismiss it after 2 seconds.
