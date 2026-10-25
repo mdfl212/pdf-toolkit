@@ -1406,6 +1406,103 @@
       }
     }
 
+
+    /* Mobile cleanup: distinct tools launcher, compact batch cards, natural footer. */
+    body { display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; }
+    .app { flex:1 0 auto; min-height:0; }
+    .app-footer { position:relative; flex:0 0 auto; margin-top:auto; padding-bottom:22px; }
+
+    @media (max-width:900px) {
+      .app { flex:1 0 auto; min-height:0; }
+      .mobile-tabbar {
+        display:flex; align-items:center; justify-content:center; gap:14px;
+        padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));
+        background:var(--surface); border-top:1px solid var(--border);
+        backdrop-filter:none; -webkit-backdrop-filter:none;
+      }
+      .mobile-tab { flex:1 1 0; max-width:112px; background:transparent; }
+      .mobile-tab[data-tab="tools"] {
+        flex:0 0 58px; width:58px; max-width:58px; height:58px; min-height:58px;
+        margin-top:-18px; padding:8px; border:1px solid var(--accent);
+        border-radius:16px; background:var(--accent); color:#102016;
+        box-shadow:0 5px 14px rgba(0,0,0,.24);
+      }
+      .mobile-tab[data-tab="tools"] svg { width:23px; height:23px; }
+      .mobile-tab[data-tab="tools"] span { font-size:.62rem; font-weight:700; }
+      .mobile-tab[data-tab="tools"].active { background:var(--accent); color:#102016; }
+
+      /* Centered opaque palette, not a bottom drop-up sheet. */
+      .mobile-tools-sheet {
+        align-items:center; justify-content:center; padding:18px;
+        background:rgba(4,8,6,.78); backdrop-filter:none; -webkit-backdrop-filter:none;
+      }
+      .mobile-tools-panel {
+        width:min(100%,440px); max-height:min(78dvh,680px); overflow-y:auto;
+        padding:20px; border:1px solid var(--border); border-radius:20px;
+        background:var(--surface); box-shadow:0 20px 55px rgba(0,0,0,.42);
+        overscroll-behavior:contain;
+      }
+      .mobile-tools-handle { display:none; }
+      .mobile-tools-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+      .mobile-tool-card { min-height:88px; padding:12px 6px; background:var(--surface2); border-color:var(--border); }
+
+      /* Batch jobs become labeled cards that fit the phone width. */
+      .batch-table-wrap { width:100%; max-width:100%; overflow:visible; border:0; background:transparent; }
+      .batch-table {
+        width:100%; min-width:0; table-layout:fixed; border-collapse:separate;
+        border-spacing:0; font-size:.82rem;
+      }
+      .batch-table thead { display:none; }
+      .batch-table, .batch-table tbody, .batch-table tbody tr, .batch-table tbody td {
+        display:block; min-width:0; max-width:100%;
+      }
+      .batch-table tbody tr {
+        margin:0 0 12px; padding:8px 12px; border:1px solid var(--border);
+        border-radius:14px; background:var(--surface); overflow:hidden;
+      }
+      .batch-table tbody td {
+        display:grid; grid-template-columns:minmax(86px,34%) minmax(0,1fr);
+        align-items:center; gap:10px; width:100%; padding:8px 0;
+        border:0; border-bottom:1px solid var(--border); text-align:left;
+        overflow-wrap:anywhere;
+      }
+      .batch-table tbody td:last-child { border-bottom:0; }
+      .batch-table tbody td::before {
+        content:attr(data-label); min-width:0; color:var(--text-muted);
+        font-family:'JetBrains Mono',monospace; font-size:.68rem; line-height:1.35;
+        text-transform:uppercase; letter-spacing:.025em; overflow-wrap:anywhere;
+      }
+      .batch-table tbody td.batch-row-num {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:2px 0 8px; font-size:.82rem; font-weight:700;
+      }
+      .batch-table tbody td.batch-row-num::before { content:"JOB"; font-size:.68rem; }
+      .batch-table input[type="text"], .batch-table select {
+        box-sizing:border-box; width:100%; min-width:0; max-width:100%;
+        min-height:42px; padding:9px 10px; font-size:16px;
+      }
+      .batch-table .batch-row-status { white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
+      .batch-table .batch-remove-cell { display:flex; justify-content:flex-end; padding-top:4px; }
+      .batch-table .batch-remove-cell::before { content:none; }
+      .batch-rm-row {
+        width:42px; height:42px; border:1px solid var(--border);
+        border-radius:10px; background:var(--surface2); color:var(--danger);
+      }
+      .batch-table tbody td[colspan] {
+        display:block; border:1px solid var(--border); border-radius:12px; padding:16px;
+      }
+      .batch-table tbody td[colspan]::before { content:none; }
+      .app-footer { margin-top:0; padding:18px var(--mobile-gutter) calc(20px + env(safe-area-inset-bottom,0px)); }
+      .footer-inner { width:100%; max-width:none; gap:10px; }
+      .footer-links { gap:8px 10px; line-height:1.6; }
+    }
+    @media (max-width:380px) {
+      .mobile-tools-panel { padding:14px; }
+      .mobile-tools-grid { gap:7px; }
+      .mobile-tool-card { min-height:82px; font-size:.72rem; }
+      .batch-table tbody td { grid-template-columns:minmax(72px,30%) minmax(0,1fr); gap:8px; }
+    }
+
   </style>
 </head>
 <body>
@@ -3343,14 +3440,15 @@
       const cols = batchParamColumns(algo);
       const thead = document.getElementById('batch-thead');
       const tbody = document.getElementById('batch-tbody');
+      const labels = ['#', 'Input source', ...cols.map(c => c.label), 'Output name', 'Status', 'Remove'];
 
       thead.innerHTML = `<tr>
         <th>#</th>
-        <th>Input layer (source)</th>
+        <th>Input source</th>
         ${cols.map(c => `<th>${c.label}</th>`).join('')}
         <th>Output name</th>
         <th>Status</th>
-        <th></th>
+        <th aria-label="Remove row"></th>
       </tr>`;
 
       if (!batchState.rows.length) {
@@ -3365,24 +3463,24 @@
               const opts = c.options.map(o =>
                 `<option value="${o.v}" ${(row.params[c.key] || '') === o.v ? 'selected' : ''}>${o.t}</option>`
               ).join('');
-              return `<td><select data-row="${row.id}" data-key="${c.key}">${opts}</select></td>`;
+              return `<td data-label="${c.label}"><select data-row="${row.id}" data-key="${c.key}">${opts}</select></td>`;
             }
-            return `<td><input type="text" data-row="${row.id}" data-key="${c.key}" value="${row.params[c.key] ?? ''}" placeholder="${c.ph || ''}"></td>`;
+            return `<td data-label="${c.label}"><input type="text" data-row="${row.id}" data-key="${c.key}" value="${row.params[c.key] ?? ''}" placeholder="${c.ph || ''}"></td>`;
           }).join('');
           const st = row.status || '';
           const stClass = st === 'Done' ? 'ok' : st === 'Failed' ? 'err' : st === 'Running' ? 'run' : '';
           return `<tr data-row-id="${row.id}">
-            <td class="batch-row-num">${idx + 1}</td>
-            <td>
+            <td class="batch-row-num" data-label="${labels[0]}">${idx + 1}</td>
+            <td data-label="${labels[1]}">
               <select data-row="${row.id}" data-key="__source">
                 <option value="">— choose source —</option>
                 ${srcOpts}
               </select>
             </td>
             ${paramCells}
-            <td><input type="text" data-row="${row.id}" data-key="__output" value="${row.output || ''}" placeholder="auto"></td>
-            <td class="batch-row-status ${stClass}">${st || '—'}${row.error ? ': ' + row.error : ''}</td>
-            <td><button type="button" class="batch-rm-row" data-rm-row="${row.id}" title="Remove row">×</button></td>
+            <td data-label="Output name"><input type="text" data-row="${row.id}" data-key="__output" value="${row.output || ''}" placeholder="auto"></td>
+            <td data-label="Status" class="batch-row-status ${stClass}">${st || '—'}${row.error ? ': ' + row.error : ''}</td>
+            <td data-label="Remove" class="batch-remove-cell"><button type="button" class="batch-rm-row" data-rm-row="${row.id}" title="Remove row" aria-label="Remove row">×</button></td>
           </tr>`;
         }).join('');
       }
