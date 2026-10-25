@@ -2048,7 +2048,6 @@
   </footer>
 
   <div class="status" id="status" role="status" aria-live="polite" aria-hidden="true">
-    <span id="status-icon" aria-hidden="true">✓</span>
     <span id="status-text"></span>
     <button type="button" class="status-close" id="status-close" aria-label="Dismiss notification" title="Close">×</button>
   </div>
@@ -2095,7 +2094,8 @@
         return;
       }
       document.getElementById('status-text').textContent = msg;
-      document.getElementById('status-icon').textContent = '✕';
+      const statusIcon = document.getElementById('status-icon');
+      if (statusIcon) statusIcon.textContent = '✕';
       el.setAttribute('aria-hidden', 'false');
       el.className = 'status show error';
       setTimeout(() => {
@@ -2104,7 +2104,7 @@
       }, 3500);
     }
 
-    // If a startup script briefly displays the default "✓ Ready" toast, dismiss it after 2 seconds.
+    // Keep the status notification hidden until an error needs to be shown.
     window.addEventListener('DOMContentLoaded', () => {
       const initialStatus = document.getElementById('status');
       if (initialStatus) setTimeout(() => initialStatus.classList.remove('show'), 2000);
