@@ -1622,6 +1622,19 @@
             Loading bookmarks…
           </div>
 
+          <div class="panel" id="no-bookmarks-help" style="display:none;margin:12px 0;padding:16px">
+            <h3 style="margin:0 0 8px">No bookmarks? You can still split this PDF.</h3>
+            <p style="color:var(--text-muted);margin-bottom:12px">Optional: ask an AI assistant to identify chapter page ranges, then paste its list below. Or skip this and use the regular Split / Extract tools.</p>
+            <div class="controls" style="margin-bottom:12px">
+              <button class="btn btn-secondary btn-sm" id="bm-copy-ai-prompt" type="button">Copy AI prompt</button>
+              <button class="btn btn-secondary btn-sm" id="bm-skip-ai-help" type="button">Skip — I'll split it myself</button>
+            </div>
+            <label for="bm-ai-chapters">Paste the AI chapter list (pipe-separated)</label>
+            <textarea id="bm-ai-chapters" rows="5" placeholder="1 | Introduction | 15 | 28 | High&#10;2 | Basic Principles | 29 | 54 | High" style="width:100%;margin:6px 0 10px"></textarea>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px">Expected columns: chapter number | title | start PDF page | end PDF page | confidence. Page numbers must refer to the full original PDF, starting at page 1.</p>
+            <button class="btn btn-primary btn-sm" id="bm-import-ai-chapters" type="button">Import chapter list</button>
+          </div>
+
           <div class="toolbar-row">
             <div class="control-group">
               <label>Extraction mode</label>
@@ -2391,14 +2404,18 @@
 
         if (!outline || outline.length === 0) {
           document.getElementById('chapters-info').innerHTML =
-            `<strong>No bookmarks found</strong> in this PDF. You can still use the manual Split / Extract tool.`;
+            `<strong>No bookmarks found</strong> in this PDF. AI-assisted chapter import is optional; you can skip it and use the other PDF tools.`;
           document.getElementById('chapters-content').style.display = 'block';
+          document.getElementById('no-bookmarks-help').style.display = 'block';
           state.bmFlat = [];
+          state.bmSelected.clear();
           renderBookmarkTree();
           updatePreviewTable();
-          showStatus('No bookmarks in this PDF', 'error');
+          document.getElementById('bm-extract-btn').disabled = true;
+          document.getElementById('bm-extract-status').textContent = 'Import a chapter list, or use another tool';
           return;
         }
+        document.getElementById('no-bookmarks-help').style.display = 'none';
 
         state.bmFlat = await flattenOutline(data.pdfJsDoc, outline);
         const ranges = calculateRanges(state.bmFlat, totalPages);
@@ -2424,6 +2441,103 @@
         console.error(err);
         showStatus('Failed to load PDF: ' + err.message, 'error');
       }
+    });
+
+    const aiChapterPrompt = [
+      'Inspect this textbook PDF and identify every main chapter in document order.',
+      'Return one chapter per line in this exact format:',
+      'CHAPTER_NUMBER | CHAPTER_TITLE | START_PDF_PAGE | END_PDF_PAGE | CONFIDENCE',
+      'Use PDF page indices, counting the first page of the complete original PDF as page 1. Do not use printed page numbers unless they match PDF page indices.',
+      'Do not guess. Flag uncertain boundaries. If the PDF is too large, analyze the supplied chunks but keep page numbers relative to the complete original PDF.',
+      'Example: 1 | Introduction | 15 | 28 | High',
+      'Exclude the table of contents, index, references, and appendices unless explicitly requested.'
+    ].join('\n');
+
+    document.getElementById('bm-copy-ai-prompt')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(aiChapterPrompt);
+        showStatus('AI prompt copied. Paste it into your preferred LLM.');
+      } catch (err) {
+        const helper = document.createElement('textarea');
+        helper.value = aiChapterPrompt;
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.select();
+        const copied = document.execCommand('copy');
+        helper.remove();
+        if (copied) showStatus('AI prompt copied. Paste it into your preferred LLM.');
+        else showStatus('Could not copy automatically. Please copy the prompt manually.', 'error');
+      }
+    });
+
+    document.getElementById('bm-skip-ai-help')?.addEventListener('click', () => {
+      document.getElementById('no-bookmarks-help').style.display = 'none';
+      document.getElementById('chapters-info').innerHTML =
+        '<strong>No bookmarks found.</strong> AI chapter import was skipped. You can use Split / Extract or another tool whenever you are ready.';
+    });
+
+    document.getElementById('bm-import-ai-chapters')?.addEventListener('click', () => {
+      const raw = document.getElementById('bm-ai-chapters').value.trim();
+      if (!raw) {
+        showStatus('Paste a chapter list first, or skip this step.', 'error');
+        return;
+      }
+
+      const totalPages = state.currentPdfDoc?.getPageCount() || 0;
+      const parsed = [];
+      const errors = [];
+      raw.split(/\r?\n/).forEach((line, lineIndex) => {
+        const clean = line.trim();
+        if (!clean || /^CHAPTER_NUMBER\s*\|/i.test(clean) || /^chapter(?:\s*number)?[,\t]/i.test(clean)) return;
+        const parts = clean.includes('|') ? clean.split('|').map(part => part.trim()) :
+          (clean.includes('\t') ? clean.split('\t').map(part => part.trim()) : clean.split(',').map(part => part.trim()));
+        if (parts.length < 4) {
+          errors.push('Line ' + (lineIndex + 1) + ': expected title and start/end page columns.');
+          return;
+        }
+        // Supports: number | title | start | end | confidence, or title | start | end | confidence.
+        const hasChapterNumber = parts.length >= 5 && /^\d+[.)]?$/.test(parts[0]);
+        const title = hasChapterNumber ? parts[1] : parts[0];
+        const start = Number(parts[hasChapterNumber ? 2 : 1]);
+        const end = Number(parts[hasChapterNumber ? 3 : 2]);
+        if (!title || !Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > totalPages) {
+          errors.push('Line ' + (lineIndex + 1) + ': invalid title or page range (PDF has ' + totalPages + ' pages).');
+          return;
+        }
+        parsed.push({ title, start, end });
+      });
+
+      if (errors.length) {
+        showStatus(errors.slice(0, 2).join(' '), 'error');
+        return;
+      }
+      if (!parsed.length) {
+        showStatus('No valid chapter rows found. Check the format and try again.', 'error');
+        return;
+      }
+
+      state.bmFlat = parsed.map((chapter, id) => ({
+        id,
+        title: chapter.title,
+        page: chapter.start,
+        start: chapter.start,
+        end: chapter.end,
+        level: 0,
+        hasChildren: false,
+        flagged: false
+      }));
+      state.bmSelected.clear();
+      state.bmFlat.forEach(chapter => state.bmSelected.add(chapter.id));
+      document.getElementById('bm-mode').value = 'manual';
+      document.getElementById('bm-prefix').value = state.sourceFileName + ' - ';
+      document.getElementById('no-bookmarks-help').style.display = 'none';
+      document.getElementById('chapters-info').innerHTML =
+        '<strong>Imported ' + parsed.length + ' chapter(s).</strong> Review the page ranges below before extracting.';
+      renderBookmarkTree();
+      updatePreviewTable();
+      document.getElementById('bm-extract-status').textContent = parsed.length + ' imported chapter(s) ready to review';
+      showStatus('Imported ' + parsed.length + ' chapter(s)');
     });
 
     function autoSelectChapters() {
