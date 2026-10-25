@@ -2,26 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF Toolkit — Chapter Extractor & PDF Tools</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c1210" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PDF Toolkit" />
+  <meta name="application-name" content="PDF Toolkit · StudyMats" />
+  <meta name="description" content="Client-side PDF toolkit with bookmark-based chapter extraction. Part of the StudyMats toolkit by mdfl212. Works offline." />
+  <meta name="author" content="mdfl212" />
+  <title>PDF Toolkit · StudyMats — Chapter Extractor</title>
+
+  <!-- PWA Manifest (generated at runtime for single-file support) -->
+  <link rel="manifest" id="pwa-manifest" />
+
+  <!-- Simple app icons via SVG data URIs -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231e6b3a'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='%23c9a227'%3E📄%3C/text%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231e6b3a'/%3E%3Ctext x='90' y='120' font-size='90' text-anchor='middle' fill='%23c9a227'%3E📄%3C/text%3E%3C/svg%3E" />
+
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
   <style>
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #242836;
-      --border: #2e3345;
-      --text: #e8eaed;
-      --text-muted: #9aa0b0;
-      --accent: #4f8cff;
-      --accent-hover: #3a7aef;
-      --success: #34d399;
+      /* Dark mode · CSU green + gold */
+      --bg: #0c1210;
+      --surface: #141c18;
+      --surface2: #1c2822;
+      --border: #2a3a32;
+      --text: #e8efe9;
+      --text-muted: #9aaf9f;
+      --accent: #c9a227;          /* gold */
+      --accent-hover: #ddb82e;
+      --accent-green: #1e6b3a;    /* CSU green */
+      --accent-green-soft: rgba(30, 107, 58, 0.22);
+      --success: #3dba6e;
       --danger: #f87171;
-      --warning: #fbbf24;
+      --warning: #e8c547;
       --radius: 12px;
-      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --shadow: 0 8px 32px rgba(0,0,0,0.45);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,7 +77,7 @@
     .logo-icon {
       width: 36px;
       height: 36px;
-      background: linear-gradient(135deg, #4f8cff, #7c5cff);
+      background: linear-gradient(135deg, #1e6b3a, #c9a227);
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -118,19 +138,19 @@
     .tool-btn:hover { background: var(--surface2); }
 
     .tool-btn.active {
-      background: rgba(79, 140, 255, 0.15);
+      background: var(--accent-green-soft);
       color: var(--accent);
       font-weight: 500;
     }
 
     .tool-btn.primary-tool {
-      background: linear-gradient(135deg, rgba(79,140,255,0.18), rgba(124,92,255,0.12));
-      border: 1px solid rgba(79,140,255,0.3);
+      background: linear-gradient(135deg, rgba(30,107,58,0.28), rgba(201,162,39,0.12));
+      border: 1px solid rgba(201,162,39,0.35);
       margin-bottom: 12px;
     }
 
     .tool-btn.primary-tool.active {
-      background: linear-gradient(135deg, rgba(79,140,255,0.28), rgba(124,92,255,0.2));
+      background: linear-gradient(135deg, rgba(30,107,58,0.4), rgba(201,162,39,0.2));
       border-color: var(--accent);
     }
 
@@ -176,7 +196,7 @@
     .drop-zone:hover,
     .drop-zone.dragover {
       border-color: var(--accent);
-      background: rgba(79, 140, 255, 0.06);
+      background: rgba(201, 162, 39, 0.07);
     }
 
     .drop-zone.dragover { transform: scale(1.01); }
@@ -242,8 +262,15 @@
       transition: all 0.15s;
     }
 
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary {
+      background: var(--accent-green);
+      color: #f5f7f5;
+      border: 1px solid rgba(201, 162, 39, 0.35);
+    }
+    .btn-primary:hover {
+      background: #258a48;
+      border-color: var(--accent);
+    }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .btn-secondary {
@@ -441,8 +468,8 @@
     .meta-table tr:last-child td { border-bottom: none; }
 
     .note {
-      background: rgba(79, 140, 255, 0.08);
-      border: 1px solid rgba(79, 140, 255, 0.25);
+      background: rgba(30, 107, 58, 0.12);
+      border: 1px solid rgba(201, 162, 39, 0.28);
       border-radius: 8px;
       padding: 12px 16px;
       font-size: 0.88rem;
@@ -473,7 +500,7 @@
     }
 
     .bm-item:hover { background: var(--surface2); }
-    .bm-item.selected { background: rgba(79,140,255,0.1); border-left-color: var(--accent); }
+    .bm-item.selected { background: rgba(30,107,58,0.18); border-left-color: var(--accent); }
     .bm-item.ambiguous { background: rgba(251,191,36,0.08); }
     .bm-item.flagged { border-left-color: var(--warning); }
 
@@ -647,6 +674,69 @@
       .tool-section { margin-bottom: 0; display: flex; gap: 4px; }
       .tool-section h3 { display: none; }
       .tool-btn { white-space: nowrap; margin-bottom: 0; }
+      .header-hint { display: none; }
+      header { padding: 12px 16px; }
+    }
+
+    /* Safe area for notched phones when installed as PWA */
+    @supports (padding: env(safe-area-inset-top)) {
+      header {
+        padding-top: calc(16px + env(safe-area-inset-top));
+        padding-left: calc(28px + env(safe-area-inset-left));
+        padding-right: calc(28px + env(safe-area-inset-right));
+      }
+    }
+
+    /* Footer branding */
+    .app-footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 18px 28px 22px;
+    }
+    .footer-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .footer-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .footer-brand strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .footer-brand a,
+    .footer-links a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .footer-brand a:hover,
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 8px;
+      align-items: center;
+    }
+    .footer-dot { opacity: 0.45; }
+    .footer-note {
+      width: 100%;
+      font-size: 0.75rem;
+      opacity: 0.75;
+    }
+    @media (max-width: 700px) {
+      .app-footer { padding: 14px 16px 18px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; gap: 8px; }
     }
   </style>
 </head>
@@ -654,11 +744,20 @@
   <header>
     <div class="logo">
       <div class="logo-icon">📄</div>
-      <span>PDF Toolkit</span>
-      <span class="badge">100% Client-side</span>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="display:flex;align-items:center;gap:8px">
+          PDF Toolkit
+          <span class="badge">StudyMats</span>
+        </span>
+        <span style="font-size:0.7rem;font-weight:500;color:var(--text-muted);letter-spacing:0.04em">by mdfl212 · 100% client-side</span>
+      </div>
     </div>
-    <div style="font-size:0.85rem;color:var(--text-muted)">
-      No uploads • No limits • Runs offline
+    <div style="display:flex;align-items:center;gap:12px;font-size:0.85rem;color:var(--text-muted)">
+      <span id="offline-badge" style="display:none;background:rgba(52,211,153,0.15);color:var(--success);padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:500">Offline ready</span>
+      <button class="btn btn-secondary btn-sm" id="pwa-install-btn" style="display:none">
+        Install App
+      </button>
+      <span class="header-hint">No uploads • No limits</span>
     </div>
   </header>
 
@@ -964,6 +1063,25 @@
       </div>
     </main>
   </div>
+
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <strong>PDF Toolkit</strong>
+        <span>part of <a href="https://mdfl212.github.io/mdfl212.studymats.io/" target="_blank" rel="noopener">StudyMats</a> by <a href="https://github.com/mdfl212" target="_blank" rel="noopener">mdfl212</a></span>
+      </div>
+      <div class="footer-links">
+        <a href="https://mdfl212.github.io/mdfl212.studymats.io/" target="_blank" rel="noopener">StudyMats Question Bank</a>
+        <span class="footer-dot">·</span>
+        <a href="https://github.com/mdfl212/MedTrans-GitHub-Repo" target="_blank" rel="noopener">MedTrans</a>
+        <span class="footer-dot">·</span>
+        <a href="https://github.com/mdfl212" target="_blank" rel="noopener">More tools</a>
+      </div>
+      <div class="footer-note">
+        Runs entirely in your browser · Files never leave your device
+      </div>
+    </div>
+  </footer>
 
   <div class="status" id="status">
     <span id="status-icon">✓</span>
@@ -2026,6 +2144,158 @@
         showStatus('Failed to read metadata: ' + err.message, 'error');
       }
     });
+
+    // ===================== PWA: Manifest + Service Worker + Install =====================
+    (function initPWA() {
+      // 1. Generate and attach Web App Manifest
+      const manifest = {
+        name: 'PDF Toolkit · StudyMats',
+        short_name: 'PDF Toolkit',
+        description: 'Client-side PDF chapter extractor by mdfl212. Part of StudyMats. Works offline.',
+        start_url: './',
+        scope: './',
+        display: 'standalone',
+        orientation: 'any',
+        background_color: '#0c1210',
+        theme_color: '#0c1210',
+        categories: ['utilities', 'productivity'],
+        icons: [
+          {
+            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%231e6b3a'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle' fill='%23c9a227'%3E📄%3C/text%3E%3C/svg%3E",
+            sizes: '192x192',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          },
+          {
+            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%231e6b3a'/%3E%3Ctext x='256' y='348' font-size='280' text-anchor='middle' fill='%23c9a227'%3E📄%3C/text%3E%3C/svg%3E",
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestURL = URL.createObjectURL(manifestBlob);
+      const manifestLink = document.getElementById('pwa-manifest');
+      if (manifestLink) manifestLink.href = manifestURL;
+
+      // 2. Service Worker for offline caching
+      const swCode = `
+        const CACHE = 'pdf-toolkit-v1';
+        const ASSETS = [
+          './',
+          self.location.href,
+          'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
+          'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs'
+        ];
+
+        self.addEventListener('install', (event) => {
+          event.waitUntil(
+            caches.open(CACHE).then((cache) => cache.addAll(ASSETS).catch(() => {}))
+          );
+          self.skipWaiting();
+        });
+
+        self.addEventListener('activate', (event) => {
+          event.waitUntil(
+            caches.keys().then((keys) =>
+              Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+            )
+          );
+          self.clients.claim();
+        });
+
+        self.addEventListener('fetch', (event) => {
+          const req = event.request;
+          // Only handle GET
+          if (req.method !== 'GET') return;
+
+          event.respondWith(
+            caches.match(req).then((cached) => {
+              if (cached) return cached;
+              return fetch(req).then((res) => {
+                // Cache successful same-origin and CDN responses
+                if (res && res.status === 200 && (req.url.startsWith(self.location.origin) ||
+                    req.url.includes('cdn.jsdelivr.net') ||
+                    req.url.includes('cdnjs.cloudflare.com'))) {
+                  const clone = res.clone();
+                  caches.open(CACHE).then((cache) => cache.put(req, clone));
+                }
+                return res;
+              }).catch(() => cached || new Response('Offline', { status: 503 }));
+            })
+          );
+        });
+      `;
+
+      // Register service worker only when served over http/https (not file://)
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        const swBlob = new Blob([swCode], { type: 'application/javascript' });
+        const swURL = URL.createObjectURL(swBlob);
+
+        navigator.serviceWorker.register(swURL, { scope: './' })
+          .then((reg) => {
+            console.log('[PWA] Service Worker registered');
+            document.getElementById('offline-badge').style.display = 'inline-block';
+            // Update if a new SW is waiting
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    showStatus('Update available — refresh to apply');
+                  }
+                });
+              }
+            });
+          })
+          .catch((err) => {
+            console.warn('[PWA] SW registration failed:', err);
+          });
+      } else {
+        // file:// or unsupported — still usable, just no offline/install
+        console.info('[PWA] Service Worker requires HTTPS or localhost. Open via a local server or host it for full offline + install support.');
+      }
+
+      // 3. Install prompt handling
+      let deferredPrompt = null;
+      const installBtn = document.getElementById('pwa-install-btn');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'inline-flex';
+      });
+
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+          // Fallback instructions
+          showStatus('To install: use browser menu → “Install app” / “Add to Home Screen”');
+          return;
+        }
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          showStatus('App installed');
+          installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+      });
+
+      window.addEventListener('appinstalled', () => {
+        installBtn.style.display = 'none';
+        showStatus('PDF Toolkit installed successfully');
+      });
+
+      // Detect if already running as installed PWA
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        installBtn.style.display = 'none';
+        document.getElementById('offline-badge').style.display = 'inline-block';
+      }
+    })();
   </script>
 </body>
 </html>
