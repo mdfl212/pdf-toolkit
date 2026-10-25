@@ -439,21 +439,43 @@
     .status {
       position: fixed;
       bottom: 24px;
-      right: 24px;
+      right: 16px;
+      width: fit-content;
+      max-width: min(320px, calc(100vw - 32px));
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 12px 18px;
+      padding: 9px 10px 9px 13px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       box-shadow: var(--shadow);
       transform: translateY(120px);
       opacity: 0;
       transition: all 0.3s ease;
       z-index: 200;
-      max-width: 360px;
+      box-sizing: border-box;
     }
+    .status #status-text { overflow-wrap: anywhere; }
+    .status-close {
+      flex: 0 0 auto;
+      margin-left: 3px;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .status-close:hover { background: var(--surface-hover, rgba(127,127,127,.12)); color: var(--text); }
 
     .status.show { transform: translateY(0); opacity: 1; }
     .status.success { border-color: var(--success); }
@@ -817,10 +839,11 @@
       }
       .btn-sm { min-height: 40px; }
       .status {
-        left: 12px;
+        left: auto;
         right: 12px;
         bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-        max-width: none;
+        width: fit-content;
+        max-width: calc(100vw - 24px);
       }
       .batch-table-wrap { font-size: 0.8rem; }
       .rotate-opt { min-width: 88px; flex: 1; }
@@ -1369,12 +1392,12 @@
 
       .status {
         bottom: calc(82px + env(safe-area-inset-bottom, 0px));
-        left: 12px;
+        left: auto;
         right: 12px;
-        width: auto;
-        max-width: none;
-        padding: 13px 15px;
-        border-radius: 12px;
+        width: fit-content;
+        max-width: calc(100vw - 24px);
+        padding: 8px 9px 8px 12px;
+        border-radius: 10px;
       }
 
       .app-footer {
@@ -2024,9 +2047,10 @@
     </div>
   </footer>
 
-  <div class="status" id="status">
-    <span id="status-icon">✓</span>
+  <div class="status" id="status" role="status" aria-live="polite">
+    <span id="status-icon" aria-hidden="true">✓</span>
     <span id="status-text">Ready</span>
+    <button type="button" class="status-close" aria-label="Dismiss notification" title="Close" onclick="document.getElementById('status').classList.remove('show')">×</button>
   </div>
 
   <script type="module">
