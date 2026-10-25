@@ -2451,7 +2451,7 @@
       'Do not guess. Flag uncertain boundaries. If the PDF is too large, analyze the supplied chunks but keep page numbers relative to the complete original PDF.',
       'Example: 1 | Introduction | 15 | 28 | High',
       'Exclude the table of contents, index, references, and appendices unless explicitly requested.'
-    ].join('\\n');
+    ].join('\n');
 
     document.getElementById('bm-copy-ai-prompt')?.addEventListener('click', async () => {
       try {
@@ -2487,17 +2487,17 @@
       const totalPages = state.currentPdfDoc?.getPageCount() || 0;
       const parsed = [];
       const errors = [];
-      raw.split(/\\r?\\n/).forEach((line, lineIndex) => {
+      raw.split(/\r?\n/).forEach((line, lineIndex) => {
         const clean = line.trim();
-        if (!clean || /^CHAPTER_NUMBER\\s*\\|/i.test(clean) || /^chapter(?:\\s*number)?[,\\t]/i.test(clean)) return;
+        if (!clean || /^CHAPTER_NUMBER\s*\|/i.test(clean) || /^chapter(?:\s*number)?[,\t]/i.test(clean)) return;
         const parts = clean.includes('|') ? clean.split('|').map(part => part.trim()) :
-          (clean.includes('\\t') ? clean.split('\\t').map(part => part.trim()) : clean.split(',').map(part => part.trim()));
+          (clean.includes('\t') ? clean.split('\t').map(part => part.trim()) : clean.split(',').map(part => part.trim()));
         if (parts.length < 4) {
           errors.push('Line ' + (lineIndex + 1) + ': expected title and start/end page columns.');
           return;
         }
         // Supports: number | title | start | end | confidence, or title | start | end | confidence.
-        const hasChapterNumber = parts.length >= 5 && /^\\d+[.)]?$/.test(parts[0]);
+        const hasChapterNumber = parts.length >= 5 && /^\d+[.)]?$/.test(parts[0]);
         const title = hasChapterNumber ? parts[1] : parts[0];
         const start = Number(parts[hasChapterNumber ? 2 : 1]);
         const end = Number(parts[hasChapterNumber ? 3 : 2]);
