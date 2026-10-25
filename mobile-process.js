@@ -1,4 +1,3 @@
-
 (() => {
   const onReady = (fn) => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -35,6 +34,14 @@
       </div>`;
     document.body.appendChild(dock);
 
+    const fab = document.createElement('button');
+    fab.type = 'button';
+    fab.className = 'mobile-process-fab';
+    fab.setAttribute('aria-label', 'Show extraction progress');
+    fab.setAttribute('aria-expanded', 'false');
+    fab.innerHTML = '<span class="mobile-process-fab-inner"><span class="mobile-process-fab-icon" id="mobile-process-fab-icon">↗</span><span class="mobile-process-fab-percent" id="mobile-process-fab-percent">0%</span></span>';
+    document.body.appendChild(fab);
+
     const titleEl = dock.querySelector('#mobile-process-title');
     const statusEl = dock.querySelector('#mobile-process-status');
     const percentEl = dock.querySelector('#mobile-process-percent');
@@ -42,47 +49,71 @@
     const trackEl = dock.querySelector('[role="progressbar"]');
     const downloadBtn = dock.querySelector('#mobile-process-download');
     const viewBtn = dock.querySelector('#mobile-process-view');
+    const fabIcon = fab.querySelector('#mobile-process-fab-icon');
+    const fabPercent = fab.querySelector('#mobile-process-fab-percent');
     const mobile = () => window.matchMedia('(max-width: 900px)').matches;
     let focusMode = false;
+    let detailsOpen = false;
     let zipWasRunning = false;
 
     function setFocusMode(on) {
       focusMode = on;
       document.body.classList.toggle('mobile-process-focus', on && mobile());
-      dock.classList.toggle('visible', on && mobile());
+      fab.classList.toggle('visible', on && mobile());
+      if (!on) {
+        detailsOpen = false;
+        dock.classList.remove('visible');
+        fab.setAttribute('aria-expanded', 'false');
+      }
     }
+
     function updateDock() {
       if (!focusMode || !mobile()) {
         dock.classList.remove('visible');
+        fab.classList.remove('visible');
         document.body.classList.remove('mobile-process-focus');
         return;
       }
-      dock.classList.add('visible');
+      fab.classList.add('visible');
       const pct = Math.max(0, Math.min(100, parseFloat(fill.style.width) || 0));
       fillEl.style.width = pct + '%';
       percentEl.textContent = Math.round(pct) + '%';
+      fabPercent.textContent = Math.round(pct) + '%';
+      fab.style.setProperty('--process-progress', pct + '%');
       trackEl.setAttribute('aria-valuenow', String(Math.round(pct)));
 
       const message = (status.textContent || '').trim();
       const zipReady = zipBtn.style.display !== 'none' && !zipBtn.disabled;
       const zipRunning = zipBtn.disabled;
       downloadBtn.disabled = !zipReady || zipRunning;
+      fab.classList.toggle('ready', zipReady && !zipRunning);
+      fabIcon.textContent = zipReady && !zipRunning ? '↓' : (zipRunning ? '…' : '↗');
+      fab.setAttribute('aria-label', zipReady && !zipRunning ? 'Download ZIP' : 'Show extraction progress');
+
       if (zipRunning) {
         zipWasRunning = true;
-        titleEl.textContent = 'Compressing & downloading';
-        statusEl.textContent = message || 'Building ZIP…';
+        titleEl.textContent = 'Compressing ZIP';
+        statusEl.textContent = message || 'Building ZIP file…';
         downloadBtn.textContent = 'Compressing…';
       } else if (message.toLowerCase().includes('ready for zip') || zipReady) {
         titleEl.textContent = 'Chapters extracted';
-        statusEl.textContent = message || 'Ready to create your ZIP file';
+        statusEl.textContent = message || 'Ready to download the ZIP';
         downloadBtn.textContent = '⬇ Download ZIP';
-        if (pct === 0) { fillEl.style.width = '100%'; percentEl.textContent = '100%'; trackEl.setAttribute('aria-valuenow', '100'); }
+        if (pct === 0) {
+          fillEl.style.width = '100%';
+          percentEl.textContent = '100%';
+          fabPercent.textContent = 'ZIP';
+          fab.style.setProperty('--process-progress', '100%');
+          trackEl.setAttribute('aria-valuenow', '100');
+        }
       } else if (message.toLowerCase().includes('zip download started') || message.toLowerCase().includes('done')) {
-        titleEl.textContent = 'ZIP ready';
+        titleEl.textContent = 'Download started';
         statusEl.textContent = message;
         downloadBtn.textContent = '⬇ Download ZIP again';
-      } else if (message.toLowerCase().includes('failed')) {
-        titleEl.textContent = 'Something went wrong';
+        fabPercent.textContent = 'ZIP';
+        fab.style.setProperty('--process-progress', '100%');
+      } else if (message.toLowerCase().includes('failed') || message.toLowerCase().includes('error')) {
+        titleEl.textContent = 'Extraction issue';
         statusEl.textContent = message;
         downloadBtn.textContent = 'Try ZIP again';
       } else {
@@ -95,30 +126,50 @@
         statusEl.textContent = message;
         fillEl.style.width = '100%';
         percentEl.textContent = '100%';
+        fabPercent.textContent = 'ZIP';
+        fab.style.setProperty('--process-progress', '100%');
         trackEl.setAttribute('aria-valuenow', '100');
         downloadBtn.textContent = '⬇ Download ZIP again';
       }
+      dock.classList.toggle('visible', detailsOpen);
+      fab.setAttribute('aria-expanded', String(detailsOpen));
     }
 
     extractBtn.addEventListener('click', () => {
       if (!mobile()) return;
+      detailsOpen = false;
       setFocusMode(true);
       titleEl.textContent = 'Splitting chapters';
       statusEl.textContent = 'Extracting selected chapters…';
       fillEl.style.width = '0%';
       percentEl.textContent = '0%';
+      fabPercent.textContent = '0%';
+      fab.style.setProperty('--process-progress', '0%');
       trackEl.setAttribute('aria-valuenow', '0');
       updateDock();
     });
 
+    fab.addEventListener('click', () => {
+      const zipReady = zipBtn.style.display !== 'none' && !zipBtn.disabled;
+      if (zipReady) {
+        zipBtn.click();
+        return;
+      }
+      detailsOpen = !detailsOpen;
+      updateDock();
+    });
     downloadBtn.addEventListener('click', () => {
       if (!downloadBtn.disabled) zipBtn.click();
     });
     viewBtn.addEventListener('click', () => {
-      document.body.classList.remove('mobile-process-focus');
-      dock.classList.remove('visible');
-      focusMode = false;
+      setFocusMode(false);
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    document.addEventListener('click', (event) => {
+      if (detailsOpen && !dock.contains(event.target) && !fab.contains(event.target)) {
+        detailsOpen = false;
+        updateDock();
+      }
     });
 
     const observer = new MutationObserver(updateDock);
