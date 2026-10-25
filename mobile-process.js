@@ -1,0 +1,137 @@
+
+(() => {
+  const onReady = (fn) => {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+    else fn();
+  };
+  onReady(() => {
+    const panel = document.getElementById('panel-chapters');
+    const extractBtn = document.getElementById('bm-extract-btn');
+    const zipBtn = document.getElementById('bm-zip-btn');
+    const progress = document.getElementById('bm-progress');
+    const fill = document.getElementById('bm-progress-fill');
+    const status = document.getElementById('bm-extract-status');
+    const input = document.getElementById('chapters-input');
+    if (!panel || !extractBtn || !zipBtn || !progress || !fill || !status) return;
+
+    const dock = document.createElement('section');
+    dock.className = 'mobile-process-dock';
+    dock.setAttribute('aria-live', 'polite');
+    dock.setAttribute('aria-label', 'Chapter extraction progress');
+    dock.innerHTML = `
+      <div class="mobile-process-top">
+        <div class="mobile-process-copy">
+          <div class="mobile-process-title" id="mobile-process-title">Preparing chapters</div>
+          <div class="mobile-process-status" id="mobile-process-status">Getting ready…</div>
+        </div>
+        <div class="mobile-process-percent" id="mobile-process-percent">0%</div>
+      </div>
+      <div class="mobile-process-track" role="progressbar" aria-label="Processing progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="mobile-process-fill" id="mobile-process-fill"></div>
+      </div>
+      <div class="mobile-process-actions">
+        <button type="button" class="btn btn-success" id="mobile-process-download" disabled>⬇ Download ZIP</button>
+        <button type="button" class="btn btn-secondary mobile-process-back" id="mobile-process-view">View chapters</button>
+      </div>`;
+    document.body.appendChild(dock);
+
+    const titleEl = dock.querySelector('#mobile-process-title');
+    const statusEl = dock.querySelector('#mobile-process-status');
+    const percentEl = dock.querySelector('#mobile-process-percent');
+    const fillEl = dock.querySelector('#mobile-process-fill');
+    const trackEl = dock.querySelector('[role="progressbar"]');
+    const downloadBtn = dock.querySelector('#mobile-process-download');
+    const viewBtn = dock.querySelector('#mobile-process-view');
+    const mobile = () => window.matchMedia('(max-width: 900px)').matches;
+    let focusMode = false;
+    let zipWasRunning = false;
+
+    function setFocusMode(on) {
+      focusMode = on;
+      document.body.classList.toggle('mobile-process-focus', on && mobile());
+      dock.classList.toggle('visible', on && mobile());
+    }
+    function updateDock() {
+      if (!focusMode || !mobile()) {
+        dock.classList.remove('visible');
+        document.body.classList.remove('mobile-process-focus');
+        return;
+      }
+      dock.classList.add('visible');
+      const pct = Math.max(0, Math.min(100, parseFloat(fill.style.width) || 0));
+      fillEl.style.width = pct + '%';
+      percentEl.textContent = Math.round(pct) + '%';
+      trackEl.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+      const message = (status.textContent || '').trim();
+      const zipReady = zipBtn.style.display !== 'none' && !zipBtn.disabled;
+      const zipRunning = zipBtn.disabled;
+      downloadBtn.disabled = !zipReady || zipRunning;
+      if (zipRunning) {
+        zipWasRunning = true;
+        titleEl.textContent = 'Compressing & downloading';
+        statusEl.textContent = message || 'Building ZIP…';
+        downloadBtn.textContent = 'Compressing…';
+      } else if (message.toLowerCase().includes('ready for zip') || zipReady) {
+        titleEl.textContent = 'Chapters extracted';
+        statusEl.textContent = message || 'Ready to create your ZIP file';
+        downloadBtn.textContent = '⬇ Download ZIP';
+        if (pct === 0) { fillEl.style.width = '100%'; percentEl.textContent = '100%'; trackEl.setAttribute('aria-valuenow', '100'); }
+      } else if (message.toLowerCase().includes('zip download started') || message.toLowerCase().includes('done')) {
+        titleEl.textContent = 'ZIP ready';
+        statusEl.textContent = message;
+        downloadBtn.textContent = '⬇ Download ZIP again';
+      } else if (message.toLowerCase().includes('failed')) {
+        titleEl.textContent = 'Something went wrong';
+        statusEl.textContent = message;
+        downloadBtn.textContent = 'Try ZIP again';
+      } else {
+        titleEl.textContent = 'Splitting chapters';
+        statusEl.textContent = message || 'Extracting selected chapters…';
+        downloadBtn.textContent = 'Preparing ZIP…';
+      }
+      if (zipWasRunning && !zipRunning && message.toLowerCase().includes('download started')) {
+        titleEl.textContent = 'Download started';
+        statusEl.textContent = message;
+        fillEl.style.width = '100%';
+        percentEl.textContent = '100%';
+        trackEl.setAttribute('aria-valuenow', '100');
+        downloadBtn.textContent = '⬇ Download ZIP again';
+      }
+    }
+
+    extractBtn.addEventListener('click', () => {
+      if (!mobile()) return;
+      setFocusMode(true);
+      titleEl.textContent = 'Splitting chapters';
+      statusEl.textContent = 'Extracting selected chapters…';
+      fillEl.style.width = '0%';
+      percentEl.textContent = '0%';
+      trackEl.setAttribute('aria-valuenow', '0');
+      updateDock();
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!downloadBtn.disabled) zipBtn.click();
+    });
+    viewBtn.addEventListener('click', () => {
+      document.body.classList.remove('mobile-process-focus');
+      dock.classList.remove('visible');
+      focusMode = false;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    const observer = new MutationObserver(updateDock);
+    observer.observe(fill, { attributes: true, attributeFilter: ['style'] });
+    observer.observe(progress, { attributes: true, attributeFilter: ['style'] });
+    observer.observe(status, { childList: true, subtree: true, characterData: true });
+    observer.observe(zipBtn, { attributes: true, attributeFilter: ['style', 'disabled'] });
+
+    if (input) input.addEventListener('change', () => {
+      setFocusMode(false);
+      zipWasRunning = false;
+    });
+    window.addEventListener('resize', updateDock, { passive: true });
+    updateDock();
+  });
+})();
