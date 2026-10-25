@@ -2,10 +2,2030 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>PDF Toolkit · StudyMats</title>
-  <meta http-equiv="refresh" content="0; url=pdf-toolkit.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Toolkit — Chapter Extractor & PDF Tools</title>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242836;
+      --border: #2e3345;
+      --text: #e8eaed;
+      --text-muted: #9aa0b0;
+      --accent: #4f8cff;
+      --accent-hover: #3a7aef;
+      --success: #34d399;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --radius: 12px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #4f8cff, #7c5cff);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .badge {
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: calc(100vh - 69px);
+    }
+
+    aside {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      overflow-y: auto;
+    }
+
+    .tool-section { margin-bottom: 24px; }
+
+    .tool-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      padding: 0 8px;
+    }
+
+    .tool-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+      margin-bottom: 4px;
+    }
+
+    .tool-btn:hover { background: var(--surface2); }
+
+    .tool-btn.active {
+      background: rgba(79, 140, 255, 0.15);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .tool-btn.primary-tool {
+      background: linear-gradient(135deg, rgba(79,140,255,0.18), rgba(124,92,255,0.12));
+      border: 1px solid rgba(79,140,255,0.3);
+      margin-bottom: 12px;
+    }
+
+    .tool-btn.primary-tool.active {
+      background: linear-gradient(135deg, rgba(79,140,255,0.28), rgba(124,92,255,0.2));
+      border-color: var(--accent);
+    }
+
+    .tool-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+
+    main {
+      padding: 28px;
+      overflow-y: auto;
+    }
+
+    .panel { display: none; animation: fadeIn 0.2s ease; }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 { font-size: 1.4rem; margin-bottom: 6px; }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      background: var(--surface);
+      transition: all 0.2s;
+      cursor: pointer;
+      margin-bottom: 24px;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(79, 140, 255, 0.06);
+    }
+
+    .drop-zone.dragover { transform: scale(1.01); }
+
+    .drop-icon { font-size: 42px; margin-bottom: 12px; opacity: 0.7; }
+    .drop-zone p { color: var(--text-muted); margin-bottom: 8px; }
+    .drop-zone .hint { font-size: 0.85rem; opacity: 0.7; }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      transition: border-color 0.15s;
+    }
+
+    .file-item:hover { border-color: #3a4055; }
+
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.7rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-meta { font-size: 0.8rem; color: var(--text-muted); }
+    .file-actions { display: flex; gap: 6px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: #2c3142; }
+
+    .btn-danger {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--danger);
+    }
+    .btn-danger:hover { background: rgba(248, 113, 113, 0.25); }
+
+    .btn-success {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--success);
+    }
+    .btn-success:hover { background: rgba(52, 211, 153, 0.25); }
+
+    .btn-sm { padding: 6px 12px; font-size: 0.82rem; }
+
+    .btn-icon {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .btn-icon:hover { color: var(--text); background: #2c3142; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-group label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-size: 0.9rem;
+      min-width: 120px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .page-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .page-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: grab;
+      transition: all 0.15s;
+      position: relative;
+      user-select: none;
+    }
+
+    .page-card:hover { border-color: #3a4055; }
+    .page-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .page-card.dragging { opacity: 0.5; cursor: grabbing; }
+
+    .page-card .thumb {
+      width: 100%;
+      aspect-ratio: 1 / 1.414;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .page-card .thumb canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .page-card .page-info {
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      background: var(--surface2);
+    }
+
+    .page-card .page-num { font-weight: 600; }
+    .page-card .rotate-badge {
+      font-size: 0.7rem;
+      background: var(--accent);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+    .status {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow);
+      transform: translateY(120px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 200;
+      max-width: 360px;
+    }
+
+    .status.show { transform: translateY(0); opacity: 1; }
+    .status.success { border-color: var(--success); }
+    .status.error { border-color: var(--danger); }
+
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .meta-table th, .meta-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-table th {
+      background: var(--surface2);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      width: 180px;
+    }
+
+    .meta-table tr:last-child th,
+    .meta-table tr:last-child td { border-bottom: none; }
+
+    .note {
+      background: rgba(79, 140, 255, 0.08);
+      border: 1px solid rgba(79, 140, 255, 0.25);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* ========== Chapter Extractor specific ========== */
+    .bookmark-tree {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-height: 420px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding: 8px 0;
+    }
+
+    .bm-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-left: 3px solid transparent;
+      transition: background 0.12s;
+    }
+
+    .bm-item:hover { background: var(--surface2); }
+    .bm-item.selected { background: rgba(79,140,255,0.1); border-left-color: var(--accent); }
+    .bm-item.ambiguous { background: rgba(251,191,36,0.08); }
+    .bm-item.flagged { border-left-color: var(--warning); }
+
+    .bm-item .bm-toggle {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .bm-item .bm-check {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .bm-item .bm-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bm-item .bm-page {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      background: var(--surface2);
+      padding: 1px 7px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .bm-item .bm-level {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .bm-children { display: none; }
+    .bm-children.open { display: block; }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+
+    .preview-table th {
+      background: var(--surface2);
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preview-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .preview-table tr:last-child td { border-bottom: none; }
+    .preview-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .preview-table input[type="number"] {
+      width: 70px;
+      padding: 5px 8px;
+      font-size: 0.85rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-badge.ready { background: rgba(52,211,153,0.15); color: var(--success); }
+    .status-badge.warn { background: rgba(251,191,36,0.15); color: var(--warning); }
+    .status-badge.error { background: rgba(248,113,113,0.15); color: var(--danger); }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.2s;
+    }
+
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .result-item .ri-name { flex: 1; font-weight: 500; }
+    .result-item .ri-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 180px;
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      padding-left: 34px;
+    }
+    .search-box::before {
+      content: '⌕';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      aside {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        overflow-x: auto;
+        padding: 12px;
+        gap: 4px;
+      }
+      .tool-section { margin-bottom: 0; display: flex; gap: 4px; }
+      .tool-section h3 { display: none; }
+      .tool-btn { white-space: nowrap; margin-bottom: 0; }
+    }
+  </style>
 </head>
 <body>
-  <p>Redirecting to <a href="pdf-toolkit.html">PDF Toolkit</a>…</p>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📄</div>
+      <span>PDF Toolkit</span>
+      <span class="badge">100% Client-side</span>
+    </div>
+    <div style="font-size:0.85rem;color:var(--text-muted)">
+      No uploads • No limits • Runs offline
+    </div>
+  </header>
+
+  <div class="app">
+    <aside>
+      <div class="tool-section">
+        <h3>Main Tool</h3>
+        <button class="tool-btn primary-tool active" data-panel="chapters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="6" x2="16" y2="6"/><line x1="12" y1="10" x2="16" y2="10"/><line x1="12" y1="14" x2="14" y2="14"/></svg>
+          Chapter Extractor
+        </button>
+      </div>
+      <div class="tool-section">
+        <h3>Tools</h3>
+        <button class="tool-btn" data-panel="merge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          Merge PDFs
+        </button>
+        <button class="tool-btn" data-panel="split">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Split / Extract
+        </button>
+        <button class="tool-btn" data-panel="delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Delete Pages
+        </button>
+        <button class="tool-btn" data-panel="rotate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Rotate Pages
+        </button>
+        <button class="tool-btn" data-panel="reorder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Reorder Pages
+        </button>
+        <button class="tool-btn" data-panel="watermark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Watermark
+        </button>
+        <button class="tool-btn" data-panel="metadata">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Metadata
+        </button>
+      </div>
+    </aside>
+
+    <main>
+      <!-- ==================== CHAPTER EXTRACTOR ==================== -->
+      <div class="panel active" id="panel-chapters">
+        <h2>Bookmark-Based Chapter Extractor</h2>
+        <p class="subtitle">Automatically extract textbook chapters using the PDF’s embedded bookmarks. No manual page hunting required.</p>
+
+        <div class="drop-zone" id="chapters-drop">
+          <div class="drop-icon">📚</div>
+          <p><strong>Drop a textbook PDF here</strong> or click to browse</p>
+          <p class="hint">Works best with PDFs that contain an outline / bookmarks</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="chapters-input">
+        </div>
+
+        <div id="chapters-content" style="display:none">
+          <div class="note" id="chapters-info">
+            Loading bookmarks…
+          </div>
+
+          <div class="toolbar-row">
+            <div class="control-group">
+              <label>Extraction mode</label>
+              <select id="bm-mode">
+                <option value="auto">Auto (detect chapter level)</option>
+                <option value="0">Top-level only (depth 0)</option>
+                <option value="1">Depth 1 (typical chapters)</option>
+                <option value="2">Depth 2 (sections)</option>
+                <option value="3">Depth 3</option>
+                <option value="manual">Manual selection only</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Filename prefix</label>
+              <input type="text" id="bm-prefix" placeholder="Optional prefix" style="min-width:140px">
+            </div>
+            <div class="control-group">
+              <label>&nbsp;</label>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary btn-sm" id="bm-expand-all">Expand all</button>
+                <button class="btn btn-secondary btn-sm" id="bm-collapse-all">Collapse all</button>
+                <button class="btn btn-secondary btn-sm" id="bm-select-visible">Select visible</button>
+                <button class="btn btn-secondary btn-sm" id="bm-deselect-all">Deselect all</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="search-box" style="margin-bottom:12px">
+            <input type="text" id="bm-search" placeholder="Filter bookmarks by title…">
+          </div>
+
+          <div class="bookmark-tree" id="bm-tree"></div>
+
+          <h3 style="font-size:1.05rem;margin:20px 0 12px">Page-range preview</h3>
+          <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:12px">
+            Ranges are calculated from the bookmark hierarchy. You can edit Start / End pages manually. Flagged rows need review.
+          </p>
+
+          <div style="overflow-x:auto">
+            <table class="preview-table" id="bm-preview">
+              <thead>
+                <tr>
+                  <th style="width:40px"><input type="checkbox" id="bm-preview-all" checked title="Select all for export"></th>
+                  <th>Chapter / Section</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Pages</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="bm-preview-body"></tbody>
+            </table>
+          </div>
+
+          <div class="controls" style="margin-top:8px">
+            <button class="btn btn-primary" id="bm-extract-btn" disabled>
+              Extract selected chapters
+            </button>
+            <button class="btn btn-success" id="bm-zip-btn" disabled style="display:none">
+              Download all as ZIP
+            </button>
+            <span id="bm-extract-status" style="color:var(--text-muted);font-size:0.9rem"></span>
+          </div>
+
+          <div class="progress-bar" id="bm-progress" style="display:none">
+            <div class="fill" id="bm-progress-fill"></div>
+          </div>
+
+          <div class="results-list" id="bm-results"></div>
+        </div>
+      </div>
+
+      <!-- ==================== MERGE ==================== -->
+      <div class="panel" id="panel-merge">
+        <h2>Merge PDFs</h2>
+        <p class="subtitle">Combine multiple PDF files into one document. Drag files to reorder before merging.</p>
+
+        <div class="drop-zone" id="merge-drop" data-multiple="true">
+          <div class="drop-icon">📂</div>
+          <p><strong>Drop PDF files here</strong> or click to browse</p>
+          <p class="hint">You can select multiple files at once</p>
+          <input type="file" accept=".pdf,application/pdf" multiple hidden id="merge-input">
+        </div>
+
+        <div class="file-list" id="merge-files"></div>
+
+        <div class="controls" id="merge-controls" style="display:none">
+          <button class="btn btn-primary" id="merge-btn" disabled>
+            Merge & Download
+          </button>
+          <button class="btn btn-secondary" id="merge-clear">Clear all</button>
+        </div>
+      </div>
+
+      <!-- ==================== SPLIT ==================== -->
+      <div class="panel" id="panel-split">
+        <h2>Split / Extract Pages</h2>
+        <p class="subtitle">Extract specific pages or page ranges from a PDF.</p>
+
+        <div class="drop-zone" id="split-drop">
+          <div class="drop-icon">✂️</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="split-input">
+        </div>
+
+        <div id="split-content" style="display:none">
+          <div class="controls">
+            <div class="control-group">
+              <label>Page ranges (e.g. 1-3, 5, 8-10)</label>
+              <input type="text" id="split-ranges" placeholder="1-3, 5, 8-10" style="min-width:220px">
+            </div>
+            <button class="btn btn-primary" id="split-btn">Extract & Download</button>
+            <button class="btn btn-secondary" id="split-all-btn">Split into single pages</button>
+          </div>
+          <div class="page-grid" id="split-pages"></div>
+        </div>
+      </div>
+
+      <!-- ==================== DELETE ==================== -->
+      <div class="panel" id="panel-delete">
+        <h2>Delete Pages</h2>
+        <p class="subtitle">Select pages to remove from the document.</p>
+
+        <div class="drop-zone" id="delete-drop">
+          <div class="drop-icon">🗑️</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="delete-input">
+        </div>
+
+        <div id="delete-content" style="display:none">
+          <div class="controls">
+            <button class="btn btn-primary" id="delete-btn" disabled>Delete selected & Download</button>
+            <button class="btn btn-secondary" id="delete-select-all">Select all</button>
+            <button class="btn btn-secondary" id="delete-deselect">Deselect all</button>
+            <span style="color:var(--text-muted);font-size:0.9rem" id="delete-count">0 pages selected</span>
+          </div>
+          <div class="page-grid" id="delete-pages"></div>
+        </div>
+      </div>
+
+      <!-- ==================== ROTATE ==================== -->
+      <div class="panel" id="panel-rotate">
+        <h2>Rotate Pages</h2>
+        <p class="subtitle">Rotate individual pages or the entire document.</p>
+
+        <div class="drop-zone" id="rotate-drop">
+          <div class="drop-icon">🔄</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="rotate-input">
+        </div>
+
+        <div id="rotate-content" style="display:none">
+          <div class="controls">
+            <div class="control-group">
+              <label>Rotation</label>
+              <select id="rotate-angle">
+                <option value="90">90° Clockwise</option>
+                <option value="180">180°</option>
+                <option value="270">90° Counter-clockwise</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="rotate-all-btn">Rotate all pages</button>
+            <button class="btn btn-primary" id="rotate-selected-btn" disabled>Rotate selected</button>
+            <button class="btn btn-secondary" id="rotate-download">Download</button>
+          </div>
+          <div class="page-grid" id="rotate-pages"></div>
+        </div>
+      </div>
+
+      <!-- ==================== REORDER ==================== -->
+      <div class="panel" id="panel-reorder">
+        <h2>Reorder Pages</h2>
+        <p class="subtitle">Drag and drop page thumbnails to change their order.</p>
+
+        <div class="drop-zone" id="reorder-drop">
+          <div class="drop-icon">↕️</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="reorder-input">
+        </div>
+
+        <div id="reorder-content" style="display:none">
+          <div class="controls">
+            <button class="btn btn-primary" id="reorder-download">Download reordered PDF</button>
+            <span style="color:var(--text-muted);font-size:0.9rem">Drag pages to rearrange</span>
+          </div>
+          <div class="page-grid" id="reorder-pages"></div>
+        </div>
+      </div>
+
+      <!-- ==================== WATERMARK ==================== -->
+      <div class="panel" id="panel-watermark">
+        <h2>Add Text Watermark</h2>
+        <p class="subtitle">Overlay text across every page of the PDF.</p>
+
+        <div class="drop-zone" id="watermark-drop">
+          <div class="drop-icon">💧</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="watermark-input">
+        </div>
+
+        <div id="watermark-content" style="display:none">
+          <div class="note">
+            Watermark is applied diagonally across each page. Opacity and size can be adjusted below.
+          </div>
+          <div class="controls">
+            <div class="control-group">
+              <label>Watermark text</label>
+              <input type="text" id="wm-text" value="CONFIDENTIAL" style="min-width:180px">
+            </div>
+            <div class="control-group">
+              <label>Opacity (0.1 – 1)</label>
+              <input type="number" id="wm-opacity" value="0.25" min="0.05" max="1" step="0.05" style="width:100px">
+            </div>
+            <div class="control-group">
+              <label>Font size</label>
+              <input type="number" id="wm-size" value="48" min="12" max="120" style="width:100px">
+            </div>
+            <button class="btn btn-primary" id="wm-apply">Apply & Download</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== METADATA ==================== -->
+      <div class="panel" id="panel-metadata">
+        <h2>PDF Metadata</h2>
+        <p class="subtitle">View document information and properties.</p>
+
+        <div class="drop-zone" id="meta-drop">
+          <div class="drop-icon">ℹ️</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="meta-input">
+        </div>
+
+        <div id="meta-content" style="display:none">
+          <table class="meta-table" id="meta-table">
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="status" id="status">
+    <span id="status-icon">✓</span>
+    <span id="status-text">Ready</span>
+  </div>
+
+  <script type="module">
+    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+    const { PDFDocument, degrees, rgb, StandardFonts } = PDFLib;
+
+    // ===================== STATE =====================
+    const state = {
+      mergeFiles: [],
+      currentPdfBytes: null,
+      currentPdfDoc: null,
+      currentPdfJs: null,
+      pageOrder: [],
+      selectedPages: new Set(),
+      rotations: {},
+      // Chapter extractor
+      bmFlat: [],           // flat list of resolved bookmarks
+      bmSelected: new Set(), // indices into bmFlat that are selected for extraction
+      bmPreviewItems: [],   // calculated ranges for preview table
+      extractedFiles: [],   // {name, bytes, pages}
+      sourceFileName: ''
+    };
+
+    // ===================== HELPERS =====================
+    function showStatus(msg, type = 'success') {
+      const el = document.getElementById('status');
+      document.getElementById('status-text').textContent = msg;
+      document.getElementById('status-icon').textContent = type === 'success' ? '✓' : '✕';
+      el.className = 'status show ' + type;
+      setTimeout(() => el.classList.remove('show'), 3500);
+    }
+
+    function downloadBytes(bytes, filename) {
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    function sanitizeFilename(name) {
+      return name
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120) || 'untitled';
+    }
+
+    async function loadPdf(file) {
+      const bytes = await file.arrayBuffer();
+      const pdfLibDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+      return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
+    }
+
+    async function renderThumb(pdfJsDoc, pageNum, canvas, maxWidth = 130) {
+      const page = await pdfJsDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = maxWidth / viewport.width;
+      const scaled = page.getViewport({ scale });
+      canvas.width = scaled.width;
+      canvas.height = scaled.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaled }).promise;
+    }
+
+    function parseRanges(str, maxPage) {
+      const pages = new Set();
+      const parts = str.split(',').map(s => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        if (part.includes('-')) {
+          const [a, b] = part.split('-').map(n => parseInt(n, 10));
+          if (isNaN(a) || isNaN(b)) continue;
+          for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+            if (i >= 1 && i <= maxPage) pages.add(i);
+          }
+        } else {
+          const n = parseInt(part, 10);
+          if (!isNaN(n) && n >= 1 && n <= maxPage) pages.add(n);
+        }
+      }
+      return Array.from(pages).sort((a, b) => a - b);
+    }
+
+    // ===================== NAVIGATION =====================
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+      });
+    });
+
+    // ===================== DROP ZONE HELPER =====================
+    function setupDropZone(zoneId, inputId, onFiles, multiple = false) {
+      const zone = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+      zone.addEventListener('click', () => input.click());
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files).filter(f =>
+          f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+        if (files.length) onFiles(multiple ? files : files[0]);
+      });
+      input.addEventListener('change', () => {
+        if (input.files.length) {
+          onFiles(multiple ? Array.from(input.files) : input.files[0]);
+          input.value = '';
+        }
+      });
+    }
+
+    // ===================== BOOKMARK RESOLUTION =====================
+    async function resolveDestToPage(pdf, dest) {
+      if (!dest) return null;
+      try {
+        let explicit = dest;
+        if (typeof dest === 'string') {
+          explicit = await pdf.getDestination(dest);
+        }
+        if (!explicit || !Array.isArray(explicit) || explicit.length === 0) return null;
+        const ref = explicit[0];
+        if (!ref) return null;
+        const pageIndex = await pdf.getPageIndex(ref);
+        return pageIndex + 1; // 1-based
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /**
+     * Recursively flatten outline into ordered list with level + page.
+     */
+    async function flattenOutline(pdf, items, level = 0, result = []) {
+      if (!items) return result;
+      for (const item of items) {
+        const page = await resolveDestToPage(pdf, item.dest);
+        const entry = {
+          id: result.length,
+          title: (item.title || 'Untitled').trim(),
+          page,                 // 1-based or null
+          level,
+          hasChildren: !!(item.items && item.items.length),
+          childrenIds: []
+        };
+        result.push(entry);
+        if (item.items && item.items.length) {
+          const before = result.length;
+          await flattenOutline(pdf, item.items, level + 1, result);
+          for (let i = before; i < result.length; i++) {
+            if (result[i].level === level + 1) entry.childrenIds.push(result[i].id);
+          }
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Calculate end page for a bookmark using hierarchy.
+     * End = (page of next bookmark with level <= current level) - 1
+     * or last page of document.
+     */
+    function calculateRanges(flat, totalPages) {
+      const ranges = [];
+      for (let i = 0; i < flat.length; i++) {
+        const bm = flat[i];
+        if (bm.page == null) {
+          ranges.push({ ...bm, start: null, end: null, pageCount: 0, status: 'unresolved', flagged: true });
+          continue;
+        }
+
+        // Find next bookmark at same or higher level (smaller level number)
+        let endPage = totalPages;
+        for (let j = i + 1; j < flat.length; j++) {
+          if (flat[j].page != null && flat[j].level <= bm.level) {
+            endPage = flat[j].page - 1;
+            break;
+          }
+        }
+
+        // Clamp
+        if (endPage < bm.page) endPage = bm.page;
+        if (endPage > totalPages) endPage = totalPages;
+
+        // Detect ambiguity: another bookmark points to the exact same page
+        const samePageCount = flat.filter(b => b.page === bm.page).length;
+        const flagged = samePageCount > 1 || endPage === bm.page && bm.hasChildren;
+
+        ranges.push({
+          ...bm,
+          start: bm.page,
+          end: endPage,
+          pageCount: endPage - bm.page + 1,
+          status: flagged ? 'review' : 'ready',
+          flagged
+        });
+      }
+      return ranges;
+    }
+
+    // ===================== CHAPTER EXTRACTOR UI =====================
+    setupDropZone('chapters-drop', 'chapters-input', async (file) => {
+      try {
+        showStatus('Loading PDF & reading bookmarks…');
+        const data = await loadPdf(file);
+        state.currentPdfBytes = data.bytes;
+        state.currentPdfDoc = data.pdfLibDoc;
+        state.currentPdfJs = data.pdfJsDoc;
+        state.sourceFileName = file.name.replace(/\.pdf$/i, '');
+        state.extractedFiles = [];
+        document.getElementById('bm-results').innerHTML = '';
+        const zipBtn = document.getElementById('bm-zip-btn');
+        zipBtn.style.display = 'none';
+        zipBtn.disabled = true;
+
+        const outline = await data.pdfJsDoc.getOutline();
+        const totalPages = data.pdfLibDoc.getPageCount();
+
+        if (!outline || outline.length === 0) {
+          document.getElementById('chapters-info').innerHTML =
+            `<strong>No bookmarks found</strong> in this PDF. You can still use the manual Split / Extract tool.`;
+          document.getElementById('chapters-content').style.display = 'block';
+          state.bmFlat = [];
+          renderBookmarkTree();
+          updatePreviewTable();
+          showStatus('No bookmarks in this PDF', 'error');
+          return;
+        }
+
+        state.bmFlat = await flattenOutline(data.pdfJsDoc, outline);
+        const ranges = calculateRanges(state.bmFlat, totalPages);
+        // Attach calculated fields back
+        state.bmFlat.forEach((bm, i) => {
+          Object.assign(bm, ranges[i]);
+        });
+
+        // Smart default selection: prefer depth that looks like chapters
+        autoSelectChapters();
+
+        document.getElementById('chapters-info').innerHTML =
+          `Loaded <strong>${file.name}</strong> — ${totalPages} pages, <strong>${state.bmFlat.length}</strong> bookmarks. ` +
+          `Select the chapters you want and click Extract.`;
+
+        document.getElementById('chapters-content').style.display = 'block';
+        document.getElementById('bm-prefix').value = state.sourceFileName + ' - ';
+
+        renderBookmarkTree();
+        updatePreviewTable();
+        showStatus(`Found ${state.bmFlat.length} bookmarks`);
+      } catch (err) {
+        console.error(err);
+        showStatus('Failed to load PDF: ' + err.message, 'error');
+      }
+    });
+
+    function autoSelectChapters() {
+      state.bmSelected.clear();
+      if (state.bmFlat.length === 0) return;
+
+      // Count items per level
+      const levelCounts = {};
+      state.bmFlat.forEach(b => {
+        levelCounts[b.level] = (levelCounts[b.level] || 0) + 1;
+      });
+
+      // Prefer the shallowest level that has a reasonable number of items (3–80)
+      let bestLevel = 0;
+      for (let lv = 0; lv <= 5; lv++) {
+        const c = levelCounts[lv] || 0;
+        if (c >= 3 && c <= 80) {
+          bestLevel = lv;
+          break;
+        }
+        if (c > 0) bestLevel = lv;
+      }
+
+      const modeSelect = document.getElementById('bm-mode');
+      // Only set if still on auto
+      if (modeSelect.value === 'auto') {
+        state.bmFlat.forEach(bm => {
+          if (bm.level === bestLevel && bm.page != null) {
+            state.bmSelected.add(bm.id);
+          }
+        });
+      }
+    }
+
+    function getVisibleDepthFilter() {
+      const mode = document.getElementById('bm-mode').value;
+      if (mode === 'auto' || mode === 'manual') return null;
+      return parseInt(mode, 10);
+    }
+
+    function renderBookmarkTree() {
+      const tree = document.getElementById('bm-tree');
+      const filter = (document.getElementById('bm-search').value || '').toLowerCase().trim();
+      const depthFilter = getVisibleDepthFilter();
+
+      tree.innerHTML = '';
+
+      // Build parent map for collapsing
+      const childrenMap = {};
+      state.bmFlat.forEach(bm => {
+        if (bm.hasChildren) childrenMap[bm.id] = true;
+      });
+
+      function shouldShow(bm) {
+        if (filter && !bm.title.toLowerCase().includes(filter)) return false;
+        if (depthFilter !== null && bm.level > depthFilter) return false;
+        return true;
+      }
+
+      // Simple flat render with indentation (more reliable than nested DOM for large outlines)
+      state.bmFlat.forEach(bm => {
+        if (!shouldShow(bm)) return;
+
+        const div = document.createElement('div');
+        div.className = 'bm-item';
+        div.dataset.id = bm.id;
+        if (state.bmSelected.has(bm.id)) div.classList.add('selected');
+        if (bm.flagged) div.classList.add('flagged');
+        if (bm.page == null) div.classList.add('ambiguous');
+
+        const indent = bm.level * 18;
+        div.style.paddingLeft = (12 + indent) + 'px';
+
+        const checked = state.bmSelected.has(bm.id) ? 'checked' : '';
+        const pageStr = bm.page != null ? `p.${bm.page}` : '?';
+
+        div.innerHTML = `
+          <input type="checkbox" class="bm-check" data-id="${bm.id}" ${checked}>
+          <span class="bm-title" title="${bm.title.replace(/"/g, '&quot;')}">${bm.title}</span>
+          <span class="bm-page">${pageStr}</span>
+          <span class="bm-level">L${bm.level}</span>
+        `;
+
+        tree.appendChild(div);
+
+        div.querySelector('.bm-check').addEventListener('change', (e) => {
+          const id = parseInt(e.target.dataset.id, 10);
+          if (e.target.checked) state.bmSelected.add(id);
+          else state.bmSelected.delete(id);
+          div.classList.toggle('selected', e.target.checked);
+          updatePreviewTable();
+        });
+
+        // Click title also toggles
+        div.querySelector('.bm-title').addEventListener('click', () => {
+          const cb = div.querySelector('.bm-check');
+          cb.checked = !cb.checked;
+          cb.dispatchEvent(new Event('change'));
+        });
+      });
+
+      if (tree.children.length === 0) {
+        tree.innerHTML = `<div class="empty-state" style="padding:30px"><div class="icon">🔍</div>No bookmarks match the filter</div>`;
+      }
+    }
+
+    function updatePreviewTable() {
+      const tbody = document.getElementById('bm-preview-body');
+      tbody.innerHTML = '';
+      state.bmPreviewItems = [];
+
+      const selected = state.bmFlat.filter(bm => state.bmSelected.has(bm.id));
+      // Sort by document order (already in order)
+      selected.sort((a, b) => a.id - b.id);
+
+      selected.forEach((bm, idx) => {
+        const start = bm.start ?? bm.page ?? 1;
+        const end = bm.end ?? start;
+        const count = end - start + 1;
+        const status = bm.page == null ? 'error' : (bm.flagged ? 'warn' : 'ready');
+        const statusText = bm.page == null ? 'Unresolved' : (bm.flagged ? 'Review' : 'Ready');
+
+        state.bmPreviewItems.push({
+          id: bm.id,
+          title: bm.title,
+          start,
+          end,
+          pageCount: count,
+          status,
+          include: true
+        });
+
+        const tr = document.createElement('tr');
+        tr.dataset.idx = idx;
+        tr.innerHTML = `
+          <td><input type="checkbox" class="pv-include" data-idx="${idx}" checked></td>
+          <td title="${bm.title.replace(/"/g, '&quot;')}">${bm.title}</td>
+          <td><input type="number" class="pv-start" data-idx="${idx}" value="${start}" min="1"></td>
+          <td><input type="number" class="pv-end" data-idx="${idx}" value="${end}" min="1"></td>
+          <td class="pv-count">${count}</td>
+          <td><span class="status-badge ${status}">${statusText}</span></td>
+          <td><button class="btn-icon btn-sm pv-reset" data-idx="${idx}" title="Restore calculated range">↺</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Wire inputs
+      tbody.querySelectorAll('.pv-start, .pv-end').forEach(inp => {
+        inp.addEventListener('change', () => {
+          const idx = parseInt(inp.dataset.idx, 10);
+          const item = state.bmPreviewItems[idx];
+          const startEl = tbody.querySelector(`.pv-start[data-idx="${idx}"]`);
+          const endEl = tbody.querySelector(`.pv-end[data-idx="${idx}"]`);
+          let s = parseInt(startEl.value, 10);
+          let e = parseInt(endEl.value, 10);
+          const maxP = state.currentPdfDoc.getPageCount();
+          if (isNaN(s) || s < 1) s = 1;
+          if (isNaN(e) || e < s) e = s;
+          if (e > maxP) e = maxP;
+          startEl.value = s;
+          endEl.value = e;
+          item.start = s;
+          item.end = e;
+          item.pageCount = e - s + 1;
+          tbody.querySelectorAll('tr')[idx].querySelector('.pv-count').textContent = item.pageCount;
+        });
+      });
+
+      tbody.querySelectorAll('.pv-include').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const idx = parseInt(cb.dataset.idx, 10);
+          state.bmPreviewItems[idx].include = cb.checked;
+        });
+      });
+
+      tbody.querySelectorAll('.pv-reset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          const bm = state.bmFlat.find(b => b.id === state.bmPreviewItems[idx].id);
+          if (!bm) return;
+          const startEl = tbody.querySelector(`.pv-start[data-idx="${idx}"]`);
+          const endEl = tbody.querySelector(`.pv-end[data-idx="${idx}"]`);
+          startEl.value = bm.start;
+          endEl.value = bm.end;
+          state.bmPreviewItems[idx].start = bm.start;
+          state.bmPreviewItems[idx].end = bm.end;
+          state.bmPreviewItems[idx].pageCount = bm.pageCount;
+          tbody.querySelectorAll('tr')[idx].querySelector('.pv-count').textContent = bm.pageCount;
+        });
+      });
+
+      const hasItems = state.bmPreviewItems.length > 0;
+      document.getElementById('bm-extract-btn').disabled = !hasItems;
+      document.getElementById('bm-extract-status').textContent =
+        hasItems ? `${state.bmPreviewItems.length} item(s) ready` : 'Select bookmarks above';
+    }
+
+    // Mode / search / expand controls
+    document.getElementById('bm-mode').addEventListener('change', () => {
+      const mode = document.getElementById('bm-mode').value;
+      state.bmSelected.clear();
+      if (mode === 'auto') {
+        autoSelectChapters();
+      } else if (mode !== 'manual') {
+        const depth = parseInt(mode, 10);
+        state.bmFlat.forEach(bm => {
+          if (bm.level === depth && bm.page != null) state.bmSelected.add(bm.id);
+        });
+      }
+      renderBookmarkTree();
+      updatePreviewTable();
+    });
+
+    document.getElementById('bm-search').addEventListener('input', () => {
+      renderBookmarkTree();
+    });
+
+    document.getElementById('bm-expand-all').addEventListener('click', () => {
+      // For flat list we just clear depth filter visually by setting mode temporarily? 
+      // Since we use indentation, expand/collapse is less critical; make search clear.
+      document.getElementById('bm-search').value = '';
+      renderBookmarkTree();
+    });
+
+    document.getElementById('bm-collapse-all').addEventListener('click', () => {
+      // Collapse = show only level 0
+      document.getElementById('bm-mode').value = '0';
+      document.getElementById('bm-mode').dispatchEvent(new Event('change'));
+    });
+
+    document.getElementById('bm-select-visible').addEventListener('click', () => {
+      const filter = (document.getElementById('bm-search').value || '').toLowerCase().trim();
+      const depthFilter = getVisibleDepthFilter();
+      state.bmFlat.forEach(bm => {
+        let show = true;
+        if (filter && !bm.title.toLowerCase().includes(filter)) show = false;
+        if (depthFilter !== null && bm.level > depthFilter) show = false;
+        if (show && bm.page != null) state.bmSelected.add(bm.id);
+      });
+      renderBookmarkTree();
+      updatePreviewTable();
+    });
+
+    document.getElementById('bm-deselect-all').addEventListener('click', () => {
+      state.bmSelected.clear();
+      renderBookmarkTree();
+      updatePreviewTable();
+    });
+
+    document.getElementById('bm-preview-all').addEventListener('change', (e) => {
+      document.querySelectorAll('.pv-include').forEach(cb => {
+        cb.checked = e.target.checked;
+        const idx = parseInt(cb.dataset.idx, 10);
+        if (state.bmPreviewItems[idx]) state.bmPreviewItems[idx].include = e.target.checked;
+      });
+    });
+
+    // ===================== EXTRACTION =====================
+    document.getElementById('bm-extract-btn').addEventListener('click', async () => {
+      const items = state.bmPreviewItems.filter(it => it.include && it.start && it.end && it.end >= it.start);
+      if (items.length === 0) {
+        showStatus('No valid chapters selected', 'error');
+        return;
+      }
+
+      const progress = document.getElementById('bm-progress');
+      const fill = document.getElementById('bm-progress-fill');
+      const results = document.getElementById('bm-results');
+      progress.style.display = 'block';
+      fill.style.width = '0%';
+      results.innerHTML = '';
+      state.extractedFiles = [];
+
+      const prefix = document.getElementById('bm-prefix').value || '';
+      const total = items.length;
+      let done = 0;
+
+      try {
+        for (const item of items) {
+          const startIdx = item.start - 1; // 0-based
+          const endIdx = item.end - 1;
+          const pageIndices = [];
+          for (let p = startIdx; p <= endIdx; p++) pageIndices.push(p);
+
+          const newDoc = await PDFDocument.create();
+          const copied = await newDoc.copyPages(state.currentPdfDoc, pageIndices);
+          copied.forEach(p => newDoc.addPage(p));
+          const bytes = await newDoc.save();
+
+          const safeTitle = sanitizeFilename(item.title);
+          const num = String(done + 1).padStart(2, '0');
+          const filename = `${prefix}${num} - ${safeTitle}.pdf`.replace(/\s+/g, ' ').trim();
+
+          state.extractedFiles.push({
+            name: filename,
+            bytes,
+            pages: item.pageCount,
+            title: item.title
+          });
+
+          // Add to results UI
+          const ri = document.createElement('div');
+          ri.className = 'result-item';
+          ri.innerHTML = `
+            <div class="file-icon">PDF</div>
+            <div class="ri-name">${filename}</div>
+            <div class="ri-meta">${item.pageCount} pages</div>
+            <button class="btn btn-secondary btn-sm ri-dl">Download</button>
+          `;
+          ri.querySelector('.ri-dl').addEventListener('click', () => {
+            downloadBytes(bytes, filename);
+          });
+          results.appendChild(ri);
+
+          done++;
+          fill.style.width = Math.round((done / total) * 100) + '%';
+        }
+
+        const zipBtn = document.getElementById('bm-zip-btn');
+        zipBtn.style.display = 'inline-flex';
+        zipBtn.disabled = false;
+        document.getElementById('bm-extract-status').textContent =
+          `Extracted ${done} file(s) — ready for ZIP`;
+        showStatus(`Successfully extracted ${done} chapter(s)`);
+      } catch (err) {
+        console.error(err);
+        showStatus('Extraction failed: ' + err.message, 'error');
+      } finally {
+        setTimeout(() => { progress.style.display = 'none'; }, 800);
+      }
+    });
+
+    document.getElementById('bm-zip-btn').addEventListener('click', async () => {
+      if (!state.extractedFiles || state.extractedFiles.length === 0) {
+        showStatus('No extracted files to zip', 'error');
+        return;
+      }
+      const zipBtn = document.getElementById('bm-zip-btn');
+      const progress = document.getElementById('bm-progress');
+      const fill = document.getElementById('bm-progress-fill');
+      const statusEl = document.getElementById('bm-extract-status');
+
+      try {
+        zipBtn.disabled = true;
+        progress.style.display = 'block';
+        fill.style.width = '0%';
+        statusEl.textContent = 'Preparing ZIP…';
+        showStatus('Building ZIP…');
+
+        const zip = new JSZip();
+        const totalFiles = state.extractedFiles.length;
+
+        // Add files with a light progress update
+        for (let i = 0; i < totalFiles; i++) {
+          const f = state.extractedFiles[i];
+          const data = f.bytes instanceof Uint8Array ? f.bytes : new Uint8Array(f.bytes);
+          zip.file(f.name, data, { binary: true });
+          // First 30% of the bar = adding files
+          const addPct = Math.round(((i + 1) / totalFiles) * 30);
+          fill.style.width = addPct + '%';
+          statusEl.textContent = `Adding files (${i + 1}/${totalFiles})…`;
+        }
+
+        statusEl.textContent = 'Compressing ZIP…';
+        showStatus('Compressing ZIP…');
+
+        const content = await zip.generateAsync(
+          {
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+          },
+          (metadata) => {
+            // JSZip progress: 0–100 → map to remaining 30%–95% of the bar
+            const pct = 30 + Math.round((metadata.percent || 0) * 0.65);
+            fill.style.width = Math.min(pct, 95) + '%';
+            statusEl.textContent = `Compressing… ${Math.round(metadata.percent || 0)}%`;
+          }
+        );
+
+        // Trigger download
+        fill.style.width = '98%';
+        statusEl.textContent = 'Starting download…';
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (state.sourceFileName || 'chapters') + '-chapters.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        // Done
+        fill.style.width = '100%';
+        statusEl.textContent = `Done — ZIP download started (${totalFiles} files)`;
+        showStatus(`Done! ZIP download started (${totalFiles} files)`);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'ZIP failed';
+        showStatus('ZIP failed: ' + (err.message || err), 'error');
+      } finally {
+        zipBtn.disabled = false;
+        // Keep the full bar visible briefly so the user sees “Done”
+        setTimeout(() => {
+          progress.style.display = 'none';
+          fill.style.width = '0%';
+        }, 2500);
+      }
+    });
+
+    // ===================== MERGE (preserved) =====================
+    setupDropZone('merge-drop', 'merge-input', (files) => {
+      state.mergeFiles.push(...files);
+      renderMergeList();
+    }, true);
+
+    function renderMergeList() {
+      const list = document.getElementById('merge-files');
+      const controls = document.getElementById('merge-controls');
+      list.innerHTML = '';
+      if (state.mergeFiles.length === 0) {
+        controls.style.display = 'none';
+        return;
+      }
+      controls.style.display = 'flex';
+      document.getElementById('merge-btn').disabled = state.mergeFiles.length < 2;
+
+      state.mergeFiles.forEach((file, idx) => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.draggable = true;
+        item.dataset.idx = idx;
+        item.innerHTML = `
+          <div class="file-icon">PDF</div>
+          <div class="file-info">
+            <div class="file-name">${file.name}</div>
+            <div class="file-meta">${formatBytes(file.size)}</div>
+          </div>
+          <div class="file-actions">
+            <button class="btn-icon" title="Move up" data-action="up" data-idx="${idx}">↑</button>
+            <button class="btn-icon" title="Move down" data-action="down" data-idx="${idx}">↓</button>
+            <button class="btn-icon" title="Remove" data-action="remove" data-idx="${idx}">✕</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      list.querySelectorAll('.file-item').forEach(item => {
+        item.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', item.dataset.idx);
+          item.classList.add('dragging');
+        });
+        item.addEventListener('dragend', () => item.classList.remove('dragging'));
+        item.addEventListener('dragover', e => e.preventDefault());
+        item.addEventListener('drop', e => {
+          e.preventDefault();
+          const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+          const to = parseInt(item.dataset.idx, 10);
+          if (from !== to) {
+            const [moved] = state.mergeFiles.splice(from, 1);
+            state.mergeFiles.splice(to, 0, moved);
+            renderMergeList();
+          }
+        });
+      });
+
+      list.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          const action = btn.dataset.action;
+          if (action === 'remove') state.mergeFiles.splice(idx, 1);
+          if (action === 'up' && idx > 0) {
+            [state.mergeFiles[idx - 1], state.mergeFiles[idx]] = [state.mergeFiles[idx], state.mergeFiles[idx - 1]];
+          }
+          if (action === 'down' && idx < state.mergeFiles.length - 1) {
+            [state.mergeFiles[idx], state.mergeFiles[idx + 1]] = [state.mergeFiles[idx + 1], state.mergeFiles[idx]];
+          }
+          renderMergeList();
+        });
+      });
+    }
+
+    document.getElementById('merge-clear').addEventListener('click', () => {
+      state.mergeFiles = [];
+      renderMergeList();
+    });
+
+    document.getElementById('merge-btn').addEventListener('click', async () => {
+      if (state.mergeFiles.length < 2) return;
+      try {
+        showStatus('Merging…');
+        const merged = await PDFDocument.create();
+        for (const file of state.mergeFiles) {
+          const bytes = await file.arrayBuffer();
+          const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+          const pages = await merged.copyPages(doc, doc.getPageIndices());
+          pages.forEach(p => merged.addPage(p));
+        }
+        const out = await merged.save();
+        downloadBytes(out, 'merged.pdf');
+        showStatus('Merged PDF downloaded');
+      } catch (err) {
+        showStatus('Merge failed: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== SHARED SINGLE-FILE LOADER =====================
+    async function loadSingle(file, contentId, pagesId, options = {}) {
+      try {
+        showStatus('Loading PDF…');
+        const data = await loadPdf(file);
+        state.currentPdfBytes = data.bytes;
+        state.currentPdfDoc = data.pdfLibDoc;
+        state.currentPdfJs = data.pdfJsDoc;
+        state.pageOrder = data.pdfLibDoc.getPageIndices();
+        state.selectedPages.clear();
+        state.rotations = {};
+        document.getElementById(contentId).style.display = 'block';
+        if (pagesId) await renderPageGrid(pagesId, options);
+        showStatus(`Loaded ${data.name} (${data.pdfLibDoc.getPageCount()} pages)`);
+        return data;
+      } catch (err) {
+        showStatus('Failed to load PDF: ' + err.message, 'error');
+      }
+    }
+
+    async function renderPageGrid(containerId, { selectable = false, showRotate = false, reorderable = false } = {}) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      const total = state.currentPdfJs.numPages;
+
+      for (let i = 0; i < total; i++) {
+        const pageNum = i + 1;
+        const card = document.createElement('div');
+        card.className = 'page-card';
+        card.dataset.page = i;
+        if (selectable && state.selectedPages.has(i)) card.classList.add('selected');
+
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        const canvas = document.createElement('canvas');
+        thumb.appendChild(canvas);
+        card.appendChild(thumb);
+
+        const info = document.createElement('div');
+        info.className = 'page-info';
+        info.innerHTML = `<span class="page-num">Page ${pageNum}</span>`;
+        if (showRotate && state.rotations[i]) {
+          info.innerHTML += `<span class="rotate-badge">${state.rotations[i]}°</span>`;
+        }
+        card.appendChild(info);
+        container.appendChild(card);
+        await renderThumb(state.currentPdfJs, pageNum, canvas);
+
+        if (selectable) {
+          card.addEventListener('click', () => {
+            if (state.selectedPages.has(i)) state.selectedPages.delete(i);
+            else state.selectedPages.add(i);
+            card.classList.toggle('selected');
+            updateDeleteCount();
+            updateRotateSelectedBtn();
+          });
+        }
+
+        if (reorderable) {
+          card.draggable = true;
+          card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', i);
+            card.classList.add('dragging');
+          });
+          card.addEventListener('dragend', () => card.classList.remove('dragging'));
+          card.addEventListener('dragover', e => e.preventDefault());
+          card.addEventListener('drop', e => {
+            e.preventDefault();
+            const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+            const to = i;
+            if (from !== to) {
+              const order = [...state.pageOrder];
+              const [moved] = order.splice(from, 1);
+              order.splice(to, 0, moved);
+              state.pageOrder = order;
+              renderPageGrid(containerId, { reorderable: true });
+            }
+          });
+        }
+      }
+    }
+
+    // ===================== SPLIT =====================
+    setupDropZone('split-drop', 'split-input', async (file) => {
+      await loadSingle(file, 'split-content', 'split-pages');
+    });
+
+    document.getElementById('split-btn').addEventListener('click', async () => {
+      const ranges = document.getElementById('split-ranges').value;
+      const pages = parseRanges(ranges, state.currentPdfDoc.getPageCount());
+      if (pages.length === 0) {
+        showStatus('Enter valid page ranges', 'error');
+        return;
+      }
+      try {
+        const newDoc = await PDFDocument.create();
+        const copied = await newDoc.copyPages(state.currentPdfDoc, pages.map(p => p - 1));
+        copied.forEach(p => newDoc.addPage(p));
+        const out = await newDoc.save();
+        downloadBytes(out, 'extracted-pages.pdf');
+        showStatus(`Extracted ${pages.length} page(s)`);
+      } catch (err) {
+        showStatus('Extract failed: ' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('split-all-btn').addEventListener('click', async () => {
+      try {
+        const count = state.currentPdfDoc.getPageCount();
+        for (let i = 0; i < count; i++) {
+          const newDoc = await PDFDocument.create();
+          const [page] = await newDoc.copyPages(state.currentPdfDoc, [i]);
+          newDoc.addPage(page);
+          const out = await newDoc.save();
+          downloadBytes(out, `page-${i + 1}.pdf`);
+        }
+        showStatus(`Split into ${count} files`);
+      } catch (err) {
+        showStatus('Split failed: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== DELETE =====================
+    setupDropZone('delete-drop', 'delete-input', async (file) => {
+      await loadSingle(file, 'delete-content', 'delete-pages', { selectable: true });
+      updateDeleteCount();
+    });
+
+    function updateDeleteCount() {
+      const n = state.selectedPages.size;
+      document.getElementById('delete-count').textContent = `${n} page${n !== 1 ? 's' : ''} selected`;
+      document.getElementById('delete-btn').disabled = n === 0;
+    }
+
+    document.getElementById('delete-select-all').addEventListener('click', () => {
+      const total = state.currentPdfDoc.getPageCount();
+      for (let i = 0; i < total; i++) state.selectedPages.add(i);
+      document.querySelectorAll('#delete-pages .page-card').forEach(c => c.classList.add('selected'));
+      updateDeleteCount();
+    });
+
+    document.getElementById('delete-deselect').addEventListener('click', () => {
+      state.selectedPages.clear();
+      document.querySelectorAll('#delete-pages .page-card').forEach(c => c.classList.remove('selected'));
+      updateDeleteCount();
+    });
+
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+      if (state.selectedPages.size === 0) return;
+      try {
+        const keep = state.currentPdfDoc.getPageIndices().filter(i => !state.selectedPages.has(i));
+        if (keep.length === 0) {
+          showStatus('Cannot delete all pages', 'error');
+          return;
+        }
+        const newDoc = await PDFDocument.create();
+        const pages = await newDoc.copyPages(state.currentPdfDoc, keep);
+        pages.forEach(p => newDoc.addPage(p));
+        const out = await newDoc.save();
+        downloadBytes(out, 'pages-removed.pdf');
+        showStatus(`Deleted ${state.selectedPages.size} page(s)`);
+      } catch (err) {
+        showStatus('Delete failed: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== ROTATE =====================
+    setupDropZone('rotate-drop', 'rotate-input', async (file) => {
+      await loadSingle(file, 'rotate-content', 'rotate-pages', { selectable: true, showRotate: true });
+      updateRotateSelectedBtn();
+    });
+
+    function updateRotateSelectedBtn() {
+      document.getElementById('rotate-selected-btn').disabled = state.selectedPages.size === 0;
+    }
+
+    document.getElementById('rotate-all-btn').addEventListener('click', async () => {
+      const angle = parseInt(document.getElementById('rotate-angle').value, 10);
+      const total = state.currentPdfDoc.getPageCount();
+      for (let i = 0; i < total; i++) {
+        state.rotations[i] = ((state.rotations[i] || 0) + angle) % 360;
+        state.currentPdfDoc.getPage(i).setRotation(degrees(state.rotations[i]));
+      }
+      await renderPageGrid('rotate-pages', { selectable: true, showRotate: true });
+      showStatus(`Rotated all pages by ${angle}°`);
+    });
+
+    document.getElementById('rotate-selected-btn').addEventListener('click', async () => {
+      const angle = parseInt(document.getElementById('rotate-angle').value, 10);
+      for (const i of state.selectedPages) {
+        state.rotations[i] = ((state.rotations[i] || 0) + angle) % 360;
+        state.currentPdfDoc.getPage(i).setRotation(degrees(state.rotations[i]));
+      }
+      await renderPageGrid('rotate-pages', { selectable: true, showRotate: true });
+      showStatus(`Rotated ${state.selectedPages.size} page(s)`);
+    });
+
+    document.getElementById('rotate-download').addEventListener('click', async () => {
+      const out = await state.currentPdfDoc.save();
+      downloadBytes(out, 'rotated.pdf');
+      showStatus('Rotated PDF downloaded');
+    });
+
+    // ===================== REORDER =====================
+    setupDropZone('reorder-drop', 'reorder-input', async (file) => {
+      await loadSingle(file, 'reorder-content', 'reorder-pages', { reorderable: true });
+    });
+
+    document.getElementById('reorder-download').addEventListener('click', async () => {
+      try {
+        const newDoc = await PDFDocument.create();
+        const pages = await newDoc.copyPages(state.currentPdfDoc, state.pageOrder);
+        pages.forEach(p => newDoc.addPage(p));
+        const out = await newDoc.save();
+        downloadBytes(out, 'reordered.pdf');
+        showStatus('Reordered PDF downloaded');
+      } catch (err) {
+        showStatus('Reorder failed: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== WATERMARK =====================
+    setupDropZone('watermark-drop', 'watermark-input', async (file) => {
+      await loadSingle(file, 'watermark-content', null);
+      document.getElementById('watermark-content').style.display = 'block';
+    });
+
+    document.getElementById('wm-apply').addEventListener('click', async () => {
+      try {
+        const text = document.getElementById('wm-text').value || 'CONFIDENTIAL';
+        const opacity = parseFloat(document.getElementById('wm-opacity').value) || 0.25;
+        const fontSize = parseInt(document.getElementById('wm-size').value, 10) || 48;
+        const font = await state.currentPdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const pages = state.currentPdfDoc.getPages();
+        for (const page of pages) {
+          const { width, height } = page.getSize();
+          page.drawText(text, {
+            x: width / 2 - (text.length * fontSize * 0.3),
+            y: height / 2,
+            size: fontSize,
+            font,
+            color: rgb(0.6, 0.6, 0.6),
+            opacity,
+            rotate: degrees(-45),
+          });
+        }
+        const out = await state.currentPdfDoc.save();
+        downloadBytes(out, 'watermarked.pdf');
+        showStatus('Watermark applied');
+      } catch (err) {
+        showStatus('Watermark failed: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== METADATA =====================
+    setupDropZone('meta-drop', 'meta-input', async (file) => {
+      try {
+        showStatus('Reading metadata…');
+        const data = await loadPdf(file);
+        state.currentPdfDoc = data.pdfLibDoc;
+        state.currentPdfJs = data.pdfJsDoc;
+        const info = await data.pdfJsDoc.getMetadata();
+        const meta = info.info || {};
+        const pageCount = data.pdfLibDoc.getPageCount();
+        const rows = [
+          ['File name', file.name],
+          ['File size', formatBytes(file.size)],
+          ['Pages', pageCount],
+          ['Title', meta.Title || '—'],
+          ['Author', meta.Author || '—'],
+          ['Subject', meta.Subject || '—'],
+          ['Keywords', meta.Keywords || '—'],
+          ['Creator', meta.Creator || '—'],
+          ['Producer', meta.Producer || '—'],
+          ['Creation Date', meta.CreationDate || '—'],
+          ['Modification Date', meta.ModDate || '—'],
+          ['PDF Version', data.pdfJsDoc.pdfInfo?.PDFFormatVersion || '—'],
+        ];
+        const tbody = document.querySelector('#meta-table tbody');
+        tbody.innerHTML = rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+        document.getElementById('meta-content').style.display = 'block';
+        showStatus('Metadata loaded');
+      } catch (err) {
+        showStatus('Failed to read metadata: ' + err.message, 'error');
+      }
+    });
+  </script>
 </body>
 </html>
