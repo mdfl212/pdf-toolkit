@@ -107,7 +107,7 @@
         if (pct === 0) {
           fillEl.style.width = '100%';
           percentEl.textContent = '100%';
-          fabPercent.textContent = '↓';
+          fabPercent.textContent = '';
           fab.style.setProperty('--process-progress', '100%');
           trackEl.setAttribute('aria-valuenow', '100');
         }
