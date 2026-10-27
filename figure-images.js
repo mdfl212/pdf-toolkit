@@ -131,8 +131,11 @@
     const ctx = canvas.getContext('2d', { willReadFrequently: false });
     if (!ctx) return null;
     try {
-      if (obj.bitmap && typeof ctx.drawImage === 'function') {
-        ctx.drawImage(obj.bitmap, 0, 0, width, height);
+      // PDF.js can expose decoded images as ImageBitmaps, image-like objects,
+      // RGBA/RGB/grayscale buffers, or packed 1-bit grayscale data.
+      const drawable = obj.bitmap || (typeof ImageBitmap !== 'undefined' && obj instanceof ImageBitmap ? obj : null);
+      if (drawable && typeof ctx.drawImage === 'function') {
+        ctx.drawImage(drawable, 0, 0, width, height);
       } else if (obj.data && obj.data.length === width * height * 4) {
         ctx.putImageData(new ImageData(new Uint8ClampedArray(obj.data), width, height), 0, 0);
       } else if (obj.data && obj.data.length === width * height * 3) {
@@ -145,6 +148,21 @@
         const rgba = new Uint8ClampedArray(width * height * 4);
         for (let i = 0, j = 0; i < obj.data.length; i++, j += 4) {
           rgba[j] = rgba[j + 1] = rgba[j + 2] = obj.data[i]; rgba[j + 3] = 255;
+        }
+        ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
+      } else if (obj.data && obj.data.length === Math.ceil(width / 8) * height) {
+        // PDF.js ImageKind.GRAYSCALE_1BPP uses packed bits. Expand each bit
+        // into a visible grayscale pixel; avoid assuming a byte per pixel.
+        const rgba = new Uint8ClampedArray(width * height * 4);
+        const rowBytes = Math.ceil(width / 8);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const byte = obj.data[y * rowBytes + (x >> 3)];
+            const value = (byte & (0x80 >> (x & 7))) ? 255 : 0;
+            const j = (y * width + x) * 4;
+            rgba[j] = rgba[j + 1] = rgba[j + 2] = value;
+            rgba[j + 3] = 255;
+          }
         }
         ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
       } else {
