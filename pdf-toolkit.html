@@ -485,6 +485,23 @@
     .status.success { border-color: var(--success); }
     .status.error { border-color: var(--danger); }
 
+    .bookmark-manager-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 2fr) minmax(90px, .6fr) minmax(100px, .7fr) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .bookmark-manager-row {
+        grid-template-columns: minmax(0, 1fr) minmax(90px, .55fr);
+      }
+      .bookmark-manager-row .control-group:first-child {
+        grid-column: 1 / -1;
+      }
+    }
+
     .meta-table {
       width: 100%;
       border-collapse: collapse;
@@ -1623,6 +1640,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           Metadata
         </button>
+        <button class="tool-btn" data-panel="bookmarks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+          Bookmark Manager
+        </button>
       </div>
       <details class="tool-section advanced-tool-section">
         <summary>More tools</summary>
@@ -1977,6 +1998,39 @@
         </div>
       </div>
 
+      <!-- ==================== BOOKMARK MANAGER ==================== -->
+      <div class="panel" id="panel-bookmarks">
+        <h2>PDF Bookmark Manager</h2>
+        <p class="subtitle">Create, rename, reorder, nest, or remove PDF bookmarks. Existing bookmarks are loaded into an editable list.</p>
+        <div class="note">Bookmarks point to pages in this PDF. Saving creates a new copy. Because PDF structures vary, always reopen the downloaded file and check the outline before replacing your original.</div>
+        <div class="drop-zone" id="bookmark-manager-drop">
+          <div class="drop-icon">🔖</div>
+          <p><strong>Drop a PDF here</strong> or click to browse</p>
+          <p class="hint">Existing nested bookmarks are imported where their destinations can be resolved.</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="bookmark-manager-input">
+        </div>
+        <div id="bookmark-manager-content" style="display:none">
+          <div class="file-item" style="margin-bottom:14px">
+            <div class="file-icon">PDF</div>
+            <div class="file-info">
+              <div class="file-name" id="bookmark-manager-filename"></div>
+              <div class="file-meta" id="bookmark-manager-summary"></div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="bookmark-manager-change">Choose another</button>
+          </div>
+          <div class="controls" style="flex-wrap:wrap;gap:8px;margin-bottom:14px">
+            <button type="button" class="btn btn-secondary" id="bookmark-manager-add">＋ Add bookmark</button>
+            <button type="button" class="btn btn-secondary" id="bookmark-manager-reset">Reset to imported bookmarks</button>
+          </div>
+          <p class="hint">Use Level 0 for top-level entries. Increase the level to nest an entry under the preceding bookmark. Levels must be sequential. Page numbers start at 1.</p>
+          <div id="bookmark-manager-list" style="display:grid;gap:10px"></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px">
+            <button type="button" class="btn btn-primary" id="bookmark-manager-save">Save bookmarks &amp; download copy</button>
+            <span id="bookmark-manager-status" role="status" style="color:var(--text-muted);font-size:.88rem"></span>
+          </div>
+        </div>
+      </div>
+
       <!-- ==================== PDF COMPRESSION ==================== -->
       <div class="panel" id="panel-compress">
         <h2>Compress PDF</h2>
@@ -2130,6 +2184,7 @@
         <button type="button" class="mobile-tool-card" data-panel="rotate"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Rotate</button>
         <button type="button" class="mobile-tool-card" data-panel="reorder"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>Reorder</button>
         <button type="button" class="mobile-tool-card" data-panel="metadata"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Metadata</button>
+        <button type="button" class="mobile-tool-card" data-panel="bookmarks"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Bookmarks</button>
         <button type="button" class="mobile-tool-card" data-panel="watermark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Watermark</button>
       </div>
     </div>
@@ -3621,6 +3676,228 @@
         showStatus('Metadata loaded');
       } catch (err) {
         showStatus('Failed to read metadata: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== BOOKMARK MANAGER =====================
+    const bookmarkManagerState = { file: null, bytes: null, rows: [], importedRows: [], pageCount: 0 };
+
+    function setBookmarkManagerStatus(message, isError = false) {
+      const el = document.getElementById('bookmark-manager-status');
+      el.textContent = message;
+      el.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+    }
+
+    function cloneBookmarkRows(rows) {
+      return rows.map(row => ({ title: row.title, page: row.page, level: row.level }));
+    }
+
+    function renderBookmarkManagerRows() {
+      const list = document.getElementById('bookmark-manager-list');
+      list.replaceChildren();
+      if (!bookmarkManagerState.rows.length) {
+        const empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.textContent = 'No bookmarks yet. Add one to create the document outline.';
+        list.appendChild(empty);
+        return;
+      }
+      bookmarkManagerState.rows.forEach((row, index) => {
+        const card = document.createElement('div');
+        card.className = 'file-item bookmark-manager-row';
+        const titleWrap = document.createElement('div');
+        titleWrap.className = 'control-group';
+        const titleLabel = document.createElement('label');
+        titleLabel.textContent = 'Bookmark title';
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.maxLength = 1000;
+        titleInput.value = row.title;
+        titleInput.placeholder = 'Chapter or section';
+        titleInput.setAttribute('aria-label', 'Bookmark title ' + (index + 1));
+        titleInput.addEventListener('input', () => { bookmarkManagerState.rows[index].title = titleInput.value; });
+        titleWrap.append(titleLabel, titleInput);
+
+        const pageWrap = document.createElement('div');
+        pageWrap.className = 'control-group';
+        const pageLabel = document.createElement('label');
+        pageLabel.textContent = 'Page';
+        const pageInput = document.createElement('input');
+        pageInput.type = 'number';
+        pageInput.min = '1';
+        pageInput.max = String(bookmarkManagerState.pageCount);
+        pageInput.step = '1';
+        pageInput.value = row.page == null ? '' : String(row.page);
+        pageInput.placeholder = '1';
+        pageInput.setAttribute('aria-label', 'Destination page for bookmark ' + (index + 1));
+        pageInput.addEventListener('input', () => { bookmarkManagerState.rows[index].page = pageInput.value === '' ? null : Number(pageInput.value); });
+        pageWrap.append(pageLabel, pageInput);
+
+        const levelWrap = document.createElement('div');
+        levelWrap.className = 'control-group';
+        const levelLabel = document.createElement('label');
+        levelLabel.textContent = 'Nesting level';
+        const levelSelect = document.createElement('select');
+        levelSelect.setAttribute('aria-label', 'Nesting level for bookmark ' + (index + 1));
+        for (let level = 0; level <= 8; level++) {
+          const option = document.createElement('option');
+          option.value = String(level);
+          option.textContent = String(level);
+          option.selected = level === row.level;
+          levelSelect.appendChild(option);
+        }
+        levelSelect.addEventListener('change', () => { bookmarkManagerState.rows[index].level = Number(levelSelect.value); });
+        levelWrap.append(levelLabel, levelSelect);
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn btn-secondary btn-sm';
+        remove.textContent = 'Remove';
+        remove.setAttribute('aria-label', 'Remove bookmark ' + (index + 1));
+        remove.addEventListener('click', () => {
+          bookmarkManagerState.rows.splice(index, 1);
+          renderBookmarkManagerRows();
+        });
+        card.append(titleWrap, pageWrap, levelWrap, remove);
+        list.appendChild(card);
+      });
+    }
+
+    function buildBookmarkTree(rows, pageCount) {
+      const root = { level: -1, children: [] };
+      const stack = [root];
+      rows.forEach((row, index) => {
+        const title = String(row.title ?? '').trim();
+        const page = Number(row.page);
+        const level = Number(row.level);
+        if (!title) throw new Error('Bookmark ' + (index + 1) + ' needs a title.');
+        if (!Number.isInteger(page) || page < 1 || page > pageCount) throw new Error('Bookmark "' + title + '" needs a valid destination page from 1 to ' + pageCount + '.');
+        if (!Number.isInteger(level) || level < 0 || level > 8) throw new Error('Bookmark "' + title + '" has an invalid nesting level.');
+        while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+        const parent = stack[stack.length - 1];
+        if (level > parent.level + 1) throw new Error('Nesting levels must be sequential. Fix the level for "' + title + '".');
+        const node = { title, page, level, children: [] };
+        parent.children.push(node);
+        stack.push(node);
+      });
+      return root.children;
+    }
+
+    function writePdfBookmarks(doc, tree) {
+      const { PDFName, PDFNumber, PDFHexString } = PDFLib;
+      const context = doc.context;
+      const name = value => PDFName.of(value);
+      const makeRef = () => context.register(context.obj({}));
+      const countDescendants = nodes => nodes.reduce((sum, node) => sum + 1 + countDescendants(node.children), 0);
+
+      if (!tree.length) {
+        doc.catalog.delete(name('Outlines'));
+        return;
+      }
+
+      const rootRef = makeRef();
+      const rootDict = context.lookup(rootRef);
+      rootDict.set(name('Type'), name('Outlines'));
+
+      function writeSiblings(nodes, parentRef) {
+        const refs = nodes.map(() => makeRef());
+        nodes.forEach((node, index) => {
+          const dict = context.lookup(refs[index]);
+          dict.set(name('Title'), PDFHexString.fromText(node.title));
+          dict.set(name('Parent'), parentRef);
+          dict.set(name('Dest'), context.obj([doc.getPage(node.page - 1).ref, name('Fit')]));
+          if (index > 0) dict.set(name('Prev'), refs[index - 1]);
+          if (index < nodes.length - 1) dict.set(name('Next'), refs[index + 1]);
+          if (node.children.length) {
+            const childRefs = writeSiblings(node.children, refs[index]);
+            dict.set(name('First'), childRefs[0]);
+            dict.set(name('Last'), childRefs[childRefs.length - 1]);
+            dict.set(name('Count'), PDFNumber.of(countDescendants(node.children)));
+          }
+        });
+        return refs;
+      }
+
+      const topRefs = writeSiblings(tree, rootRef);
+      rootDict.set(name('First'), topRefs[0]);
+      rootDict.set(name('Last'), topRefs[topRefs.length - 1]);
+      rootDict.set(name('Count'), PDFNumber.of(countDescendants(tree)));
+      doc.catalog.set(name('Outlines'), rootRef);
+    }
+
+    async function readBookmarkRows(pdfJsDoc) {
+      const outline = await pdfJsDoc.getOutline();
+      const rows = [];
+      async function visit(items, level) {
+        for (const item of items || []) {
+          const page = await resolveDestToPage(pdfJsDoc, item.dest);
+          rows.push({ title: item.title || '', page, level });
+          if (item.items?.length) await visit(item.items, level + 1);
+        }
+      }
+      await visit(outline || [], 0);
+      return rows;
+    }
+
+    async function loadBookmarkManagerFile(file) {
+      const status = document.getElementById('bookmark-manager-status');
+      status.textContent = 'Reading PDF bookmarks…';
+      try {
+        const bytes = await file.arrayBuffer();
+        const pdfLibDoc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+        const pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        const rows = await readBookmarkRows(pdfJsDoc);
+        bookmarkManagerState.file = file;
+        bookmarkManagerState.bytes = bytes;
+        bookmarkManagerState.rows = cloneBookmarkRows(rows);
+        bookmarkManagerState.importedRows = cloneBookmarkRows(rows);
+        bookmarkManagerState.pageCount = pdfLibDoc.getPageCount();
+        document.getElementById('bookmark-manager-filename').textContent = file.name;
+        document.getElementById('bookmark-manager-summary').textContent = bookmarkManagerState.pageCount + ' pages · ' + rows.length + ' bookmarks imported';
+        document.getElementById('bookmark-manager-content').style.display = 'block';
+        document.getElementById('bookmark-manager-save').disabled = false;
+        renderBookmarkManagerRows();
+        const unresolved = rows.filter(row => !Number.isInteger(row.page)).length;
+        setBookmarkManagerStatus(unresolved ? unresolved + ' bookmark destination(s) could not be resolved. Assign a page or remove those entries before saving.' : 'PDF loaded. Review the imported outline before saving.');
+      } catch (err) {
+        bookmarkManagerState.file = null;
+        bookmarkManagerState.bytes = null;
+        document.getElementById('bookmark-manager-save').disabled = true;
+        setBookmarkManagerStatus('Could not read this PDF: ' + (err?.message || String(err)), true);
+      }
+    }
+
+    setupDropZone('bookmark-manager-drop', 'bookmark-manager-input', loadBookmarkManagerFile);
+    document.getElementById('bookmark-manager-change').addEventListener('click', () => document.getElementById('bookmark-manager-input').click());
+    document.getElementById('bookmark-manager-add').addEventListener('click', () => {
+      const previous = bookmarkManagerState.rows[bookmarkManagerState.rows.length - 1];
+      bookmarkManagerState.rows.push({ title: '', page: 1, level: previous ? previous.level : 0 });
+      renderBookmarkManagerRows();
+      document.querySelector('#bookmark-manager-list input')?.focus();
+      setBookmarkManagerStatus('New bookmark added. Enter its title and destination page.');
+    });
+    document.getElementById('bookmark-manager-reset').addEventListener('click', () => {
+      bookmarkManagerState.rows = cloneBookmarkRows(bookmarkManagerState.importedRows);
+      renderBookmarkManagerRows();
+      setBookmarkManagerStatus('Restored the bookmarks imported from the selected PDF.');
+    });
+    document.getElementById('bookmark-manager-save').addEventListener('click', async () => {
+      if (!bookmarkManagerState.file || !bookmarkManagerState.bytes) return;
+      const button = document.getElementById('bookmark-manager-save');
+      button.disabled = true;
+      setBookmarkManagerStatus('Writing bookmark outline…');
+      try {
+        const tree = buildBookmarkTree(bookmarkManagerState.rows, bookmarkManagerState.pageCount);
+        const doc = await PDFDocument.load(bookmarkManagerState.bytes.slice(0), { ignoreEncryption: true });
+        writePdfBookmarks(doc, tree);
+        const output = await doc.save({ useObjectStreams: true });
+        const baseName = sanitizeFilename(bookmarkManagerState.file.name.replace(/\.pdf$/i, '')) || 'document';
+        downloadBytes(output, baseName + '-bookmarks-edited.pdf');
+        setBookmarkManagerStatus('Copy downloaded. Reopen it in a PDF reader and verify the bookmark hierarchy and destinations.');
+      } catch (err) {
+        setBookmarkManagerStatus('Could not save bookmarks: ' + (err?.message || String(err)), true);
+      } finally {
+        button.disabled = false;
       }
     });
 
