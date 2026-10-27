@@ -26,12 +26,14 @@
     panel.className = 'panel'; panel.id = 'panel-ocr';
     panel.innerHTML = [
       '<h2>OCR & Searchable PDF</h2>',
-      '<p class="subtitle">Recognize English text on scanned pages and add an invisible searchable text layer while preserving the original page artwork.</p>',
+      '<p class="subtitle">Recognize English text on scanned pages and add an invisible searchable text layer while preserving the original page artwork. For offline use, prepare the assets once while online.</p>',
       '<div class="drop-zone" id="ocr-drop"><div class="drop-icon">🔎</div><p><strong>Drop a scanned PDF here</strong> or click to browse</p><p class="hint">Your file is processed locally in this browser; it is not uploaded.</p><input type="file" accept=".pdf,application/pdf" hidden id="ocr-input"></div>',
       '<div id="ocr-file-card" class="file-item" style="display:none;margin-bottom:18px"><div class="file-icon">PDF</div><div class="file-info"><div class="file-name" id="ocr-file-name"></div><div class="file-meta" id="ocr-file-size"></div></div><button type="button" class="btn btn-secondary btn-sm" id="ocr-remove">Remove</button></div>',
       '<div class="controls" style="flex-direction:column;align-items:stretch;gap:14px">',
       '<div class="control-group"><label for="ocr-pages">Pages to OCR</label><input type="text" id="ocr-pages" placeholder="All pages, or e.g. 1-5, 8, 12-14" style="min-width:100%;font-family:\'JetBrains Mono\',monospace"><span class="hint">Leave blank to process all pages. Page numbers start at 1.</span></div>',
-      '<div class="control-group"><label for="ocr-scale">Recognition quality</label><select id="ocr-scale"><option value="1.5">Fast — 1.5× resolution</option><option value="2" selected>Balanced — 2× resolution</option><option value="2.5">High — 2.5× resolution (slower)</option></select></div>',
+      '<div class="control-group"><label for="ocr-scale">Recognition resolution</label><select id="ocr-scale"><option value="1.5">Fast — 1.5× resolution</option><option value="2" selected>Balanced — 2× resolution</option><option value="2.5">High — 2.5× resolution (slower)</option><option value="3">Maximum — 3× resolution (slowest; uses more memory)</option></select></div>',
+      '<div class="control-group"><label for="ocr-layout">Page layout</label><select id="ocr-layout"><option value="auto" selected>Automatic — full page / columns</option><option value="sparse">Sparse text — scattered labels and notes</option></select><span class="hint">Use Sparse text for pages with separated labels, annotations, or text around diagrams.</span></div>',
+      '<div class="control-group"><label><input type="checkbox" id="ocr-clean" style="width:auto;min-width:0;margin-right:8px">Improve faint scans (grayscale + contrast normalization)</label><span class="hint">Optional preprocessing may help pale or uneven scans; inspect output for tables, symbols, and photos.</span></div>',
       '<div class="note" style="margin:0">Pages that already contain selectable text are skipped to avoid duplicate text. OCR does not sharpen visible images; accuracy depends on scan quality. The first run needs internet unless OCR assets have been cached.</div>',
       '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-secondary" id="ocr-detect" disabled>Detect scanned pages</button><button type="button" class="btn btn-primary" id="ocr-run" disabled>Make Searchable PDF</button><button type="button" class="btn btn-secondary" id="ocr-cancel" disabled>Cancel</button><button type="button" class="btn btn-secondary" id="ocr-offline">Prepare OCR for offline use</button></div>',
       '<div class="progress-bar" id="ocr-progress-wrap" style="display:none"><div class="fill" id="ocr-progress-fill"></div></div>',
@@ -86,6 +88,49 @@
     if (!pages.size) throw new Error('Enter at least one page or range.');
     return [...pages].sort((a,b) => a-b);
   }
+  // Distinguish a genuinely searchable page from a scanned page with only a few
+  // selectable headers/footers. Use text quantity and its footprint, not a single
+  // character-count cutoff.
+  function hasUsableTextLayer(page, items) {
+    const valid = (items || []).filter(item => String(item.str || '').trim());
+    const chars = valid.reduce((n, item) => n + String(item.str || '').trim().length, 0);
+    if (chars < 80 || valid.length < 8) return false;
+    const viewport = page.getViewport({scale:1});
+    let footprint = 0;
+    for (const item of valid) {
+      const width = Math.abs(Number(item.width) || 0);
+      const height = Math.max(0, Math.abs(Number(item.height) || 0));
+      footprint += width * height;
+    }
+    const pageArea = Math.max(1, viewport.width * viewport.height);
+    return footprint / pageArea >= 0.002;
+  }
+  function enhanceScan(canvas, ctx) {
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = image.data;
+    // Grayscale first, then stretch contrast using robust near-black/near-white
+    // percentiles. This avoids a harsh binary threshold that can erase thin glyphs.
+    const histogram = new Uint32Array(256);
+    const gray = new Uint8Array(data.length / 4);
+    for (let p = 0, i = 0; i < data.length; i += 4, p++) {
+      const g = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+      gray[p] = g; histogram[g]++;
+    }
+    const total = gray.length;
+    const percentile = target => {
+      let sum = 0;
+      for (let v = 0; v < 256; v++) { sum += histogram[v]; if (sum >= target) return v; }
+      return 255;
+    };
+    const low = percentile(Math.max(1, Math.floor(total * 0.02)));
+    const high = percentile(Math.max(1, Math.floor(total * 0.98)));
+    const span = Math.max(32, high - low);
+    for (let p = 0, i = 0; p < gray.length; p++, i += 4) {
+      const v = Math.max(0, Math.min(255, Math.round((gray[p] - low) * 255 / span)));
+      data[i] = data[i+1] = data[i+2] = v;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
   function compactRanges(numbers) {
     const sorted = [...new Set(numbers)].sort((a, b) => a - b);
     if (!sorted.length) return '';
@@ -119,8 +164,7 @@
         status('Checking page ' + i + ' of ' + doc.numPages + '…');
         const page = await doc.getPage(i);
         const items = (await page.getTextContent()).items || [];
-        const textLength = items.map(item => item.str || '').join(' ').trim().length;
-        if (textLength > 30) searchable.push(i);
+        if (hasUsableTextLayer(page, items)) searchable.push(i);
         else scanned.push(i);
         progress(i / doc.numPages * 95);
       }
@@ -186,6 +230,11 @@
         }
       });
       worker = pdfWorker;
+      const layout = $('ocr-layout')?.value || 'auto';
+      await pdfWorker.setParameters({
+        preserve_interword_spaces: '1',
+        tessedit_pageseg_mode: layout === 'sparse' ? Tesseract.PSM.SPARSE_TEXT : Tesseract.PSM.AUTO
+      });
       const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
       canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', {alpha:false});
@@ -193,13 +242,17 @@
       for (let i = 0; i < pages.length; i++) {
         if (cancelled) throw new Error('OCR cancelled.');
         const number = pages[i], page = await source.getPage(number);
-        const text = (await page.getTextContent()).items.map(x => x.str || '').join(' ').trim();
-        if (text.length > 30) { skipped++; processed++; progress(processed / pages.length * 95); continue; }
+        const textItems = (await page.getTextContent()).items || [];
+        if (hasUsableTextLayer(page, textItems)) { skipped++; processed++; progress(processed / pages.length * 95); continue; }
         status('Rendering page ' + number + ' (' + (i+1) + ' of ' + pages.length + ')…');
         const viewport = page.getViewport({scale});
         canvas.width = Math.max(1, Math.ceil(viewport.width)); canvas.height = Math.max(1, Math.ceil(viewport.height));
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({canvasContext:ctx, viewport, background:'#fff'}).promise;
+        if ($('ocr-clean')?.checked) {
+          status('Enhancing scan contrast on page ' + number + '…');
+          enhanceScan(canvas, ctx);
+        }
         if (cancelled) throw new Error('OCR cancelled.');
         status('Recognizing page ' + number + ' (' + (i+1) + ' of ' + pages.length + ')…');
         const result = await pdfWorker.recognize(canvas);
