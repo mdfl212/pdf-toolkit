@@ -38,6 +38,21 @@
       '<div class="progress-bar" id="figure-images-progress-wrap" style="display:none"><div class="fill" id="figure-images-progress-fill"></div></div>',
       '<div id="figure-images-status" class="note" role="status" aria-live="polite" style="display:none;margin:0"></div>',
       '<div id="figure-images-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:12px"></div>',
+      '<div class="note" style="margin:0 0 8px"><strong>Fallback: render and crop a whole figure</strong><br>Use this when a diagram is made from vector lines, text, and multiple image pieces. Choose a page, render it, then drag on the page to select the complete figure. This works in the browser on Android too.</div>',
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px;align-items:end">',
+      '<div class="control-group"><label for="figure-crop-page">PDF page number</label><input type="number" id="figure-crop-page" min="1" value="1" style="width:100%;box-sizing:border-box"></div>',
+      '<button type="button" class="btn btn-secondary" id="figure-crop-render" disabled>Render page</button>',
+      '<button type="button" class="btn btn-secondary" id="figure-crop-clear" disabled>Clear selection</button>',
+      '<button type="button" class="btn btn-primary" id="figure-crop-add" disabled>Add crop</button>',
+      '<button type="button" class="btn btn-primary" id="figure-crop-download" disabled>Download crops ZIP (0)</button>',
+      '</div>',
+      '<p class="hint">Tip: zoom your browser if needed. Drag around the figure; the crop is saved at the rendered page resolution. You can include labels and captions by making the selection larger.</p>',
+      '<div id="figure-crop-stage" style="display:none;position:relative;width:100%;overflow:auto;border:1px solid var(--border);border-radius:8px;background:#eee;touch-action:pan-y">',
+      '<canvas id="figure-crop-page-canvas" style="display:block;width:100%;height:auto;touch-action:pan-y"></canvas>',
+      '<canvas id="figure-crop-overlay" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair"></canvas>',
+      '</div>',
+      '<div id="figure-crop-status" class="note" style="display:none;margin:8px 0"></div>',
+      '<div id="figure-crop-queue" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:10px"></div>',
       '<div id="figure-images-result" class="note" style="display:none;margin:0"></div></div>'
     ].join('');
     const before = $('panel-compress');
@@ -254,6 +269,163 @@
     $('figure-images-export').disabled = busy || selected === 0;
     $('figure-images-export').textContent = selected ? 'Download selected (' + selected + ') ZIP' : 'Download selected ZIP';
   }
+  let cropPageCanvas = null, cropOverlay = null, cropSelection = null, cropDrag = null, cropQueue = [];
+  function cropStatus(message, error = false) {
+    const el = $('figure-crop-status');
+    if (!el) return;
+    el.style.display = message ? 'block' : 'none';
+    el.textContent = message || '';
+    el.style.borderColor = error ? 'var(--danger)' : 'var(--border)';
+  }
+  function drawCropSelection() {
+    if (!cropOverlay) return;
+    const ctx = cropOverlay.getContext('2d');
+    ctx.clearRect(0, 0, cropOverlay.width, cropOverlay.height);
+    if (!cropSelection) return;
+    const { x, y, w, h } = cropSelection;
+    ctx.save();
+    ctx.fillStyle = 'rgba(20, 120, 220, 0.12)';
+    ctx.strokeStyle = '#1677d2';
+    ctx.lineWidth = Math.max(2, cropOverlay.width / 700);
+    ctx.setLineDash([8, 5]);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  }
+  function setupCropOverlay() {
+    cropPageCanvas = $('figure-crop-page-canvas');
+    cropOverlay = $('figure-crop-overlay');
+    cropOverlay.width = cropPageCanvas.width;
+    cropOverlay.height = cropPageCanvas.height;
+    cropSelection = null;
+    drawCropSelection();
+    const point = e => {
+      const r = cropOverlay.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(cropOverlay.width, (e.clientX - r.left) * cropOverlay.width / r.width)),
+        y: Math.max(0, Math.min(cropOverlay.height, (e.clientY - r.top) * cropOverlay.height / r.height))
+      };
+    };
+    cropOverlay.onpointerdown = e => {
+      e.preventDefault();
+      cropOverlay.setPointerCapture(e.pointerId);
+      const p = point(e);
+      cropDrag = { x: p.x, y: p.y };
+      cropSelection = { x: p.x, y: p.y, w: 0, h: 0 };
+      drawCropSelection();
+    };
+    cropOverlay.onpointermove = e => {
+      if (!cropDrag) return;
+      e.preventDefault();
+      const p = point(e);
+      cropSelection = { x: Math.min(cropDrag.x, p.x), y: Math.min(cropDrag.y, p.y), w: Math.abs(p.x - cropDrag.x), h: Math.abs(p.y - cropDrag.y) };
+      drawCropSelection();
+    };
+    const finish = () => {
+      cropDrag = null;
+      const ok = cropSelection && cropSelection.w >= 12 && cropSelection.h >= 12;
+      $('figure-crop-add').disabled = !ok;
+      if (ok) cropStatus('Selection: ' + Math.round(cropSelection.w) + ' × ' + Math.round(cropSelection.h) + ' rendered pixels. Tap “Add crop” to save it.');
+    };
+    cropOverlay.onpointerup = finish;
+    cropOverlay.onpointercancel = finish;
+  }
+  async function renderCropPage() {
+    if (!file || busy) return;
+    const pageNo = Number($('figure-crop-page').value);
+    if (!Number.isInteger(pageNo) || pageNo < 1) return cropStatus('Enter a valid page number.', true);
+    setBusy(true);
+    $('figure-crop-render').disabled = true;
+    cropStatus('Rendering page ' + pageNo + '…');
+    try {
+      const pdfjs = await loadPdfJs();
+      const doc = await pdfjs.getDocument({ data: (await file.arrayBuffer()).slice(0) }).promise;
+      if (pageNo > doc.numPages) throw new Error('This PDF has only ' + doc.numPages + ' page(s).');
+      const page = await doc.getPage(pageNo);
+      const base = page.getViewport({ scale: 1.8 });
+      const maxWidth = 1800;
+      const scale = Math.min(1.8, maxWidth / base.width);
+      const viewport = page.getViewport({ scale });
+      const canvas = $('figure-crop-page-canvas');
+      canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      $('figure-crop-stage').style.display = 'block';
+      setupCropOverlay();
+      $('figure-crop-clear').disabled = false;
+      $('figure-crop-add').disabled = true;
+      cropStatus('Page ' + pageNo + ' rendered. Drag over the figure you want to crop.');
+      try { page.cleanup(); } catch (_) {}
+      await doc.destroy();
+    } catch (error) {
+      cropStatus('Could not render page: ' + (error.message || error), true);
+    } finally {
+      setBusy(false);
+      $('figure-crop-render').disabled = !file;
+    }
+  }
+  async function addCrop() {
+    if (!cropPageCanvas || !cropSelection || cropSelection.w < 12 || cropSelection.h < 12) return;
+    const { x, y, w, h } = cropSelection;
+    const out = document.createElement('canvas');
+    out.width = Math.round(w); out.height = Math.round(h);
+    out.getContext('2d').drawImage(cropPageCanvas, Math.round(x), Math.round(y), out.width, out.height, 0, 0, out.width, out.height);
+    const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
+    out.width = 0; out.height = 0;
+    if (!blob) return cropStatus('Could not encode this crop as PNG.', true);
+    const pageNo = Number($('figure-crop-page').value);
+    cropQueue.push({ blob, page: pageNo, width: Math.round(w), height: Math.round(h), name: 'Page_' + pageNo + '_Crop_' + cropQueue.length });
+    renderCropQueue();
+    cropSelection = null; drawCropSelection();
+    $('figure-crop-add').disabled = true;
+    cropStatus('Crop added. You can select another figure or page.');
+  }
+  function renderCropQueue() {
+    const root = $('figure-crop-queue');
+    root.replaceChildren();
+    cropQueue.forEach((item, index) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:8px;min-width:0';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(item.blob);
+      img.style.cssText = 'width:100%;height:110px;object-fit:contain;background:#fff';
+      const name = document.createElement('input');
+      name.value = item.name; name.setAttribute('aria-label', 'Filename for crop ' + (index + 1));
+      name.style.cssText = 'width:100%;box-sizing:border-box;margin-top:6px';
+      name.addEventListener('input', () => { item.name = name.value; });
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'btn btn-secondary btn-sm'; remove.textContent = 'Remove';
+      remove.style.cssText = 'margin-top:6px;width:100%';
+      remove.addEventListener('click', () => { cropQueue.splice(index, 1); renderCropQueue(); });
+      card.append(img, name, remove); root.append(card);
+    });
+    $('figure-crop-download').disabled = cropQueue.length === 0;
+    $('figure-crop-download').textContent = 'Download crops ZIP (' + cropQueue.length + ')';
+  }
+  async function downloadCrops() {
+    if (!cropQueue.length || !window.JSZip) return;
+    const zip = new JSZip();
+    const used = new Set();
+    const rows = [['filename','source_page','width_px','height_px'].join(',')];
+    cropQueue.forEach((item, i) => {
+      let stem = slugName(item.name || ('Page_' + item.page + '_Crop_' + (i + 1)));
+      if (used.has(stem.toLowerCase())) stem += '_' + (i + 1);
+      used.add(stem.toLowerCase());
+      const filename = stem + '.png';
+      zip.file(filename, item.blob);
+      rows.push([filename, item.page, item.width, item.height].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(','));
+    });
+    zip.file('manifest.csv', rows.join('\r\n'));
+    cropStatus('Building crops ZIP…');
+    try {
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = safeName(file ? file.name.replace(/\.pdf$/i, '') : 'document') + '-figure-crops.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      cropStatus('Crop ZIP download started.');
+    } catch (error) { cropStatus('Could not create ZIP: ' + (error.message || error), true); }
+  }
+
   async function scan() {
     if (!file || busy) return;
     cancelled = false; setBusy(true); candidates = [];
@@ -375,6 +547,10 @@
     $('figure-images-select-all').addEventListener('click', () => { $('figure-images-results').querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = true); updateSelection(); });
     $('figure-images-select-none').addEventListener('click', () => { $('figure-images-results').querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false); updateSelection(); });
     $('figure-images-export').addEventListener('click', exportZip);
+    $('figure-crop-render').addEventListener('click', renderCropPage);
+    $('figure-crop-clear').addEventListener('click', () => { cropSelection = null; drawCropSelection(); $('figure-crop-add').disabled = true; cropStatus('Selection cleared. Drag to select a figure.'); });
+    $('figure-crop-add').addEventListener('click', addCrop);
+    $('figure-crop-download').addEventListener('click', downloadCrops);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
