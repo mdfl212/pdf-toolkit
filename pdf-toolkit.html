@@ -29,6 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="./mobile-process.js" defer></script>
+  <script src="./ocr.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
   <style>
     :root {
@@ -1565,7 +1566,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;font-size:0.85rem;color:var(--text-muted)">
-      <span id="offline-badge" style="display:none;background:rgba(52,211,153,0.15);color:var(--success);padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:500">Offline ready</span>
+      <span id="offline-badge" style="display:none;background:rgba(52,211,153,0.15);color:var(--success);padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:500">Offline support</span>
       <button class="btn btn-secondary btn-sm" id="pwa-install-btn" style="display:none">
         Install App
       </button>
@@ -4044,84 +4045,25 @@
       const manifestLink = document.getElementById('pwa-manifest');
       if (manifestLink) manifestLink.href = manifestURL;
 
-      // 2. Service Worker for offline caching
-      const swCode = `
-        const CACHE = 'pdf-toolkit-v2';
-        const ASSETS = [
-          './',
-          self.location.href,
-          'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
-          'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs'
-        ];
-
-        self.addEventListener('install', (event) => {
-          event.waitUntil(
-            caches.open(CACHE).then((cache) => cache.addAll(ASSETS).catch(() => {}))
-          );
-          self.skipWaiting();
-        });
-
-        self.addEventListener('activate', (event) => {
-          event.waitUntil(
-            caches.keys().then((keys) =>
-              Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-            )
-          );
-          self.clients.claim();
-        });
-
-        self.addEventListener('fetch', (event) => {
-          const req = event.request;
-          // Only handle GET
-          if (req.method !== 'GET') return;
-
-          event.respondWith(
-            caches.match(req).then((cached) => {
-              if (cached) return cached;
-              return fetch(req).then((res) => {
-                // Cache successful same-origin and CDN responses
-                if (res && res.status === 200 && (req.url.startsWith(self.location.origin) ||
-                    req.url.includes('cdn.jsdelivr.net') ||
-                    req.url.includes('cdnjs.cloudflare.com'))) {
-                  const clone = res.clone();
-                  caches.open(CACHE).then((cache) => cache.put(req, clone));
-                }
-                return res;
-              }).catch(() => cached || new Response('Offline', { status: 503 }));
-            })
-          );
-        });
-      `;
-
-      // Register service worker only when served over http/https (not file://)
+      // 2. Register a same-origin service worker. Blob URLs cannot be used as service-worker script URLs.
       if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-        const swBlob = new Blob([swCode], { type: 'application/javascript' });
-        const swURL = URL.createObjectURL(swBlob);
-
-        navigator.serviceWorker.register(swURL, { scope: './' })
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
           .then((reg) => {
             console.log('[PWA] Service Worker registered');
-            document.getElementById('offline-badge').style.display = 'inline-block';
-            // Update if a new SW is waiting
+            const badge = document.getElementById('offline-badge');
+            if (badge) badge.style.display = 'inline-block';
             reg.addEventListener('updatefound', () => {
               const newWorker = reg.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    showStatus('Update available — refresh to apply');
-                  }
-                });
-              }
+              if (newWorker) newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  showStatus('Update available — refresh to apply');
+                }
+              });
             });
           })
-          .catch((err) => {
-            console.warn('[PWA] SW registration failed:', err);
-          });
+          .catch((err) => console.warn('[PWA] SW registration failed:', err));
       } else {
-        // file:// or unsupported — still usable, just no offline/install
-        console.info('[PWA] Service Worker requires HTTPS or localhost. Open via a local server or host it for full offline + install support.');
+        console.info('[PWA] Service Worker requires HTTPS or localhost. Open the hosted site or a local server for offline support.');
       }
 
       // 3. Install prompt handling

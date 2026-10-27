@@ -78,6 +78,7 @@ The **Chapter Extractor is the primary tool** and the first screen when the app 
 |----------|------|----------------|
 | **Main tool** | **Chapter Extractor** | Split textbooks into individual chapter PDFs using bookmarks or an AI-assisted page-range list |
 | **Advanced workflow** | **Batch Processor** | Run multiple PDF operations in one batch and download the results together |
+| **Quick tasks** | **OCR & Searchable PDF** | Add an invisible English text layer to scanned pages while keeping visible page artwork |
 | **Quick tasks** | **Compress PDF** | Try basic PDF optimization or stronger image compression |
 | **Quick tasks** | **Merge** | Combine multiple PDFs |
 | **Quick tasks** | **Split / Extract** | Extract custom page ranges or split a document into individual pages |
@@ -87,6 +88,13 @@ The **Chapter Extractor is the primary tool** and the first screen when the app 
 | **Study & info** | **Chapter Extractor** | Extract textbook chapters using bookmarks or an imported page-range list |
 | **Study & info** | **Metadata** | Inspect document information |
 | **More tools** | **Watermark** | Add a diagonal text overlay |
+
+### OCR notes
+
+- **OCR & Searchable PDF** uses Tesseract.js in the browser to recognize English text on selected pages or page ranges and adds a transparent text layer over the original pages.
+- Pages that already contain selectable text are skipped to reduce duplicate text. OCR output must be reviewed; scan quality, skew, small print, tables, and handwriting can reduce accuracy.
+- Use **Prepare OCR for offline use** while online to cache the OCR engine and English language data. This can download tens of megabytes. Offline readiness must be verified by reopening the app without internet and testing OCR; browser storage can be cleared or evicted.
+- The tool runs locally and does not upload the PDF. The initial implementation focuses on searchable text, not full preservation of every advanced PDF feature.
 
 ### Compression notes
 
