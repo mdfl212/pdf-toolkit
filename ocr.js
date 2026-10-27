@@ -33,7 +33,7 @@
       '<div class="control-group"><label for="ocr-pages">Pages to OCR</label><input type="text" id="ocr-pages" placeholder="All pages, or e.g. 1-5, 8, 12-14" style="min-width:100%;font-family:\'JetBrains Mono\',monospace"><span class="hint">Leave blank to process all pages. Page numbers start at 1.</span></div>',
       '<div class="control-group"><label for="ocr-scale">Recognition quality</label><select id="ocr-scale"><option value="1.5">Fast — 1.5× resolution</option><option value="2" selected>Balanced — 2× resolution</option><option value="2.5">High — 2.5× resolution (slower)</option></select></div>',
       '<div class="note" style="margin:0">Pages that already contain selectable text are skipped to avoid duplicate text. OCR does not sharpen visible images; accuracy depends on scan quality. The first run needs internet unless OCR assets have been cached.</div>',
-      '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-primary" id="ocr-run" disabled>Make Searchable PDF</button><button type="button" class="btn btn-secondary" id="ocr-cancel" disabled>Cancel</button><button type="button" class="btn btn-secondary" id="ocr-offline">Prepare OCR for offline use</button></div>',
+      '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-secondary" id="ocr-detect" disabled>Detect scanned pages</button><button type="button" class="btn btn-primary" id="ocr-run" disabled>Make Searchable PDF</button><button type="button" class="btn btn-secondary" id="ocr-cancel" disabled>Cancel</button><button type="button" class="btn btn-secondary" id="ocr-offline">Prepare OCR for offline use</button></div>',
       '<div class="progress-bar" id="ocr-progress-wrap" style="display:none"><div class="fill" id="ocr-progress-fill"></div></div>',
       '<div id="ocr-status" class="note" role="status" aria-live="polite" style="display:none;margin:0"></div><div id="ocr-result" class="note" style="display:none;margin:0"></div></div>'
     ].join('');
@@ -66,12 +66,12 @@
     file = f; $('ocr-file-name').textContent = f.name;
     $('ocr-file-size').textContent = 'Original size: ' + (f.size / 1048576).toFixed(2) + ' MB';
     $('ocr-file-card').style.display = 'flex'; $('ocr-drop').style.display = 'none';
-    $('ocr-run').disabled = busy; $('ocr-result').style.display = 'none'; status('');
+    $('ocr-run').disabled = busy; $('ocr-detect').disabled = busy; $('ocr-result').style.display = 'none'; status('');
   }
   function clearFile() {
     if (busy) return; file = null; $('ocr-input').value = '';
     $('ocr-file-card').style.display = 'none'; $('ocr-drop').style.display = '';
-    $('ocr-run').disabled = true; $('ocr-result').style.display = 'none'; status(''); progress(0, false);
+    $('ocr-run').disabled = true; $('ocr-detect').disabled = true; $('ocr-result').style.display = 'none'; status(''); progress(0, false);
   }
   function parseRanges(raw, count) {
     if (!raw.trim()) return Array.from({length: count}, (_, i) => i + 1);
@@ -86,6 +86,63 @@
     if (!pages.size) throw new Error('Enter at least one page or range.');
     return [...pages].sort((a,b) => a-b);
   }
+  function compactRanges(numbers) {
+    const sorted = [...new Set(numbers)].sort((a, b) => a - b);
+    if (!sorted.length) return '';
+    const ranges = [];
+    let start = sorted[0], end = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === end + 1) end = sorted[i];
+      else {
+        ranges.push(start === end ? String(start) : start + '-' + end);
+        start = end = sorted[i];
+      }
+    }
+    ranges.push(start === end ? String(start) : start + '-' + end);
+    return ranges.join(', ');
+  }
+  async function detectScannedPages() {
+    if (!file || busy) return;
+    cancelled = false;
+    setBusy(true);
+    progress(0);
+    $('ocr-result').style.display = 'none';
+    let doc = null;
+    try {
+      status('Opening PDF to inspect text layers…');
+      const pdf = await pdfjs();
+      doc = await pdf.getDocument({data: await file.arrayBuffer()}).promise;
+      const scanned = [];
+      const searchable = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        if (cancelled) throw new Error('Scan detection cancelled.');
+        status('Checking page ' + i + ' of ' + doc.numPages + '…');
+        const page = await doc.getPage(i);
+        const items = (await page.getTextContent()).items || [];
+        const textLength = items.map(item => item.str || '').join(' ').trim().length;
+        if (textLength > 30) searchable.push(i);
+        else scanned.push(i);
+        progress(i / doc.numPages * 95);
+      }
+      if (cancelled) throw new Error('Scan detection cancelled.');
+      $('ocr-pages').value = compactRanges(scanned);
+      const message = scanned.length
+        ? 'Detected ' + scanned.length + ' page(s) with little or no selectable text and selected them for OCR. ' + searchable.length + ' page(s) already contain selectable text and were left out. Review the page range before running OCR.'
+        : 'All ' + doc.numPages + ' pages appear to contain selectable text. OCR may not be necessary.';
+      $('ocr-result').textContent = message;
+      $('ocr-result').style.display = 'block';
+      progress(100);
+      status('Scan detection complete. You can edit the selected page range manually.');
+    } catch (e) {
+      const message = e?.message || String(e);
+      status(/cancelled/i.test(message) ? message : 'Scan detection failed: ' + message, !/cancelled/i.test(message));
+    } finally {
+      try { await doc?.destroy(); } catch (_) {}
+      setBusy(false);
+      progress(0, false);
+    }
+  }
+
   async function loadTesseract() {
     if (window.Tesseract) return window.Tesseract;
     await new Promise((resolve, reject) => {
