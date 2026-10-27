@@ -19,7 +19,7 @@
     if (mobile) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'mobile-tool-card'; b.dataset.panel = 'ocr';
-      b.textContent = '🔎 OCR & Search';
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span>OCR</span>';
       mobile.insertBefore(b, mobile.querySelector('[data-panel="compress"]'));
     }
     const panel = document.createElement('section');
