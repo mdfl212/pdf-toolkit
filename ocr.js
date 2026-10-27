@@ -34,6 +34,7 @@
       '<div class="control-group"><label for="ocr-scale">Recognition resolution</label><select id="ocr-scale"><option value="1.5">Fast — 1.5× resolution</option><option value="2" selected>Balanced — 2× resolution</option><option value="2.5">High — 2.5× resolution (slower)</option><option value="3">Maximum — 3× resolution (slowest; uses more memory)</option></select></div>',
       '<div class="control-group"><label for="ocr-layout">Page layout</label><select id="ocr-layout"><option value="auto" selected>Automatic — full page / columns</option><option value="sparse">Sparse text — scattered labels and notes</option></select><span class="hint">Use Sparse text for pages with separated labels, annotations, or text around diagrams.</span></div>',
       '<div class="control-group"><label><input type="checkbox" id="ocr-clean" style="width:auto;min-width:0;margin-right:8px">Improve faint scans (grayscale + contrast normalization)</label><span class="hint">Optional preprocessing may help pale or uneven scans; inspect output for tables, symbols, and photos.</span></div>',
+      '<div class="control-group"><label for="ocr-watchwords">Medical terms to watch (optional)</label><textarea id="ocr-watchwords" rows="3" placeholder="Paste one term per line, e.g. ceftriaxone, Streptococcus, mg/dL" style="width:100%;font:inherit"></textarea><span class="hint">These terms are not forced into OCR. They are checked against recognized text and included in the review report when absent, so you can verify high-risk names and units manually.</span></div>',
       '<div class="note" style="margin:0">Pages that already contain selectable text are skipped to avoid duplicate text. OCR does not sharpen visible images; accuracy depends on scan quality. The first run needs internet unless OCR assets have been cached.</div>',
       '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-secondary" id="ocr-detect" disabled>Detect scanned pages</button><button type="button" class="btn btn-primary" id="ocr-run" disabled>Make Searchable PDF</button><button type="button" class="btn btn-secondary" id="ocr-cancel" disabled>Cancel</button><button type="button" class="btn btn-secondary" id="ocr-offline">Prepare OCR for offline use</button></div>',
       '<div class="progress-bar" id="ocr-progress-wrap" style="display:none"><div class="fill" id="ocr-progress-fill"></div></div>',
@@ -213,6 +214,7 @@
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
     let pdfWorker = null, doc = null, canvas = null;
     let skipped = 0, processed = 0;
+    const lowConfidence = [], recognizedTerms = new Set();
     try {
       status('Reading PDF…');
       const bytes = await file.arrayBuffer();
@@ -277,8 +279,27 @@
       status('Building searchable PDF…');
       const output = await doc.save({useObjectStreams:true});
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
-      download(output, name + '-searchable.pdf'); progress(100);
-      $('ocr-result').innerHTML = '<strong>Searchable PDF created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Search for a word in the downloaded PDF and review OCR accuracy.';
+      download(output, name + '-searchable.pdf');
+      const watchwords = ($('ocr-watchwords')?.value || '').split(/[\\n,;]+/).map(x => x.trim()).filter(Boolean);
+      const missingTerms = watchwords.filter(term => !recognizedTerms.has(term.toLocaleLowerCase()));
+      const report = [
+        'OCR QUALITY REVIEW',
+        'Source: ' + file.name,
+        'Pages OCR-processed: ' + (processed-skipped),
+        'Pages skipped (already searchable): ' + skipped,
+        'Low-confidence recognized words (confidence below 65/100): ' + lowConfidence.length,
+        '',
+        'LOW-CONFIDENCE WORDS — verify against the original scan; these are not necessarily wrong:',
+        ...(lowConfidence.length ? lowConfidence.map(w => 'Page ' + w.page + ' | confidence ' + w.confidence + ' | ' + w.text) : ['None flagged by the confidence threshold. This does not mean OCR is error-free.']),
+        '',
+        'USER-SUPPLIED TERMS TO WATCH — absent from OCR output; verify spelling and page coverage manually:',
+        ...(missingTerms.length ? missingTerms.map(t => '- ' + t) : ['None absent, or no terms were supplied.']),
+        '',
+        'Important: OCR confidence is only a heuristic. Always verify drug names, doses, units, lab values, abbreviations, and Greek letters against the original PDF.'
+      ].join('\\n');
+      download(new TextEncoder().encode(report), name + '-ocr-review.txt');
+      progress(100);
+      $('ocr-result').innerHTML = '<strong>Searchable PDF and OCR review report created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Low-confidence words flagged: ' + lowConfidence.length + '<br>User-supplied terms not found: ' + missingTerms.length + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Download the review report and verify flagged words against the original scan.';
       $('ocr-result').style.display = 'block'; status('Download started. Review the output before relying on it.');
     } catch (e) {
       const message = e?.message || String(e);
