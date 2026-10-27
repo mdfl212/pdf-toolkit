@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="PDF Toolkit" />
   <meta name="application-name" content="PDF Toolkit · StudyMats" />
-  <meta name="description" content="Client-side PDF toolkit with bookmark-based chapter extraction. Part of the StudyMats toolkit by mdfl212. Works offline." />
+  <meta name="description" content="Browser-based PDF toolkit with batch processing, compression, chapter extraction, and everyday PDF editing. Part of StudyMats by mdfl212." />
   <meta name="author" content="mdfl212" />
   <title>PDF Toolkit · StudyMats — Batch Processor</title>
 
@@ -4046,7 +4046,7 @@
 
       // 2. Service Worker for offline caching
       const swCode = `
-        const CACHE = 'pdf-toolkit-v1';
+        const CACHE = 'pdf-toolkit-v2';
         const ASSETS = [
           './',
           self.location.href,
