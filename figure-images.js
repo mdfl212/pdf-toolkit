@@ -608,7 +608,7 @@
     return null;
   }
   function workspaceBindOverlay(pageNo, overlay) {
-    const point=e=>{const r=overlay.getBoundingClientRect();return{x:Math.max(0,Math.min(overlay.width,(e.clientX-r.left)*overlay.width/r.width)),y:Math.max(0,Math.min(overlay.height,(e.clientY-r.top)*overlay.height/r.height)};};
+    const point=e=>{const r=overlay.getBoundingClientRect();return{x:Math.max(0,Math.min(overlay.width,(e.clientX-r.left)*overlay.width/r.width)),y:Math.max(0,Math.min(overlay.height,(e.clientY-r.top)*overlay.height/r.height))};};
     overlay.onpointerdown=e=>{
       const p=point(e); let box=workspaceSelected?workspaceBoxes.find(b=>b.id===workspaceSelected&&b.page===pageNo):null;
       if(workspaceAddMode){e.preventDefault();overlay.setPointerCapture(e.pointerId);workspaceDrag={mode:'new',page:pageNo,start:p,box:{id:'crop-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),page:pageNo,x:p.x,y:p.y,w:0,h:0,label:'Page_'+pageNo+'_Crop',kind:'Manual'}};workspaceBoxes.push(workspaceDrag.box);workspaceSelected=workspaceDrag.box.id;return;}
@@ -617,15 +617,15 @@
       workspaceSelected=hit.id;box=hit;
       const nearRight=Math.abs(p.x-(box.x+box.w))<12,nearBottom=Math.abs(p.y-(box.y+box.h))<12;
       const nearLeft=Math.abs(p.x-box.x)<12,nearTop=Math.abs(p.y-box.y)<12;
-      const resize=(nearRight||nearLeft)&&(nearBottom||nearTop);
-      workspaceDrag={mode:resize?'resize':'move',page:pageNo,start:p,original:{x:box.x,y:box.y,w:box.w,h:box.h},box,corner:(nearLeft?'l':'r')+(nearTop?'t':'b')};
+      const resize=nearRight||nearLeft||nearBottom||nearTop;
+      workspaceDrag={mode:resize?'resize':'move',page:pageNo,start:p,original:{x:box.x,y:box.y,w:box.w,h:box.h},box,edge:nearLeft?'l':nearRight?'r':nearTop?'t':nearBottom?'b':'',corner:(nearLeft?'l':nearRight?'r':'')+(nearTop?'t':nearBottom?'b':'')};
       overlay.setPointerCapture(e.pointerId);workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();e.preventDefault();
     };
     overlay.onpointermove=e=>{
       if(!workspaceDrag||workspaceDrag.page!==pageNo)return;const p=point(e),d=workspaceDrag,dx=p.x-d.start.x,dy=p.y-d.start.y,b=d.box;
       if(d.mode==='new'){b.x=Math.min(d.start.x,p.x);b.y=Math.min(d.start.y,p.y);b.w=Math.abs(dx);b.h=Math.abs(dy);}
       else if(d.mode==='move'){b.x=Math.max(0,Math.min(overlay.width-b.w,d.original.x+dx));b.y=Math.max(0,Math.min(overlay.height-b.h,d.original.y+dy));}
-      else {const o=d.original;if(d.corner[0]==='l'){b.x=Math.max(0,Math.min(o.x+o.w-16,o.x+dx));b.w=o.x+o.w-b.x;}else b.w=Math.max(16,Math.min(overlay.width-o.x,o.w+dx));if(d.corner[1]==='t'){b.y=Math.max(0,Math.min(o.y+o.h-16,o.y+dy));b.h=o.y+o.h-b.y;}else b.h=Math.max(16,Math.min(overlay.height-o.y,o.h+dy));}
+      else {const o=d.original,corner=d.corner,edge=d.edge;if(corner.includes('l')||edge==='l'){b.x=Math.max(0,Math.min(o.x+o.w-16,o.x+dx));b.w=o.x+o.w-b.x;}else if(corner.includes('r')||edge==='r')b.w=Math.max(16,Math.min(overlay.width-o.x,o.w+dx));if(corner.includes('t')||edge==='t'){b.y=Math.max(0,Math.min(o.y+o.h-16,o.y+dy));b.h=o.y+o.h-b.y;}else if(corner.includes('b')||edge==='b')b.h=Math.max(16,Math.min(overlay.height-o.y,o.h+dy));}
       workspaceDrawPage(pageNo);
     };
     const finish=()=>{if(!workspaceDrag||workspaceDrag.page!==pageNo)return;const d=workspaceDrag;workspaceDrag=null;if(d.mode==='new'&&(d.box.w<18||d.box.h<18)){workspaceBoxes=workspaceBoxes.filter(b=>b.id!==d.box.id);workspaceSelected=null;}else if(d.mode==='new'){d.box.label='Page_'+pageNo+'_Crop_'+workspaceBoxes.filter(b=>b.page===pageNo).length;workspaceAddMode=false;workspaceStatus('Crop added. You can resize it or rename it below.');}workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();};
@@ -638,7 +638,7 @@
       const pdfjs=await loadPdfJs();if(workspaceDoc){try{await workspaceDoc.destroy();}catch(_){}}
       workspaceDoc=await pdfjs.getDocument({data:(await file.arrayBuffer()).slice(0)}).promise;
       const pageNos=parseRanges($('figure-workspace-pages').value,workspaceDoc.numPages);
-      if(pageNos.length>120)throw new Error('Please analyze 120 pages or fewer at a time to protect browser memory. Use a chapter range and continue with the next range.');
+      if(pageNos.length>40)throw new Error('Please analyze 40 pages or fewer at a time to protect browser memory. Use a chapter range and continue with the next range.');
       workspacePages.clear();workspaceBoxes=[];workspaceSelected=null;
       const root=$('figure-workspace-pages-root');root.replaceChildren();
       for(let i=0;i<pageNos.length;i++){
