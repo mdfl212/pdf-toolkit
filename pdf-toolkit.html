@@ -1706,6 +1706,15 @@
               <input type="text" id="bm-prefix" placeholder="Optional prefix" style="min-width:140px">
             </div>
             <div class="control-group">
+              <label for="bm-filename-style">Chapter filename format</label>
+              <select id="bm-filename-style">
+                <option value="number-title">01 - Chapter title</option>
+                <option value="title">Chapter title only</option>
+                <option value="number-pages-title">01 - pp. 0001-0025 - Chapter title</option>
+              </select>
+              <span class="hint">The ZIP also includes a CSV index with source-page ranges.</span>
+            </div>
+            <div class="control-group">
               <label>&nbsp;</label>
               <div style="display:flex;gap:8px">
                 <button class="btn btn-secondary btn-sm" id="bm-expand-all">Expand all</button>
@@ -3040,13 +3049,20 @@
 
           const safeTitle = sanitizeFilename(item.title);
           const num = String(done + 1).padStart(2, '0');
-          const filename = `${prefix}${num} - ${safeTitle}.pdf`.replace(/\s+/g, ' ').trim();
+          const filenameStyle = document.getElementById('bm-filename-style')?.value || 'number-title';
+          const pageRange = 'pp. ' + String(item.start).padStart(4, '0') + '-' + String(item.end).padStart(4, '0');
+          let chapterBaseName = safeTitle;
+          if (filenameStyle === 'number-title') chapterBaseName = num + ' - ' + safeTitle;
+          if (filenameStyle === 'number-pages-title') chapterBaseName = num + ' - ' + pageRange + ' - ' + safeTitle;
+          const filename = (prefix + chapterBaseName + '.pdf').replace(/\s+/g, ' ').trim();
 
           state.extractedFiles.push({
             name: filename,
             bytes,
             pages: item.pageCount,
-            title: item.title
+            title: item.title,
+            sourceStartPage: item.start,
+            sourceEndPage: item.end
           });
 
           // Add to results UI
@@ -3111,6 +3127,15 @@
           fill.style.width = addPct + '%';
           statusEl.textContent = `Adding files (${i + 1}/${totalFiles})…`;
         }
+
+        const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+        const manifestRows = [
+          ['chapter_title', 'source_start_page', 'source_end_page', 'pages_in_export', 'filename'],
+          ...state.extractedFiles.map(f => [
+            f.title, f.sourceStartPage, f.sourceEndPage, f.pages, f.name
+          ])
+        ];
+        zip.file('chapter-index.csv', manifestRows.map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n');
 
         statusEl.textContent = 'Compressing ZIP…';
         showStatus('Compressing ZIP…');
