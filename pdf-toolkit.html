@@ -3634,6 +3634,12 @@
 
     function batchNewId() { return 'b' + (batchState.nextId++); }
 
+    function batchEscapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[ch]);
+    }
+
     function batchSafePdfName(value) {
       let name = String(value ?? '').trim().replace(/[\\/:*?"<>|\\u0000-\\u001f]/g, '_').replace(/\\.pdf$/i, '').replace(/[. ]+$/g, '').trim();
       if (!name || name === '.' || name === '..') name = 'output';
@@ -3702,9 +3708,9 @@
         return;
       }
       el.innerHTML = batchState.sources.map(s => `
-        <div class="batch-source-chip" title="${s.name}">
-          <span>📄 ${s.name}</span>
-          <button type="button" data-rm-src="${s.id}" aria-label="Remove">×</button>
+        <div class="batch-source-chip" title="${batchEscapeHtml(s.name)}">
+          <span>📄 ${batchEscapeHtml(s.name)}</span>
+          <button type="button" data-rm-src="${batchEscapeHtml(s.id)}" aria-label="Remove">×</button>
         </div>
       `).join('');
       el.querySelectorAll('[data-rm-src]').forEach(btn => {
@@ -3739,7 +3745,7 @@
       } else {
         tbody.innerHTML = batchState.rows.map((row, idx) => {
           const srcOpts = batchState.sources.map(s =>
-            `<option value="${s.id}" ${row.sourceId === s.id ? 'selected' : ''}>${s.name}</option>`
+            `<option value="${batchEscapeHtml(s.id)}" ${row.sourceId === s.id ? 'selected' : ''}>${batchEscapeHtml(s.name)}</option>`
           ).join('');
           const paramCells = cols.map(c => {
             if (c.type === 'select') {
@@ -3748,7 +3754,7 @@
               ).join('');
               return `<td data-label="${c.label}"><select data-row="${row.id}" data-key="${c.key}">${opts}</select></td>`;
             }
-            return `<td data-label="${c.label}"><input type="text" data-row="${row.id}" data-key="${c.key}" value="${row.params[c.key] ?? ''}" placeholder="${c.ph || ''}"></td>`;
+            return `<td data-label="${c.label}"><input type="text" data-row="${row.id}" data-key="${c.key}" value="${batchEscapeHtml(row.params[c.key] ?? '')}" placeholder="${batchEscapeHtml(c.ph || '')}"></td>`;
           }).join('');
           const st = row.status || '';
           const stClass = st === 'Done' ? 'ok' : st === 'Failed' ? 'err' : st === 'Running' ? 'run' : '';
@@ -3761,8 +3767,8 @@
               </select>
             </td>
             ${paramCells}
-            <td data-label="Output name"><input type="text" data-row="${row.id}" data-key="__output" value="${row.output || ''}" placeholder="auto"></td>
-            <td data-label="Status" class="batch-row-status ${stClass}">${st || '—'}${row.error ? ': ' + row.error : ''}</td>
+            <td data-label="Output name"><input type="text" data-row="${row.id}" data-key="__output" value="${batchEscapeHtml(row.output || '')}" placeholder="auto"></td>
+            <td data-label="Status" class="batch-row-status ${stClass}">${batchEscapeHtml(st || '—')}${row.error ? ': ' + batchEscapeHtml(row.error) : ''}</td>
             <td data-label="Remove" class="batch-remove-cell"><button type="button" class="batch-rm-row" data-rm-row="${row.id}" title="Remove row" aria-label="Remove row">×</button></td>
           </tr>`;
         }).join('');
