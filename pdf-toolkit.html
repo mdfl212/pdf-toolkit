@@ -3749,7 +3749,7 @@
           return match ? Number(match[1]) : null;
         };
 
-        if (parts.length >= 3 && /^\d+$/.test(parts[0]) && pageMatch(parts[parts.length - 1]) !== null) {
+        if (parts.length >= 3 && /^\d+$/.test(parts[0])) {
           level = Number(parts[0]);
           title = parts.slice(1, -1).join(' | ').trim();
           page = pageMatch(parts[parts.length - 1]);
