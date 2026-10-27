@@ -696,8 +696,9 @@
           if(!item.str||!item.str.trim()||!Array.isArray(item.transform))continue;
           const pt=viewport.convertToViewportPoint(item.transform[4],item.transform[5]);
           let line=lines.find(l=>Math.abs(l.y-pt[1])<4);
-          if(!line){line={y:pt[1],x:pt[0],parts:[]};lines.push(line);}
-          line.x=Math.min(line.x,pt[0]);line.parts.push(item.str.trim());
+          const itemRight=pt[0]+Math.abs(Number(item.width)||0)*viewport.scale;
+          if(!line){line={y:pt[1],x:pt[0],xEnd:itemRight,parts:[]};lines.push(line);}
+          line.x=Math.min(line.x,pt[0]);line.xEnd=Math.max(line.xEnd,itemRight);line.parts.push(item.str.trim());
         }
         lines.forEach(l=>l.text=l.parts.join(' ').replace(/\s+/g,' ').trim());
         const anchors=lines.filter(l=>/^(?:fig(?:ure)?s?\.?|table|box|algorithm)\s*[A-Z]?\d+(?:[.-]\d+)*(?:[A-Z])?\b/i.test(l.text));
@@ -705,10 +706,13 @@
         // If captions appear in both page halves, treat them as separate
         // columns. Otherwise retain a full-width crop for single/full-width
         // figures, where column inference would be too speculative.
-        const hasLeftAnchor=anchors.some(a=>a.x<pageW*.42);
-        const hasRightAnchor=anchors.some(a=>a.x>pageW*.58);
+        // A caption line that itself spans much of the page is evidence of a
+        // full-width figure/table, even when other captions sit in both columns.
+        const isWideAnchor=a=>(a.xEnd||a.x)-a.x>pageW*.56;
+        const hasLeftAnchor=anchors.some(a=>!isWideAnchor(a)&&a.x<pageW*.42);
+        const hasRightAnchor=anchors.some(a=>!isWideAnchor(a)&&a.x>pageW*.58);
         const useColumns=hasLeftAnchor&&hasRightAnchor;
-        const columnOf=a=>useColumns?(a.x<pageW*.5?'left':a.x>pageW*.5?'right':'full'):'full';
+        const columnOf=a=>isWideAnchor(a)?'full':(useColumns?(a.x<pageW*.5?'left':a.x>pageW*.5?'right':'full'):'full');
         const byColumn=new Map();
         anchors.forEach(a=>{const key=columnOf(a);if(!byColumn.has(key))byColumn.set(key,[]);byColumn.get(key).push(a);});
         for(const list of byColumn.values())list.sort((a,b)=>a.y-b.y);
