@@ -485,6 +485,23 @@
     .status.success { border-color: var(--success); }
     .status.error { border-color: var(--danger); }
 
+    .bookmark-manager-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 2fr) minmax(90px, .6fr) minmax(100px, .7fr) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .bookmark-manager-row {
+        grid-template-columns: minmax(0, 1fr) minmax(90px, .55fr);
+      }
+      .bookmark-manager-row .control-group:first-child {
+        grid-column: 1 / -1;
+      }
+    }
+
     .meta-table {
       width: 100%;
       border-collapse: collapse;
@@ -3687,8 +3704,7 @@
       }
       bookmarkManagerState.rows.forEach((row, index) => {
         const card = document.createElement('div');
-        card.className = 'file-item';
-        card.style.cssText = 'display:grid;grid-template-columns:minmax(160px,2fr) minmax(90px,.6fr) minmax(100px,.7fr) auto;gap:10px;align-items:end;padding:12px';
+        card.className = 'file-item bookmark-manager-row';
         const titleWrap = document.createElement('div');
         titleWrap.className = 'control-group';
         const titleLabel = document.createElement('label');
@@ -3776,7 +3792,6 @@
 
       if (!tree.length) {
         doc.catalog.delete(name('Outlines'));
-        doc.catalog.delete(name('PageMode'));
         return;
       }
 
@@ -3808,7 +3823,6 @@
       rootDict.set(name('Last'), topRefs[topRefs.length - 1]);
       rootDict.set(name('Count'), PDFNumber.of(countDescendants(tree)));
       doc.catalog.set(name('Outlines'), rootRef);
-      doc.catalog.set(name('PageMode'), name('UseOutlines'));
     }
 
     async function readBookmarkRows(pdfJsDoc) {
