@@ -128,6 +128,7 @@
           if (info.status === 'recognizing text') status('Recognizing text… ' + Math.round((info.progress || 0) * 100) + '%');
         }
       });
+      worker = pdfWorker;
       const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
       canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', {alpha:false});
@@ -174,6 +175,7 @@
       status(/cancelled/i.test(message) ? 'OCR cancelled. No output was downloaded.' : 'OCR failed: ' + message, !/cancelled/i.test(message));
     } finally {
       if (pdfWorker) { try { await pdfWorker.terminate(); } catch (_) {} }
+      worker = null;
       if (canvas) { canvas.width = 0; canvas.height = 0; }
       if (doc && doc.cleanup) { try { doc.cleanup(); } catch (_) {} }
       setBusy(false); progress(0, false);
