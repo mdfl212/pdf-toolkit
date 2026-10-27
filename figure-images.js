@@ -51,6 +51,19 @@
       '<canvas id="figure-crop-page-canvas" style="display:block;width:100%;height:auto;touch-action:pan-y"></canvas>',
       '<canvas id="figure-crop-overlay" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair"></canvas>',
       '</div>',
+
+      '<div class="note" style="margin-top:18px"><strong>Interactive PDF crop workspace</strong><br>Automatically suggest figure and table regions, then review and adjust the outlines directly on the pages. Suggestions are drafts: verify every boundary before export.</div>',
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;align-items:end;margin:12px 0">',
+      '<div class="control-group"><label for="figure-workspace-pages">Pages to display and analyze</label><input type="text" id="figure-workspace-pages" placeholder="Blank = all pages; or 1-10, 15" style="width:100%;box-sizing:border-box"><span class="hint">For very large textbooks, start with a chapter range to limit memory use.</span></div>',
+      '<button type="button" class="btn btn-primary" id="figure-workspace-auto" disabled>Auto-suggest crops</button>',
+      '<button type="button" class="btn btn-secondary" id="figure-workspace-add" disabled>Add crop</button>',
+      '<button type="button" class="btn btn-secondary" id="figure-workspace-remove" disabled>Remove selected</button>',
+      '<button type="button" class="btn btn-primary" id="figure-workspace-export" disabled>Export reviewed crops (0)</button>',
+      '</div>',
+      '<p class="hint">Tap a crop outline to select it. Drag inside to move it; drag a corner handle to resize. To add a crop, tap “Add crop” and drag on a page. Includes figures, graphs, flowcharts, and table-caption-based suggestions where detectable.</p>',
+      '<div id="figure-workspace-status" class="note" role="status" aria-live="polite" style="display:none"></div>',
+      '<div id="figure-workspace-pages-root" style="display:grid;gap:16px"></div>',
+      '<div id="figure-workspace-crops" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:10px;margin-top:12px"></div>',
       '<div id="figure-crop-status" class="note" style="display:none;margin:8px 0"></div>',
       '<div id="figure-crop-queue" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:10px"></div>',
       '<div id="figure-images-result" class="note" style="display:none;margin:0"></div></div>'
@@ -94,6 +107,11 @@
     $('figure-images-drop').style.display = 'none';
     $('figure-images-scan').disabled = busy;
     if ($('figure-crop-render')) $('figure-crop-render').disabled = busy;
+    if ($('figure-workspace-auto')) $('figure-workspace-auto').disabled = busy;
+    if ($('figure-workspace-add')) $('figure-workspace-add').disabled = true;
+    if ($('figure-workspace-export')) $('figure-workspace-export').disabled = true;
+    if ($('figure-workspace-pages-root')) $('figure-workspace-pages-root').replaceChildren();
+    workspaceBoxes = []; workspaceSelected = null; workspacePages.clear(); if (workspaceDoc) { try { workspaceDoc.destroy(); } catch (_) {} workspaceDoc = null; }
     $('figure-images-results').replaceChildren();
     $('figure-images-export').disabled = true;
     $('figure-images-result').style.display = 'none';
@@ -107,6 +125,11 @@
     $('figure-images-drop').style.display = '';
     $('figure-images-scan').disabled = true;
     if ($('figure-crop-render')) $('figure-crop-render').disabled = true;
+    if ($('figure-workspace-auto')) $('figure-workspace-auto').disabled = true;
+    if ($('figure-workspace-add')) $('figure-workspace-add').disabled = true;
+    if ($('figure-workspace-export')) $('figure-workspace-export').disabled = true;
+    if ($('figure-workspace-pages-root')) $('figure-workspace-pages-root').replaceChildren();
+    workspaceBoxes = []; workspaceSelected = null; workspacePages.clear(); if (workspaceDoc) { try { workspaceDoc.destroy(); } catch (_) {} workspaceDoc = null; }
     $('figure-images-export').disabled = true;
     $('figure-images-results').replaceChildren();
     $('figure-images-result').style.display = 'none';
@@ -535,6 +558,159 @@
     } catch (error) { status('Could not create ZIP: ' + (error.message || error), true); }
     finally { setBusy(false); progress(0, false); updateSelection(); }
   }
+
+  let workspaceDoc = null, workspacePages = new Map(), workspaceBoxes = [], workspaceSelected = null, workspaceAddMode = false, workspaceDrag = null, workspaceBusy = false;
+  const workspaceScale = 1.05;
+  function workspaceStatus(message, error = false) {
+    const el = $('figure-workspace-status'); if (!el) return;
+    el.style.display = message ? 'block' : 'none'; el.textContent = message || '';
+    el.style.borderColor = error ? 'var(--danger)' : 'var(--border)';
+  }
+  function workspaceUpdateButtons() {
+    $('figure-workspace-add').disabled = !workspaceDoc || workspaceBusy;
+    $('figure-workspace-remove').disabled = !workspaceSelected || workspaceBusy;
+    $('figure-workspace-export').disabled = !workspaceBoxes.length || workspaceBusy;
+    $('figure-workspace-export').textContent = 'Export reviewed crops (' + workspaceBoxes.length + ')';
+  }
+  function workspaceDrawPage(pageNo) {
+    const entry = workspacePages.get(pageNo); if (!entry || !entry.overlay) return;
+    const ctx = entry.overlay.getContext('2d'); ctx.clearRect(0, 0, entry.overlay.width, entry.overlay.height);
+    for (const box of workspaceBoxes.filter(b => b.page === pageNo)) {
+      const selected = box.id === workspaceSelected;
+      ctx.save(); ctx.fillStyle = selected ? 'rgba(22,119,210,.16)' : 'rgba(22,163,74,.10)';
+      ctx.strokeStyle = selected ? '#1677d2' : '#16a34a'; ctx.lineWidth = selected ? 3 : 2;
+      ctx.fillRect(box.x, box.y, box.w, box.h); ctx.strokeRect(box.x, box.y, box.w, box.h);
+      ctx.fillStyle = selected ? '#1677d2' : '#15803d'; ctx.font = 'bold 12px sans-serif';
+      ctx.fillRect(box.x, Math.max(0, box.y - 19), Math.min(Math.max(70, ctx.measureText(box.label).width + 12), entry.overlay.width - box.x), 19);
+      ctx.fillStyle = '#fff'; ctx.fillText(box.label.slice(0, 42), box.x + 5, Math.max(13, box.y - 5), Math.max(40, entry.overlay.width - box.x - 8));
+      if (selected) {
+        ctx.fillStyle = '#1677d2';
+        for (const [hx, hy] of [[box.x,box.y],[box.x+box.w,box.y],[box.x,box.y+box.h],[box.x+box.w,box.y+box.h]]) ctx.fillRect(hx-5,hy-5,10,10);
+      }
+      ctx.restore();
+    }
+  }
+  function workspaceDrawAll() { for (const p of workspacePages.keys()) workspaceDrawPage(p); }
+  function workspaceRenderList() {
+    const root = $('figure-workspace-crops'); root.replaceChildren();
+    workspaceBoxes.forEach(box => {
+      const card = document.createElement('div'); card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:8px;display:grid;gap:6px;min-width:0';
+      const title = document.createElement('button'); title.type='button'; title.className='btn btn-secondary btn-sm'; title.textContent=(box.id===workspaceSelected?'● ':'')+'Page '+box.page+' · '+box.kind; title.addEventListener('click',()=>{workspaceSelected=box.id;workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();const node=workspacePages.get(box.page)?.node;node?.scrollIntoView({behavior:'smooth',block:'center'});});
+      const label = document.createElement('input'); label.value=box.label; label.setAttribute('aria-label','Crop label'); label.style.cssText='width:100%;box-sizing:border-box'; label.addEventListener('input',()=>{box.label=label.value||'Crop';workspaceDrawPage(box.page);});
+      const remove = document.createElement('button'); remove.type='button'; remove.className='btn btn-secondary btn-sm'; remove.textContent='Remove'; remove.addEventListener('click',()=>{workspaceBoxes=workspaceBoxes.filter(b=>b.id!==box.id);if(workspaceSelected===box.id)workspaceSelected=null;workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();});
+      card.append(title,label,remove);root.append(card);
+    });
+    workspaceUpdateButtons();
+  }
+  function workspaceBoxAt(pageNo, p) {
+    const list=workspaceBoxes.filter(b=>b.page===pageNo);
+    for(let i=list.length-1;i>=0;i--){const b=list[i];if(p.x>=b.x-7&&p.x<=b.x+b.w+7&&p.y>=b.y-7&&p.y<=b.y+b.h+7)return b;}
+    return null;
+  }
+  function workspaceBindOverlay(pageNo, overlay) {
+    const point=e=>{const r=overlay.getBoundingClientRect();return{x:Math.max(0,Math.min(overlay.width,(e.clientX-r.left)*overlay.width/r.width)),y:Math.max(0,Math.min(overlay.height,(e.clientY-r.top)*overlay.height/r.height))};};
+    overlay.onpointerdown=e=>{
+      const p=point(e); let box=workspaceSelected?workspaceBoxes.find(b=>b.id===workspaceSelected&&b.page===pageNo):null;
+      if(workspaceAddMode){e.preventDefault();overlay.setPointerCapture(e.pointerId);workspaceDrag={mode:'new',page:pageNo,start:p,box:{id:'crop-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),page:pageNo,x:p.x,y:p.y,w:0,h:0,label:'Page_'+pageNo+'_Crop',kind:'Manual'}};workspaceBoxes.push(workspaceDrag.box);workspaceSelected=workspaceDrag.box.id;return;}
+      const hit=workspaceBoxAt(pageNo,p);
+      if(!hit){workspaceSelected=null;workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();return;}
+      workspaceSelected=hit.id;box=hit;
+      const nearRight=Math.abs(p.x-(box.x+box.w))<12,nearBottom=Math.abs(p.y-(box.y+box.h))<12;
+      const nearLeft=Math.abs(p.x-box.x)<12,nearTop=Math.abs(p.y-box.y)<12;
+      const resize=nearRight||nearLeft||nearBottom||nearTop;
+      workspaceDrag={mode:resize?'resize':'move',page:pageNo,start:p,original:{x:box.x,y:box.y,w:box.w,h:box.h},box,edge:nearLeft?'l':nearRight?'r':nearTop?'t':nearBottom?'b':'',corner:(nearLeft?'l':nearRight?'r':'')+(nearTop?'t':nearBottom?'b':'')};
+      overlay.setPointerCapture(e.pointerId);workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();e.preventDefault();
+    };
+    overlay.onpointermove=e=>{
+      if(!workspaceDrag||workspaceDrag.page!==pageNo)return;const p=point(e),d=workspaceDrag,dx=p.x-d.start.x,dy=p.y-d.start.y,b=d.box;
+      if(d.mode==='new'){b.x=Math.min(d.start.x,p.x);b.y=Math.min(d.start.y,p.y);b.w=Math.abs(dx);b.h=Math.abs(dy);}
+      else if(d.mode==='move'){b.x=Math.max(0,Math.min(overlay.width-b.w,d.original.x+dx));b.y=Math.max(0,Math.min(overlay.height-b.h,d.original.y+dy));}
+      else {const o=d.original,corner=d.corner,edge=d.edge;if(corner.includes('l')||edge==='l'){b.x=Math.max(0,Math.min(o.x+o.w-16,o.x+dx));b.w=o.x+o.w-b.x;}else if(corner.includes('r')||edge==='r')b.w=Math.max(16,Math.min(overlay.width-o.x,o.w+dx));if(corner.includes('t')||edge==='t'){b.y=Math.max(0,Math.min(o.y+o.h-16,o.y+dy));b.h=o.y+o.h-b.y;}else if(corner.includes('b')||edge==='b')b.h=Math.max(16,Math.min(overlay.height-o.y,o.h+dy));}
+      workspaceDrawPage(pageNo);
+    };
+    const finish=()=>{if(!workspaceDrag||workspaceDrag.page!==pageNo)return;const d=workspaceDrag;workspaceDrag=null;if(d.mode==='new'&&(d.box.w<18||d.box.h<18)){workspaceBoxes=workspaceBoxes.filter(b=>b.id!==d.box.id);workspaceSelected=null;}else if(d.mode==='new'){d.box.label='Page_'+pageNo+'_Crop_'+workspaceBoxes.filter(b=>b.page===pageNo).length;workspaceAddMode=false;workspaceStatus('Crop added. You can resize it or rename it below.');}workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();};
+    overlay.onpointerup=finish;overlay.onpointercancel=finish;
+  }
+  async function workspaceAutoSuggest() {
+    if(!file||workspaceBusy)return;
+    workspaceBusy=true;workspaceStatus('Opening PDF and analyzing page captions…');$('figure-workspace-auto').disabled=true;
+    try{
+      const pdfjs=await loadPdfJs();if(workspaceDoc){try{await workspaceDoc.destroy();}catch(_){}}
+      workspaceDoc=await pdfjs.getDocument({data:(await file.arrayBuffer()).slice(0)}).promise;
+      const pageNos=parseRanges($('figure-workspace-pages').value,workspaceDoc.numPages);
+      if(pageNos.length>40)throw new Error('Please analyze 40 pages or fewer at a time to protect browser memory. Use a chapter range and continue with the next range.');
+      workspacePages.clear();workspaceBoxes=[];workspaceSelected=null;
+      const root=$('figure-workspace-pages-root');root.replaceChildren();
+      for(let i=0;i<pageNos.length;i++){
+        const pageNo=pageNos[i];workspaceStatus('Analyzing page '+pageNo+' ('+(i+1)+' of '+pageNos.length+')…');
+        const page=await workspaceDoc.getPage(pageNo),viewport=page.getViewport({scale:workspaceScale});
+        const node=document.createElement('section');node.style.cssText='border:1px solid var(--border);border-radius:10px;padding:10px;min-width:0;overflow:hidden';
+        const heading=document.createElement('div');heading.style.cssText='font-weight:600;margin-bottom:8px';heading.textContent='Page '+pageNo;
+        const stage=document.createElement('div');stage.style.cssText='position:relative;width:100%;max-width:'+Math.ceil(viewport.width)+'px;margin:0 auto;background:#fff;overflow:hidden';
+        const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.style.cssText='display:block;width:100%;height:auto';
+        const overlay=document.createElement('canvas');overlay.width=canvas.width;overlay.height=canvas.height;overlay.style.cssText='position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair';
+        stage.append(canvas,overlay);node.append(heading,stage);root.append(node);
+        const entry={pageNo,page,viewport,node,canvas,overlay,rendered:false};workspacePages.set(pageNo,entry);workspaceBindOverlay(pageNo,overlay);
+        const textContent=await page.getTextContent();
+        const lines=[];
+        for(const item of textContent.items||[]){
+          if(!item.str||!item.str.trim()||!Array.isArray(item.transform))continue;
+          const pt=viewport.convertToViewportPoint(item.transform[4],item.transform[5]);
+          let line=lines.find(l=>Math.abs(l.y-pt[1])<4);
+          if(!line){line={y:pt[1],x:pt[0],parts:[]};lines.push(line);}
+          line.x=Math.min(line.x,pt[0]);line.parts.push(item.str.trim());
+        }
+        lines.forEach(l=>l.text=l.parts.join(' ').replace(/\s+/g,' ').trim());
+        const anchors=lines.filter(l=>/^(?:fig(?:ure)?s?\.?|table|box|algorithm)\s*[A-Z]?\d+(?:[.-]\d+)*(?:[A-Z])?\b/i.test(l.text));
+        const pageH=viewport.height,pageW=viewport.width;
+        anchors.forEach((a,j)=>{
+          const isTable=/^table\b/i.test(a.text), prior=anchors.filter(x=>x.y<a.y).sort((x,y)=>y.y-x.y)[0], next=anchors.filter(x=>x.y>a.y).sort((x,y)=>x.y-y.y)[0];
+          const colW=pageW*0.46, center=a.x+Math.min(pageW*0.2,a.text.length*3);
+          const twoCol=a.x<pageW*.36||a.x>pageW*.58;
+          const x=twoCol?(a.x<pageW*.5?Math.max(0,a.x-8):Math.max(0,pageW-colW-8)):pageW*.04;
+          const w=twoCol?Math.min(colW,pageW-x):pageW*.92;
+          let y,h;
+          if(isTable){y=Math.max(0,a.y-14);h=Math.min(pageH*.38,Math.max(150,(next?next.y-a.y:pageH-a.y)*.78));}
+          else {h=Math.min(pageH*.38,Math.max(150,(a.y-(prior?prior.y:0))*.85));y=Math.max(0,a.y-h-5);}
+          h=Math.min(h,pageH-y);if(h<40)return;
+          workspaceBoxes.push({id:'auto-'+pageNo+'-'+j,page:pageNo,x,y,w,h,label:(isTable?'Table_':'Fig_')+(a.text.match(/\d+(?:[.-]\d+)*/)||['suggested'])[0],kind:isTable?'Table suggestion':'Figure suggestion',confidence:'review'});
+        });
+        // Render pages as they are prepared, but cap each canvas to a modest width.
+        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+        entry.rendered=true;workspaceDrawPage(pageNo);
+        try{page.cleanup();}catch(_){}
+      }
+      workspaceRenderList();workspaceUpdateButtons();
+      workspaceStatus('Viewer ready: '+pageNos.length+' page(s), '+workspaceBoxes.length+' caption-anchored suggestion(s). These are rough starting boxes, not verified figure/table boundaries. Use Add crop for missed content and inspect each outline.');
+    }catch(error){workspaceStatus('Could not prepare crop workspace: '+(error.message||error),true);}
+    finally{workspaceBusy=false;$('figure-workspace-auto').disabled=!file;workspaceUpdateButtons();}
+  }
+  async function workspaceExport() {
+    if(!workspaceBoxes.length||workspaceBusy||!window.JSZip||!workspaceDoc)return;
+    workspaceBusy=true;workspaceUpdateButtons();workspaceStatus('Rendering reviewed crops for export…');
+    try{
+      const zip=new JSZip(),used=new Set(),rows=[['filename','label','type','source_page','x_pt','y_pt','width_pt','height_pt'].join(',')];
+      const pdfjs=await loadPdfJs();let n=0;
+      for(const box of workspaceBoxes){
+        const entry=workspacePages.get(box.page);if(!entry)continue;
+        const page=await workspaceDoc.getPage(box.page),scale=2,viewport=page.getViewport({scale});
+        const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+        const factor=scale/workspaceScale,x=Math.max(0,Math.floor(box.x*factor)),y=Math.max(0,Math.floor(box.y*factor)),w=Math.min(canvas.width-x,Math.ceil(box.w*factor)),h=Math.min(canvas.height-y,Math.ceil(box.h*factor));
+        if(w<2||h<2){canvas.width=0;canvas.height=0;continue;}
+        const out=document.createElement('canvas');out.width=w;out.height=h;out.getContext('2d').drawImage(canvas,x,y,w,h,0,0,w,h);
+        const blob=await new Promise(resolve=>out.toBlob(resolve,'image/png'));canvas.width=0;canvas.height=0;out.width=0;out.height=0;if(!blob)continue;
+        let stem=slugName(box.label||('Page_'+box.page+'_Crop_'+(++n)));if(used.has(stem.toLowerCase()))stem+='_'+box.page+'_'+(++n);used.add(stem.toLowerCase());const filename=stem+'.png';zip.file(filename,blob);
+        const csv=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+        rows.push([filename,box.label,box.kind,box.page,(box.x/workspaceScale).toFixed(2),(box.y/workspaceScale).toFixed(2),(box.w/workspaceScale).toFixed(2),(box.h/workspaceScale).toFixed(2)].map(csv).join(','));
+        workspaceStatus('Exporting crop '+(n+1)+' of '+workspaceBoxes.length+'…');
+      }
+      zip.file('manifest.csv',rows.join('\r\n'));const blob=await zip.generateAsync({type:'blob'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=safeName(file.name.replace(/\.pdf$/i,''))+'-reviewed-crops.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+      workspaceStatus('Export started. Review manifest.csv for page numbers and crop coordinates.');
+    }catch(error){workspaceStatus('Could not export crops: '+(error.message||error),true);}
+    finally{workspaceBusy=false;workspaceUpdateButtons();}
+  }
+
   function init() {
     addUI();
     const drop = $('figure-images-drop'), input = $('figure-images-input');
@@ -553,6 +729,12 @@
     $('figure-crop-clear').addEventListener('click', () => { cropSelection = null; drawCropSelection(); $('figure-crop-add').disabled = true; cropStatus('Selection cleared. Drag to select a figure.'); });
     $('figure-crop-add').addEventListener('click', addCrop);
     $('figure-crop-download').addEventListener('click', downloadCrops);
+
+    $('figure-workspace-auto').addEventListener('click', workspaceAutoSuggest);
+    $('figure-workspace-add').addEventListener('click', () => { workspaceAddMode=true; workspaceStatus('Add-crop mode is on. Drag a rectangle on the page where the crop should be.'); });
+    $('figure-workspace-remove').addEventListener('click', () => { if(!workspaceSelected)return;workspaceBoxes=workspaceBoxes.filter(b=>b.id!==workspaceSelected);workspaceSelected=null;workspaceDrawAll();workspaceRenderList();workspaceStatus('Selected crop removed.'); });
+    $('figure-workspace-export').addEventListener('click', workspaceExport);
+
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
