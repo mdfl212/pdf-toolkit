@@ -125,6 +125,9 @@
       return;
     }
     selectedFile = file;
+    lastRecoveryKey = null;
+    $('security-recovery-key-wrap').style.display = 'none';
+    $('security-recovery-key-display').value = '';
     $('security-file-name').textContent = file.name;
     $('security-file-size').textContent = 'Size: ' + (file.size / 1048576).toFixed(2) + ' MB';
     $('security-file-card').style.display = 'flex';
