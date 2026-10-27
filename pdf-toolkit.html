@@ -485,6 +485,16 @@
     .status.success { border-color: var(--success); }
     .status.error { border-color: var(--danger); }
 
+    .form-field-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      padding: 14px;
+    }
+    .form-field-row .control-group { min-width: 0; }
+    .form-field-row input[type="checkbox"] { width: auto; min-width: 18px; }
+    .form-field-row select[multiple] { min-height: 100px; }
+
     .meta-table {
       width: 100%;
       border-collapse: collapse;
@@ -1623,6 +1633,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           Metadata
         </button>
+        <button class="tool-btn" data-panel="forms">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>
+          Fill PDF Forms
+        </button>
       </div>
       <details class="tool-section advanced-tool-section">
         <summary>More tools</summary>
@@ -1977,6 +1991,34 @@
         </div>
       </div>
 
+      <!-- ==================== PDF FORM FILLER ==================== -->
+      <div class="panel" id="panel-forms">
+        <h2>Fill PDF Forms</h2>
+        <p class="subtitle">Fill supported interactive form fields in a PDF and download a completed copy.</p>
+        <div class="note">This works with interactive AcroForm fields. It does not create signatures, edit scanned paper forms, or decrypt password-protected PDFs. Your original file remains unchanged.</div>
+        <div class="drop-zone" id="forms-drop">
+          <div class="drop-icon">📝</div>
+          <p><strong>Drop a fillable PDF here</strong> or click to browse</p>
+          <p class="hint">Text fields, checkboxes, dropdowns, radio groups, and option lists are supported when readable by pdf-lib.</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="forms-input">
+        </div>
+        <div id="forms-content" style="display:none">
+          <div class="file-item" style="margin-bottom:14px">
+            <div class="file-icon">PDF</div>
+            <div class="file-info">
+              <div class="file-name" id="forms-filename"></div>
+              <div class="file-meta" id="forms-summary"></div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="forms-change">Choose another</button>
+          </div>
+          <div id="forms-fields" style="display:grid;gap:12px"></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px">
+            <button type="button" class="btn btn-primary" id="forms-save" disabled>Save filled PDF &amp; download</button>
+            <span id="forms-status" role="status" style="color:var(--text-muted);font-size:.88rem"></span>
+          </div>
+        </div>
+      </div>
+
       <!-- ==================== PDF COMPRESSION ==================== -->
       <div class="panel" id="panel-compress">
         <h2>Compress PDF</h2>
@@ -2130,6 +2172,7 @@
         <button type="button" class="mobile-tool-card" data-panel="rotate"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Rotate</button>
         <button type="button" class="mobile-tool-card" data-panel="reorder"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>Reorder</button>
         <button type="button" class="mobile-tool-card" data-panel="metadata"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Metadata</button>
+        <button type="button" class="mobile-tool-card" data-panel="forms"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5M8 16h8"/></svg>PDF Forms</button>
         <button type="button" class="mobile-tool-card" data-panel="watermark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Watermark</button>
       </div>
     </div>
@@ -3621,6 +3664,164 @@
         showStatus('Metadata loaded');
       } catch (err) {
         showStatus('Failed to read metadata: ' + err.message, 'error');
+      }
+    });
+
+    // ===================== PDF FORM FILLER =====================
+    const formsState = { file: null, bytes: null, fields: [], docFieldCount: 0 };
+
+    function setFormsStatus(message, isError = false) {
+      const el = document.getElementById('forms-status');
+      el.textContent = message;
+      el.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+    }
+
+    function makeFormsLabel(text, htmlFor) {
+      const label = document.createElement('label');
+      label.textContent = text;
+      if (htmlFor) label.htmlFor = htmlFor;
+      return label;
+    }
+
+    function fieldClassName(field) {
+      return field?.constructor?.name || 'PDFField';
+    }
+
+    function renderPdfFormFields(fields) {
+      const container = document.getElementById('forms-fields');
+      container.replaceChildren();
+      formsState.fields = [];
+      const supported = new Set(['PDFTextField', 'PDFCheckBox', 'PDFDropdown', 'PDFRadioGroup', 'PDFOptionList']);
+      fields.forEach((field, index) => {
+        const type = fieldClassName(field);
+        const name = field.getName();
+        const row = document.createElement('div');
+        row.className = 'file-item form-field-row';
+        const title = document.createElement('strong');
+        title.textContent = name;
+        row.appendChild(title);
+        const controlId = 'pdf-form-field-' + index;
+        let control = null;
+        let valueType = 'unsupported';
+
+        try {
+          if (type === 'PDFTextField') {
+            valueType = 'text';
+            control = field.isMultiline() ? document.createElement('textarea') : document.createElement('input');
+            if (control.tagName === 'INPUT') control.type = 'text';
+            control.value = field.getText() || '';
+            control.maxLength = field.getMaxLength() || 10000;
+          } else if (type === 'PDFCheckBox') {
+            valueType = 'checkbox';
+            control = document.createElement('input');
+            control.type = 'checkbox';
+            control.checked = field.isChecked();
+          } else if (type === 'PDFDropdown' || type === 'PDFOptionList' || type === 'PDFRadioGroup') {
+            valueType = type === 'PDFRadioGroup' ? 'radio' : (type === 'PDFDropdown' ? 'dropdown' : 'optionlist');
+            control = document.createElement('select');
+            const options = field.getOptions();
+            const multi = (type !== 'PDFRadioGroup' && typeof field.isMultiselect === 'function' && field.isMultiselect());
+            if (multi) control.multiple = true;
+            if (type !== 'PDFRadioGroup' && !multi) {
+              const blank = document.createElement('option');
+              blank.value = '';
+              blank.textContent = '— Select —';
+              control.appendChild(blank);
+            }
+            for (const optionValue of options) {
+              const option = document.createElement('option');
+              option.value = optionValue;
+              option.textContent = optionValue;
+              control.appendChild(option);
+            }
+            const selected = field.getSelected();
+            const selectedValues = Array.isArray(selected) ? selected : (selected ? [selected] : []);
+            Array.from(control.options).forEach(option => { option.selected = selectedValues.includes(option.value); });
+          } else {
+            const hint = document.createElement('p');
+            hint.className = 'hint';
+            hint.textContent = type + ' is preserved but cannot be edited by this tool.';
+            row.appendChild(hint);
+          }
+
+          if (control) {
+            control.id = controlId;
+            control.setAttribute('aria-label', name);
+            if (typeof field.isReadOnly === 'function' && field.isReadOnly()) control.disabled = true;
+            row.appendChild(control);
+            formsState.fields.push({ field, type: valueType, control, name });
+          }
+          if (!supported.has(type)) row.style.opacity = '0.85';
+        } catch (err) {
+          const hint = document.createElement('p');
+          hint.className = 'hint';
+          hint.textContent = 'Could not display this field: ' + (err?.message || String(err));
+          row.appendChild(hint);
+        }
+        container.appendChild(row);
+      });
+      document.getElementById('forms-save').disabled = fields.length === 0;
+    }
+
+    async function loadFillablePdf(file) {
+      setFormsStatus('Reading form fields…');
+      try {
+        const bytes = await file.arrayBuffer();
+        const doc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+        const form = doc.getForm();
+        const fields = form.getFields();
+        formsState.file = file;
+        formsState.bytes = bytes;
+        formsState.docFieldCount = fields.length;
+        document.getElementById('forms-filename').textContent = file.name;
+        document.getElementById('forms-summary').textContent = fields.length + ' interactive form field(s) found';
+        document.getElementById('forms-content').style.display = 'block';
+        renderPdfFormFields(fields);
+        setFormsStatus(fields.length ? 'Fill the fields and save a copy.' : 'No interactive form fields found. Scanned or flattened forms cannot be filled here.');
+      } catch (err) {
+        formsState.file = null;
+        formsState.bytes = null;
+        document.getElementById('forms-save').disabled = true;
+        setFormsStatus('Could not read PDF forms: ' + (err?.message || String(err)), true);
+      }
+    }
+
+    setupDropZone('forms-drop', 'forms-input', loadFillablePdf);
+    document.getElementById('forms-change').addEventListener('click', () => document.getElementById('forms-input').click());
+    document.getElementById('forms-save').addEventListener('click', async () => {
+      if (!formsState.file || !formsState.bytes) return;
+      const button = document.getElementById('forms-save');
+      button.disabled = true;
+      setFormsStatus('Saving completed form…');
+      try {
+        const doc = await PDFDocument.load(formsState.bytes.slice(0), { ignoreEncryption: true });
+        const form = doc.getForm();
+        for (const item of formsState.fields) {
+          if (item.control.disabled) continue;
+          if (item.type === 'text') {
+            item.field.setText(item.control.value);
+          } else if (item.type === 'checkbox') {
+            item.control.checked ? item.field.check() : item.field.uncheck();
+          } else if (item.type === 'dropdown' || item.type === 'optionlist') {
+            const values = item.control.multiple
+              ? Array.from(item.control.selectedOptions).map(option => option.value).filter(Boolean)
+              : (item.control.value ? [item.control.value] : []);
+            if (values.length) item.field.select(item.control.multiple ? values : values[0]);
+            else if (typeof item.field.clear === 'function') item.field.clear();
+          } else if (item.type === 'radio') {
+            if (item.control.value) item.field.select(item.control.value);
+            else if (typeof item.field.clear === 'function') item.field.clear();
+          }
+        }
+        form.updateFieldAppearances(StandardFonts.Helvetica);
+        const output = await doc.save({ useObjectStreams: true });
+        const baseName = sanitizeFilename(formsState.file.name.replace(/\.pdf$/i, '')) || 'document';
+        downloadBytes(output, baseName + '-filled.pdf');
+        setFormsStatus('Completed copy downloaded. Reopen it in a PDF reader to verify the field values and appearance.');
+      } catch (err) {
+        setFormsStatus('Could not save form: ' + (err?.message || String(err)), true);
+      } finally {
+        button.disabled = formsState.docFieldCount === 0;
       }
     });
 
