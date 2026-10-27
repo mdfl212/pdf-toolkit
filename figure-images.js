@@ -200,10 +200,10 @@
       if (!line) { line = { y, parts: [] }; lines.push(line); }
       line.parts.push({ x: Number(item.transform[4]) || 0, text: item.str.trim() });
     }
-    return lines.map(line => line.parts.sort((a, b) => a.x - b.x).map(part => part.text).join(' ').replace(/\\s+/g, ' ').trim())
-      .filter(text => /^(?:fig(?:ure)?s?\\.?)[ \\u00a0]*[A-Z]?\\d+(?:[.-]\\d+)*(?:[A-Z])?\\b/i.test(text))
+    return lines.map(line => line.parts.sort((a, b) => a.x - b.x).map(part => part.text).join(' ').replace(/\s+/g, ' ').trim())
+      .filter(text => /^(?:fig(?:ure)?s?\.?)[ \u00a0]*[A-Z]?\d+(?:[.-]\d+)*(?:[A-Z])?\b/i.test(text))
       .map(text => {
-        const match = text.match(/^(?:fig(?:ure)?s?\\.?)[ \\u00a0]*([A-Z]?\\d+(?:[.-]\\d+)*(?:[A-Z])?)\\s*[.:)-]?\\s*(.*)$/i);
+        const match = text.match(/^(?:fig(?:ure)?s?\.?)[ \u00a0]*([A-Z]?\d+(?:[.-]\d+)*(?:[A-Z])?)\s*[.:)-]?\s*(.*)$/i);
         return match ? { number: match[1], caption: (match[2] || '').trim(), text } : { number: '', caption: text, text };
       });
   }
