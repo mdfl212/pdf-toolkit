@@ -185,6 +185,41 @@
     } catch (_) { return canvas.width + 'x' + canvas.height; }
   }
   function safeName(name) { return name.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'document'; }
+
+  function slugName(value) {
+    return safeName(String(value || 'untitled').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').replace(/^[_ .-]+|[_ .-]+$/g, '')).slice(0, 100) || 'untitled';
+  }
+  function extractCaptionLines(textContent) {
+    const lines = [];
+    for (const item of textContent.items || []) {
+      if (!item.str || !item.str.trim() || !Array.isArray(item.transform)) continue;
+      const y = Number(item.transform[5]);
+      if (!Number.isFinite(y)) continue;
+      let line = lines.find(entry => Math.abs(entry.y - y) < 2.5);
+      if (!line) { line = { y, parts: [] }; lines.push(line); }
+      line.parts.push({ x: Number(item.transform[4]) || 0, text: item.str.trim() });
+    }
+    return lines.map(line => line.parts.sort((a, b) => a.x - b.x).map(part => part.text).join(' ').replace(/\\s+/g, ' ').trim())
+      .filter(text => /^(?:fig(?:ure)?s?\\.?)[ \\u00a0]*[A-Z]?\\d+(?:[.-]\\d+)*(?:[A-Z])?\\b/i.test(text))
+      .map(text => {
+        const match = text.match(/^(?:fig(?:ure)?s?\\.?)[ \\u00a0]*([A-Z]?\\d+(?:[.-]\\d+)*(?:[A-Z])?)\\s*[.:)-]?\\s*(.*)$/i);
+        return match ? { number: match[1], caption: (match[2] || '').trim(), text } : { number: '', caption: text, text };
+      });
+  }
+  function assignPageCaptions(items, captions) {
+    if (!captions.length) return;
+    // This is a suggestion, not a guarantee: some PDFs don't preserve a reliable
+    // reading order. Users can edit the filename label before exporting.
+    items.forEach((item, index) => {
+      const cap = captions.length === 1 ? captions[0] : captions[Math.min(index, captions.length - 1)];
+      if (!cap) return;
+      item.figureNumber = cap.number || '';
+      item.caption = cap.caption || cap.text || '';
+      item.label = [item.figureNumber ? 'Fig_' + item.figureNumber : '', item.caption].filter(Boolean).join('_');
+      item.captionSuggested = true;
+    });
+  }
   function cardFor(item, index) {
     const card = document.createElement('label');
     card.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);min-width:0;cursor:pointer';
@@ -196,10 +231,20 @@
     const check = document.createElement('input');
     check.type = 'checkbox'; check.checked = true; check.dataset.index = String(index); check.style.cssText = 'min-width:0;margin-top:5px';
     checkRow.append(check, document.createTextNode('Page ' + item.page + ' · ' + item.width + ' × ' + item.height));
+    const labelWrap = document.createElement('span');
+    labelWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-size:.8rem';
+    const label = document.createElement('span');
+    label.textContent = 'Filename label';
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text'; labelInput.value = item.label || ('Page_' + item.page + '_Image_' + (index + 1));
+    labelInput.setAttribute('aria-label', 'Filename label for image ' + (index + 1));
+    labelInput.style.cssText = 'width:100%;min-width:0;box-sizing:border-box';
+    labelInput.addEventListener('input', () => { item.label = labelInput.value; });
+    labelWrap.append(label, labelInput);
     const meta = document.createElement('span');
     meta.style.cssText = 'font-size:.75rem;color:var(--text-muted);overflow-wrap:anywhere';
-    meta.textContent = item.name + ' · ' + Math.round(item.bytes / 1024) + ' KB';
-    card.append(img, checkRow, meta);
+    meta.textContent = (item.figureNumber ? 'Detected figure ' + item.figureNumber + ' · ' : '') + 'Page ' + item.page + ' · ' + Math.round(item.bytes / 1024) + ' KB';
+    card.append(img, checkRow, labelWrap, meta);
     check.addEventListener('change', updateSelection);
     return card;
   }
@@ -229,6 +274,9 @@
         if (cancelled) throw new Error('Scan cancelled.');
         const pageNo = pages[p], page = await doc.getPage(pageNo);
         status('Scanning page ' + pageNo + ' (' + (p + 1) + ' of ' + pages.length + ')…');
+        const textContent = await page.getTextContent();
+        const pageCaptions = extractCaptionLines(textContent);
+        const pageCandidates = [];
         const list = await page.getOperatorList();
         const OPS = pdfjs.OPS;
         for (let i = 0; i < list.fnArray.length; i++) {
@@ -255,9 +303,12 @@
           const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
           if (!blob) { ignored++; canvas.width = 0; canvas.height = 0; continue; }
           const url = URL.createObjectURL(blob);
-          candidates.push({ page: pageNo, width, height, blob, url, bytes: blob.size, hash, name: 'figure-' + String(candidates.length + 1).padStart(4, '0') + '.png' });
+          const item = { page: pageNo, width, height, blob, url, bytes: blob.size, hash, name: 'figure-' + String(candidates.length + 1).padStart(4, '0') + '.png', label: 'Page_' + pageNo + '_Image_' + (pageCandidates.length + 1), figureNumber: '', caption: '' };
+          pageCandidates.push(item);
+          candidates.push(item);
           canvas.width = 0; canvas.height = 0;
         }
+        assignPageCaptions(pageCandidates, pageCaptions);
         progress((p + 1) / pages.length * 95);
         try { page.cleanup(); } catch (_) {}
       }
@@ -286,7 +337,19 @@
     setBusy(true);
     try {
       const zip = new JSZip(), base = safeName(file ? file.name.replace(/\.pdf$/i, '') : 'document');
-      chosen.forEach((item, i) => zip.file(base + '-page-' + String(item.page).padStart(4, '0') + '-image-' + String(i + 1).padStart(4, '0') + '.png', item.blob));
+      const usedNames = new Set();
+      const manifest = [['filename', 'figure_number', 'caption', 'source_page', 'width_px', 'height_px'].join(',')];
+      chosen.forEach((item, i) => {
+        let stem = slugName(item.label || ('Page_' + item.page + '_Image_' + (i + 1)));
+        const key = stem.toLowerCase();
+        const uniqueStem = usedNames.has(key) ? stem + '_page' + item.page + '_' + (i + 1) : stem;
+        usedNames.add(uniqueStem.toLowerCase());
+        const filename = uniqueStem + '.png';
+        zip.file(filename, item.blob);
+        const csv = value => '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+        manifest.push([filename, item.figureNumber || '', item.caption || '', item.page, item.width, item.height].map(csv).join(','));
+      });
+      zip.file('manifest.csv', manifest.join('\\r\\n'));
       status('Building ZIP file…'); progress(0.9);
       const blob = await zip.generateAsync({ type: 'blob' }, meta => progress(meta.percent || 0));
       const url = URL.createObjectURL(blob), a = document.createElement('a');
