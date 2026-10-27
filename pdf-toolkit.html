@@ -2018,7 +2018,7 @@
             </div>
             <button type="button" class="btn btn-secondary btn-sm" id="bookmark-manager-change">Choose another</button>
           </div>
-          <section class="panel" aria-labelledby="bookmark-ai-import-title" style="margin:0 0 16px;padding:16px;border:1px solid var(--border)">
+          <section aria-labelledby="bookmark-ai-import-title" style="margin:0 0 16px;padding:16px;border:1px solid var(--border)">
             <h3 id="bookmark-ai-import-title" style="margin-bottom:6px">Import an AI-generated outline</h3>
             <p class="hint" style="margin-bottom:12px">If this PDF has no bookmarks, use the prompt to ask your preferred AI assistant to build an outline from the table of contents. Paste its result here, then review every entry before saving.</p>
             <div class="controls" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
@@ -3994,13 +3994,7 @@
         helper.select();
         const copied = document.execCommand('copy');
         helper.remove();
-        status.textContent = copied ? 'Prompt copied. Paste it into your preferred AI assistant, then paste the returned outline here.' : 'Clipboard access was blocked. Select and copy the prompt manually from the fallback text area if shown.';
-        if (!copied) {
-          const fallback = document.getElementById('bookmark-ai-outline');
-          fallback.value = prompt;
-          fallback.focus();
-          fallback.select();
-        }
+        status.textContent = copied ? 'Prompt copied. Paste it into your preferred AI assistant, then paste the returned outline here.' : 'Clipboard access was blocked. Please allow clipboard access and try again, or copy the prompt from your browser clipboard interface if available.';
       }
     });
 
