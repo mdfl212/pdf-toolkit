@@ -3,6 +3,8 @@
 
   const $ = id => document.getElementById(id);
   let selectedFile = null;
+  let recoveryFile = null;
+  let lastRecoveryKey = null;
   let busy = false;
   let toolkitPromise = null;
 
@@ -52,7 +54,18 @@
       '</details>',
       '<div class="note" style="margin:0">AES-256 encryption is used. If you lose the opening password, it cannot be recovered. Keep an unprotected backup. The first use downloads the encryption engine; PDF contents and passwords remain on your device.</div>',
       '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-primary" id="security-run" disabled>Encrypt &amp; Download</button><span id="security-status" role="status" aria-live="polite" style="color:var(--text-muted);font-size:.88rem"></span></div>',
-      '</div>'
+      '</div>',
+      '<section style="margin-top:24px;padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">',
+      '<h3 style="margin-bottom:6px">Your recovery key</h3>',
+      '<p class="hint" style="margin-bottom:10px">After encryption, save the recovery key separately. It is the PDF owner password and can remove the opening-password protection in this toolkit. It does not reveal your original opening password.</p>',
+      '<div id="security-recovery-key-wrap" style="display:none;gap:10px;align-items:stretch;flex-wrap:wrap;margin-bottom:10px"><input id="security-recovery-key-display" type="text" readonly aria-label="Recovery key" style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:.85rem"><button type="button" class="btn btn-secondary" id="security-save-key">Download recovery key (.txt)</button></div>',
+      '<hr style="border:0;border-top:1px solid var(--border);margin:18px 0">',
+      '<h3 style="margin-bottom:6px">Forgot password? Recover a PDF</h3>',
+      '<p class="hint" style="margin-bottom:12px">Choose the protected PDF and enter its opening password or recovery/owner key. If neither password nor a backup is available, this tool cannot bypass AES-256 encryption.</p>',
+      '<div class="control-group" style="margin-bottom:12px"><label for="security-recovery-input">Protected PDF</label><input id="security-recovery-input" type="file" accept=".pdf,application/pdf" style="max-width:100%;color:var(--text)"></div>',
+      '<div class="control-group" style="margin-bottom:12px"><label for="security-recovery-password">Opening password or recovery key</label><input id="security-recovery-password" type="password" autocomplete="current-password" placeholder="Enter a password you know" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:.9rem"></div>',
+      '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-primary" id="security-recover-run" disabled>Recover &amp; Download Unlocked PDF</button><span id="security-recover-status" role="status" aria-live="polite" style="color:var(--text-muted);font-size:.88rem"></span></div>',
+      '</section>'
     ].join('');
 
     const before = $('panel-compress');
@@ -72,6 +85,13 @@
     input.addEventListener('change', () => chooseFile(input.files?.[0]));
     $('security-remove').addEventListener('click', clearFile);
     $('security-run').addEventListener('click', protectPdf);
+    $('security-save-key').addEventListener('click', downloadRecoveryKey);
+    $('security-recovery-input').addEventListener('change', () => {
+      recoveryFile = $('security-recovery-input').files?.[0] || null;
+      $('security-recover-run').disabled = busy || !recoveryFile;
+      setRecoveryStatus(recoveryFile ? 'PDF selected. Enter a valid opening password or recovery key.' : '');
+    });
+    $('security-recover-run').addEventListener('click', recoverPdf);
 
     document.querySelectorAll('[data-panel="security"]').forEach(button => {
       button.addEventListener('click', () => {
@@ -82,6 +102,13 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
+  }
+
+  function setRecoveryStatus(message, error = false) {
+    const el = $('security-recover-status');
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = error ? 'var(--danger)' : 'var(--text-muted)';
   }
 
   function setStatus(message, error = false) {
@@ -119,6 +146,7 @@
   function setBusy(value) {
     busy = value;
     $('security-run').disabled = value || !selectedFile;
+    $('security-recover-run').disabled = value || !recoveryFile;
     $('security-remove').disabled = value;
     $('security-input').disabled = value;
   }
@@ -152,6 +180,58 @@
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  function downloadText(text, filename) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  function downloadRecoveryKey() {
+    if (!lastRecoveryKey || !selectedFile) return;
+    const base = selectedFile.name.replace(/\\.pdf$/i, '') || 'document';
+    const contents = [
+      'PDF Toolkit recovery key',
+      'Protected PDF: ' + base + '_protected.pdf',
+      '',
+      'Recovery / owner password:',
+      lastRecoveryKey,
+      '',
+      'Keep this file in a separate, secure location. Anyone with this key and the protected PDF may be able to remove its password protection.',
+      'This key does not reveal the original opening password.'
+    ].join('\\n');
+    downloadText(contents, base + '_recovery-key.txt');
+    setStatus('Recovery key file downloaded. Store it separately from the protected PDF.');
+  }
+
+  async function recoverPdf() {
+    if (!recoveryFile || busy) return;
+    const password = $('security-recovery-password').value;
+    if (!password) return setRecoveryStatus('Enter the opening password or recovery key.', true);
+    setBusy(true);
+    try {
+      setRecoveryStatus('Loading PDF recovery engine…');
+      const toolkit = await loadToolkit();
+      setRecoveryStatus('Checking password and removing encryption locally…');
+      const bytes = new Uint8Array(await recoveryFile.arrayBuffer());
+      const unlocked = await toolkit.unlock(bytes, { password });
+      if (!(unlocked instanceof Uint8Array) || unlocked.length < 8) {
+        throw new Error('The recovery engine returned an invalid PDF.');
+      }
+      const base = recoveryFile.name.replace(/\\.pdf$/i, '') || 'document';
+      downloadPdf(unlocked, base + '_recovered.pdf');
+      setRecoveryStatus('Unlocked copy downloaded. Keep it somewhere safe.');
+    } catch (error) {
+      setRecoveryStatus('Could not unlock this PDF. Check the password or recovery key. If neither is available, the encryption cannot be bypassed here.', true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function protectPdf() {
@@ -194,7 +274,10 @@
       }
       const base = selectedFile.name.replace(/\.pdf$/i, '') || 'document';
       downloadPdf(protectedBytes, base + '_protected.pdf');
-      setStatus('Encrypted copy downloaded. Keep your original and store the password safely.');
+      lastRecoveryKey = ownerPassword;
+      $('security-recovery-key-display').value = ownerPassword;
+      $('security-recovery-key-wrap').style.display = 'flex';
+      setStatus('Encrypted copy downloaded. Download and securely store the recovery key below.');
     } catch (error) {
       setStatus(error?.message || 'Could not encrypt this PDF. Check the file and try again.', true);
     } finally {
