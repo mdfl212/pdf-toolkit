@@ -55,7 +55,6 @@
     let focusMode = false;
     let detailsOpen = false;
     let zipWasRunning = false;
-    let detailsOpen = false;
 
     function setFocusMode(on) {
       focusMode = on;
@@ -82,16 +81,12 @@
       fabPercent.textContent = Math.round(pct) + '%';
       fab.style.setProperty('--process-progress', pct + '%');
       trackEl.setAttribute('aria-valuenow', String(Math.round(pct)));
-      fabPercent.textContent = Math.round(pct) + '%';
-      fab.style.setProperty('--process-progress', pct + '%');
 
       const message = (status.textContent || '').trim();
       const zipReady = zipBtn.style.display !== 'none' && !zipBtn.disabled;
       const zipRunning = zipBtn.disabled;
       downloadBtn.disabled = !zipReady || zipRunning;
       fab.classList.toggle('ready', zipReady && !zipRunning);
-      fabIcon.textContent = zipReady && !zipRunning ? '↓' : (zipRunning ? '…' : '↗');
-      fab.setAttribute('aria-label', zipReady && !zipRunning ? 'Download ZIP' : 'Show extraction progress');
       fabIcon.textContent = zipReady && !zipRunning ? '↓' : (zipRunning ? '…' : '↗');
       fab.setAttribute('aria-label', zipReady && !zipRunning ? 'Download ZIP' : 'Show extraction progress');
 
@@ -160,12 +155,6 @@
         zipBtn.click();
         return;
       }
-      detailsOpen = !detailsOpen;
-      updateDock();
-    });
-    fab.addEventListener('click', () => {
-      const zipReady = zipBtn.style.display !== 'none' && !zipBtn.disabled;
-      if (zipReady) { zipBtn.click(); return; }
       detailsOpen = !detailsOpen;
       updateDock();
     });
