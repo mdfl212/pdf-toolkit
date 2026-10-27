@@ -1971,6 +1971,40 @@
         </div>
 
         <div id="meta-content" style="display:none">
+          <div class="controls" style="flex-direction:column;align-items:stretch;gap:14px">
+            <h3 style="margin:0">Editable document properties</h3>
+            <p style="color:var(--text-muted);font-size:.88rem">Edit the common PDF metadata fields, then save a new copy. The original file is not changed.</p>
+            <div class="control-group">
+              <label for="meta-title">Title</label>
+              <input id="meta-title" type="text" maxlength="1000" placeholder="Document title">
+            </div>
+            <div class="control-group">
+              <label for="meta-author">Author</label>
+              <input id="meta-author" type="text" maxlength="1000" placeholder="Author">
+            </div>
+            <div class="control-group">
+              <label for="meta-subject">Subject</label>
+              <input id="meta-subject" type="text" maxlength="2000" placeholder="Subject">
+            </div>
+            <div class="control-group">
+              <label for="meta-keywords">Keywords (comma-separated)</label>
+              <input id="meta-keywords" type="text" maxlength="2000" placeholder="keyword one, keyword two">
+            </div>
+            <div class="control-group">
+              <label for="meta-creator">Creator application</label>
+              <input id="meta-creator" type="text" maxlength="1000" placeholder="Creator">
+            </div>
+            <div class="control-group">
+              <label for="meta-producer">PDF producer</label>
+              <input id="meta-producer" type="text" maxlength="1000" placeholder="Producer">
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+              <button type="button" class="btn btn-primary" id="meta-save-btn">Save metadata &amp; download copy</button>
+              <span id="meta-save-status" role="status" style="color:var(--text-muted);font-size:.88rem"></span>
+            </div>
+            <div class="note" style="margin:0">Saving re-serializes the PDF with pdf-lib. Advanced features in unusual PDFs may not be fully preserved; inspect the saved copy before replacing your original.</div>
+          </div>
+          <h3 style="margin:20px 0 8px">Document information</h3>
           <table class="meta-table" id="meta-table">
             <tbody></tbody>
           </table>
@@ -3592,35 +3626,103 @@
     });
 
     // ===================== METADATA =====================
+    let metaLoadedFile = null;
+
+    function setMetaSaveStatus(message, isError = false) {
+      const el = document.getElementById('meta-save-status');
+      el.textContent = message;
+      el.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+    }
+
+    function renderMetaRows(rows) {
+      const tbody = document.querySelector('#meta-table tbody');
+      tbody.replaceChildren();
+      for (const [label, value] of rows) {
+        const tr = document.createElement('tr');
+        const th = document.createElement('th');
+        const td = document.createElement('td');
+        th.scope = 'row';
+        th.textContent = String(label);
+        td.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+        tr.append(th, td);
+        tbody.appendChild(tr);
+      }
+    }
+
+    function refreshMetaSummary(data, file) {
+      const info = data.pdfJsDoc.getMetadata().then(metaInfo => {
+        const meta = metaInfo.info || {};
+        renderMetaRows([
+          ['File name', file.name],
+          ['File size', formatBytes(file.size)],
+          ['Pages', data.pdfLibDoc.getPageCount()],
+          ['Title', data.pdfLibDoc.getTitle() || meta.Title || '—'],
+          ['Author', data.pdfLibDoc.getAuthor() || meta.Author || '—'],
+          ['Subject', data.pdfLibDoc.getSubject() || meta.Subject || '—'],
+          ['Keywords', data.pdfLibDoc.getKeywords().join(', ') || meta.Keywords || '—'],
+          ['Creator', data.pdfLibDoc.getCreator() || meta.Creator || '—'],
+          ['Producer', data.pdfLibDoc.getProducer() || meta.Producer || '—'],
+          ['Creation Date', meta.CreationDate || '—'],
+          ['Modification Date', meta.ModDate || '—'],
+          ['PDF Version', data.pdfJsDoc.pdfInfo?.PDFFormatVersion || '—'],
+        ]);
+      });
+      return info;
+    }
+
     setupDropZone('meta-drop', 'meta-input', async (file) => {
       try {
         showStatus('Reading metadata…');
         const data = await loadPdf(file);
+        metaLoadedFile = { file, bytes: data.bytes };
         state.currentPdfDoc = data.pdfLibDoc;
         state.currentPdfJs = data.pdfJsDoc;
         const info = await data.pdfJsDoc.getMetadata();
         const meta = info.info || {};
-        const pageCount = data.pdfLibDoc.getPageCount();
-        const rows = [
-          ['File name', file.name],
-          ['File size', formatBytes(file.size)],
-          ['Pages', pageCount],
-          ['Title', meta.Title || '—'],
-          ['Author', meta.Author || '—'],
-          ['Subject', meta.Subject || '—'],
-          ['Keywords', meta.Keywords || '—'],
-          ['Creator', meta.Creator || '—'],
-          ['Producer', meta.Producer || '—'],
-          ['Creation Date', meta.CreationDate || '—'],
-          ['Modification Date', meta.ModDate || '—'],
-          ['PDF Version', data.pdfJsDoc.pdfInfo?.PDFFormatVersion || '—'],
-        ];
-        const tbody = document.querySelector('#meta-table tbody');
-        tbody.innerHTML = rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+        document.getElementById('meta-title').value = data.pdfLibDoc.getTitle() || meta.Title || '';
+        document.getElementById('meta-author').value = data.pdfLibDoc.getAuthor() || meta.Author || '';
+        document.getElementById('meta-subject').value = data.pdfLibDoc.getSubject() || meta.Subject || '';
+        document.getElementById('meta-keywords').value = data.pdfLibDoc.getKeywords().join(', ') || meta.Keywords || '';
+        document.getElementById('meta-creator').value = data.pdfLibDoc.getCreator() || meta.Creator || '';
+        document.getElementById('meta-producer').value = data.pdfLibDoc.getProducer() || meta.Producer || '';
         document.getElementById('meta-content').style.display = 'block';
+        document.getElementById('meta-save-btn').disabled = false;
+        setMetaSaveStatus('');
+        await refreshMetaSummary(data, file);
         showStatus('Metadata loaded');
       } catch (err) {
+        metaLoadedFile = null;
+        document.getElementById('meta-save-btn').disabled = true;
         showStatus('Failed to read metadata: ' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('meta-save-btn').addEventListener('click', async () => {
+      if (!metaLoadedFile) return;
+      const button = document.getElementById('meta-save-btn');
+      button.disabled = true;
+      setMetaSaveStatus('Saving PDF…');
+      try {
+        const doc = await PDFDocument.load(metaLoadedFile.bytes.slice(0), { ignoreEncryption: true });
+        doc.setTitle(document.getElementById('meta-title').value.trim());
+        doc.setAuthor(document.getElementById('meta-author').value.trim());
+        doc.setSubject(document.getElementById('meta-subject').value.trim());
+        doc.setKeywords(document.getElementById('meta-keywords').value.split(',').map(v => v.trim()).filter(Boolean));
+        doc.setCreator(document.getElementById('meta-creator').value.trim());
+        doc.setProducer(document.getElementById('meta-producer').value.trim());
+        doc.setModificationDate(new Date());
+        const output = await doc.save({ useObjectStreams: true });
+        const baseName = sanitizeFilename(metaLoadedFile.file.name.replace(/\.pdf$/i, '')) || 'document';
+        downloadBytes(output, baseName + '-metadata-edited.pdf');
+        const refreshedBytes = output.buffer.slice(output.byteOffset, output.byteOffset + output.byteLength);
+        const refreshedFile = new File([refreshedBytes], baseName + '-metadata-edited.pdf', { type: 'application/pdf' });
+        const refreshed = await loadPdf(refreshedFile);
+        await refreshMetaSummary(refreshed, refreshedFile);
+        setMetaSaveStatus('Saved copy downloaded.');
+      } catch (err) {
+        setMetaSaveStatus('Could not save: ' + (err?.message || String(err)), true);
+      } finally {
+        button.disabled = false;
       }
     });
 
