@@ -3641,14 +3641,14 @@
     }
 
     function batchSafePdfName(value) {
-      let name = String(value ?? '').trim().replace(/[\\/:*?"<>|\\u0000-\\u001f]/g, '_').replace(/\\.pdf$/i, '').replace(/[. ]+$/g, '').trim();
+      let name = String(value ?? '').trim().replace(/[\/:*?"<>|]/g, '_').replace(/\\/g, '_').replace(/[\u0000-\u001f]/g, '_').replace(/\.pdf$/i, '').replace(/[. ]+$/g, '').trim();
       if (!name || name === '.' || name === '..') name = 'output';
       return name + '.pdf';
 }
 
     function batchUniquePdfName(value, usedNames) {
       const safeName = batchSafePdfName(value);
-      const base = safeName.replace(/\\.pdf$/i, '');
+      const base = safeName.replace(/\.pdf$/i, '');
       let candidate = safeName; let suffix = 2;
       while (usedNames.has(candidate.toLowerCase())) candidate = base + '_' + suffix++ + '.pdf';
       usedNames.add(candidate.toLowerCase()); return candidate;
@@ -3661,7 +3661,7 @@
       for (const originalPart of value.split(',')) {
         const part = originalPart.trim();
         if (!part) throw new Error('Page ranges contain an empty item. Use a format like 1-3,5.');
-        const match = part.match(/^(\\d+)(?:\\s*-\\s*(\\d+))?$/);
+        const match = part.match(/^(\d+)(?:\s*-\s*(\d+))?$/);
         if (!match) throw new Error('Invalid page range "' + part + '". Use numbers and ranges like 1-3,5.');
         const start = Number(match[1]); const end = match[2] === undefined ? start : Number(match[2]);
         if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < 1 || start > pageCount || end > pageCount) throw new Error('Page range "' + part + '" is outside this PDF (1-' + pageCount + ').');
