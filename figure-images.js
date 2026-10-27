@@ -663,17 +663,40 @@
         lines.forEach(l=>l.text=l.parts.join(' ').replace(/\s+/g,' ').trim());
         const anchors=lines.filter(l=>/^(?:fig(?:ure)?s?\.?|table|box|algorithm)\s*[A-Z]?\d+(?:[.-]\d+)*(?:[A-Z])?\b/i.test(l.text));
         const pageH=viewport.height,pageW=viewport.width;
+        // If captions appear in both page halves, treat them as separate
+        // columns. Otherwise retain a full-width crop for single/full-width
+        // figures, where column inference would be too speculative.
+        const hasLeftAnchor=anchors.some(a=>a.x<pageW*.42);
+        const hasRightAnchor=anchors.some(a=>a.x>pageW*.58);
+        const useColumns=hasLeftAnchor&&hasRightAnchor;
+        const columnOf=a=>useColumns?(a.x<pageW*.5?'left':a.x>pageW*.5?'right':'full'):'full';
+        const byColumn=new Map();
+        anchors.forEach(a=>{const key=columnOf(a);if(!byColumn.has(key))byColumn.set(key,[]);byColumn.get(key).push(a);});
+        for(const list of byColumn.values())list.sort((a,b)=>a.y-b.y);
         anchors.forEach((a,j)=>{
-          const isTable=/^table\b/i.test(a.text), prior=anchors.filter(x=>x.y<a.y).sort((x,y)=>y.y-x.y)[0], next=anchors.filter(x=>x.y>a.y).sort((x,y)=>x.y-y.y)[0];
-          const colW=pageW*0.46, center=a.x+Math.min(pageW*0.2,a.text.length*3);
-          const twoCol=a.x<pageW*.36||a.x>pageW*.58;
-          const x=twoCol?(a.x<pageW*.5?Math.max(0,a.x-8):Math.max(0,pageW-colW-8)):pageW*.04;
+          const isTable=/^table\b/i.test(a.text), column=columnOf(a), peers=byColumn.get(column)||[];
+          const index=peers.indexOf(a), prior=peers[index-1], next=peers[index+1];
+          const twoCol=column==='left'||column==='right';
+          const colW=pageW*.46;
+          const x=column==='left'?Math.max(0,a.x-8):column==='right'?Math.max(0,pageW-colW-8):pageW*.04;
           const w=twoCol?Math.min(colW,pageW-x):pageW*.92;
+          // Bound the suggestion by captions in the same column only. A
+          // neighboring caption in the opposite column must not control height.
+          const upperLimit=prior?(prior.y+a.y)/2:0;
+          const lowerLimit=next?(next.y+a.y)/2:pageH;
           let y,h;
-          if(isTable){y=Math.max(0,a.y-14);h=Math.min(pageH*.38,Math.max(150,(next?next.y-a.y:pageH-a.y)*.78));}
-          else {h=Math.min(pageH*.38,Math.max(150,(a.y-(prior?prior.y:0))*.85));y=Math.max(0,a.y-h-5);}
-          h=Math.min(h,pageH-y);if(h<40)return;
-          workspaceBoxes.push({id:'auto-'+pageNo+'-'+j,page:pageNo,x,y,w,h,label:(isTable?'Table_':'Fig_')+(a.text.match(/\d+(?:[.-]\d+)*/)||['suggested'])[0],kind:isTable?'Table suggestion':'Figure suggestion',confidence:'review'});
+          if(isTable){
+            y=Math.max(0,a.y-14,upperLimit);
+            h=Math.min(pageH*.38,Math.max(110,lowerLimit-y-8));
+          } else {
+            h=Math.min(pageH*.38,Math.max(110,a.y-upperLimit-5));
+            y=Math.max(upperLimit,a.y-h-5);
+          }
+          h=Math.min(h,pageH-y,Math.max(0,lowerLimit-y));
+          if(h<40)return;
+          const safeX=Math.max(0,Math.min(pageW-1,x));
+          const safeW=Math.max(1,Math.min(w,pageW-safeX));
+          workspaceBoxes.push({id:'auto-'+pageNo+'-'+j,page:pageNo,x:safeX,y,w:safeW,h,label:(isTable?'Table_':'Fig_')+(a.text.match(/\d+(?:[.-]\d+)*/)||['suggested'])[0],kind:isTable?'Table suggestion':'Figure suggestion',confidence:'review'});
         });
         // Render pages as they are prepared, but cap each canvas to a modest width.
         await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
