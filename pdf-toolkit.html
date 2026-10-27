@@ -3641,7 +3641,7 @@
     }
 
     function batchSafePdfName(value) {
-      let name = String(value ?? '').trim().replace(/[\/:*?"<>|]/g, '_').replace(/\\/g, '_').replace(/[\u0000-\u001f]/g, '_').replace(/\.pdf$/i, '').replace(/[. ]+$/g, '').trim();
+      let name = String(value ?? '').trim().replace(/[\/:*?"<>|]/g, '_').replace(/\\/g, '_').replace(/[\u0000-\u001f]/g, '_').replace(/\.pdf$/i, '').replace(/^[. ]+|[. ]+$/g, '').trim();
       if (!name || name === '.' || name === '..') name = 'output';
       return name + '.pdf';
 }
