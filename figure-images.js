@@ -745,7 +745,7 @@
             if(edge!==null&&edge>y+65)h=Math.min(pageH*.72,edge-y+8);
           } else {
             const edge=workspaceFindContentEdge(canvas,scanX0,scanX1,Math.max(0,a.y-16),'up',Math.max(upperLimit,0));
-            if(edge!==null&&edge<a.y-65){y=Math.max(upperLimit,edge-5);h=Math.max(0,a.y-y-14);}
+            if(edge!==null&&edge<a.y-65){y=Math.max(upperLimit,edge-5);h=Math.max(0,a.y-y-2);}
           }
           h=Math.min(h,pageH-y,Math.max(0,lowerLimit-y));
           if(h<40)return;
