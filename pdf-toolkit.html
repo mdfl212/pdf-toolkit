@@ -2321,11 +2321,12 @@
       return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
     }
 
-    async function renderThumb(pdfJsDoc, pageNum, canvas, maxWidth = 130) {
+    async function renderThumb(pdfJsDoc, pageNum, canvas, maxWidth = 130, rotationOverride = null) {
       const page = await pdfJsDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1 });
+      const rotation = rotationOverride == null ? page.rotate : rotationOverride;
+      const viewport = page.getViewport({ scale: 1, rotation });
       const scale = maxWidth / viewport.width;
-      const scaled = page.getViewport({ scale });
+      const scaled = page.getViewport({ scale, rotation });
       canvas.width = scaled.width;
       canvas.height = scaled.height;
       await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaled }).promise;
@@ -3256,13 +3257,49 @@
 
         const info = document.createElement('div');
         info.className = 'page-info';
-        info.innerHTML = `<span class="page-num">Page ${pageNum}</span>`;
-        if (showRotate && state.rotations[i]) {
-          info.innerHTML += `<span class="rotate-badge">${state.rotations[i]}°</span>`;
+        const pageNumLabel = document.createElement('span');
+        pageNumLabel.className = 'page-num';
+        pageNumLabel.textContent = `Page ${pageNum}`;
+        info.appendChild(pageNumLabel);
+        if (showRotate) {
+          const currentAngle = getPageRotationAngle(i);
+          if (currentAngle) {
+            const badge = document.createElement('span');
+            badge.className = 'rotate-badge';
+            badge.textContent = `${currentAngle}°`;
+            badge.dataset.rotationBadge = 'true';
+            info.appendChild(badge);
+          }
         }
         card.appendChild(info);
         container.appendChild(card);
-        await renderThumb(state.currentPdfJs, pageNum, canvas);
+        await renderThumb(state.currentPdfJs, pageNum, canvas, 130, showRotate ? getPageRotationAngle(i) : null);
+
+        if (showRotate) {
+          const actions = document.createElement('div');
+          actions.className = 'controls';
+          actions.style.cssText = 'display:flex;gap:6px;justify-content:center;margin-top:6px';
+          const left = document.createElement('button');
+          left.type = 'button';
+          left.className = 'btn btn-secondary btn-sm';
+          left.textContent = '↶ Rotate left';
+          left.setAttribute('aria-label', `Rotate page ${pageNum} 90 degrees counter-clockwise`);
+          const right = document.createElement('button');
+          right.type = 'button';
+          right.className = 'btn btn-secondary btn-sm';
+          right.textContent = '↷ Rotate right';
+          right.setAttribute('aria-label', `Rotate page ${pageNum} 90 degrees clockwise`);
+          left.addEventListener('click', async event => {
+            event.stopPropagation();
+            await rotateSinglePage(i, 270);
+          });
+          right.addEventListener('click', async event => {
+            event.stopPropagation();
+            await rotateSinglePage(i, 90);
+          });
+          actions.append(left, right);
+          card.appendChild(actions);
+        }
 
         if (selectable) {
           card.addEventListener('click', () => {
@@ -3455,6 +3492,37 @@
       return `${angle}°`;
     }
 
+    function getPageRotationAngle(index) {
+      const tracked = state.rotations[index];
+      const original = state.currentPdfDoc?.getPage(index)?.getRotation()?.angle || 0;
+      return ((tracked == null ? original : tracked) % 360 + 360) % 360;
+    }
+
+    async function rotateSinglePage(index, angle) {
+      if (!state.currentPdfDoc || !state.currentPdfJs) return;
+      const next = (getPageRotationAngle(index) + angle) % 360;
+      state.rotations[index] = next;
+      state.currentPdfDoc.getPage(index).setRotation(degrees(next));
+      const card = document.querySelector(`#rotate-pages .page-card[data-page="${index}"]`);
+      if (card) {
+        const canvas = card.querySelector('canvas');
+        if (canvas) await renderThumb(state.currentPdfJs, index + 1, canvas, 130, next);
+        const info = card.querySelector('.page-info');
+        if (info) {
+          const oldBadge = info.querySelector('[data-rotation-badge="true"]');
+          if (oldBadge) oldBadge.remove();
+          if (next) {
+            const badge = document.createElement('span');
+            badge.className = 'rotate-badge';
+            badge.textContent = `${next}°`;
+            badge.dataset.rotationBadge = 'true';
+            info.appendChild(badge);
+          }
+        }
+      }
+      showStatus(`Page ${index + 1} rotated to ${next}°`);
+    }
+
     function updateRotateSelectedBtn() {
       const n = state.selectedPages.size;
       const btn = document.getElementById('rotate-selected-btn');
@@ -3532,7 +3600,7 @@
       const angle = parseInt(document.getElementById('rotate-angle').value, 10);
       const total = state.currentPdfDoc.getPageCount();
       for (let i = 0; i < total; i++) {
-        state.rotations[i] = ((state.rotations[i] || 0) + angle) % 360;
+        state.rotations[i] = (getPageRotationAngle(i) + angle) % 360;
         state.currentPdfDoc.getPage(i).setRotation(degrees(state.rotations[i]));
       }
       await renderPageGrid('rotate-pages', { selectable: true, showRotate: true });
