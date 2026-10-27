@@ -631,6 +631,43 @@
     const finish=()=>{if(!workspaceDrag||workspaceDrag.page!==pageNo)return;const d=workspaceDrag;workspaceDrag=null;if(d.mode==='new'&&(d.box.w<18||d.box.h<18)){workspaceBoxes=workspaceBoxes.filter(b=>b.id!==d.box.id);workspaceSelected=null;}else if(d.mode==='new'){d.box.label='Page_'+pageNo+'_Crop_'+workspaceBoxes.filter(b=>b.page===pageNo).length;workspaceAddMode=false;workspaceStatus('Crop added. You can resize it or rename it below.');}workspaceDrawAll();workspaceRenderList();workspaceUpdateButtons();};
     overlay.onpointerup=finish;overlay.onpointercancel=finish;
   }
+  // Find the nearest sustained whitespace boundary after scanning from a caption anchor.
+  // Rendered pixels allow this to work even when the figure has no text layer.
+  function workspaceFindContentEdge(canvas, x0, x1, startY, direction, limitY) {
+    try {
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      const left=Math.max(0,Math.floor(x0)), right=Math.min(canvas.width,Math.ceil(x1));
+      const top=Math.max(0,Math.min(canvas.height-1,Math.floor(Math.min(startY,limitY))));
+      const bottom=Math.max(0,Math.min(canvas.height-1,Math.ceil(Math.max(startY,limitY))));
+      if(right-left<8||bottom-top<8)return null;
+      const pixels=ctx.getImageData(left,top,right-left,bottom-top+1).data;
+      const width=right-left,height=bottom-top+1;
+      const inkRows=new Uint8Array(height);
+      const sampleStep=Math.max(1,Math.floor(width/700));
+      const threshold=Math.max(3,Math.floor(width*.0025));
+      for(let y=0;y<height;y++){
+        let ink=0;
+        for(let x=0;x<width;x+=sampleStep){
+          const k=(y*width+x)*4;
+          if(pixels[k]<238||pixels[k+1]<238||pixels[k+2]<238){ink++;if(ink>=threshold)break;}
+        }
+        inkRows[y]=ink>=threshold?1:0;
+      }
+      const start=Math.max(0,Math.min(height-1,Math.round(startY-top)));
+      const step=direction==='up'?-1:1;
+      let seenInk=false,lastInk=-1,gap=0;
+      const sustainedGap=14;
+      for(let y=start;y>=0&&y<height;y+=step){
+        if(inkRows[y]){seenInk=true;lastInk=y;gap=0;}
+        else if(seenInk){
+          gap++;
+          if(gap>=sustainedGap)return top+lastInk;
+        }
+      }
+      return seenInk?top+lastInk:null;
+    } catch (_) { return null; }
+  }
+
   async function workspaceAutoSuggest() {
     if(!file||workspaceBusy)return;
     workspaceBusy=true;workspaceStatus('Opening PDF and analyzing page captions…');$('figure-workspace-auto').disabled=true;
@@ -651,14 +688,17 @@
         const overlay=document.createElement('canvas');overlay.width=canvas.width;overlay.height=canvas.height;overlay.style.cssText='position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair';
         stage.append(canvas,overlay);node.append(heading,stage);root.append(node);
         const entry={pageNo,page,viewport,node,canvas,overlay,rendered:false};workspacePages.set(pageNo,entry);workspaceBindOverlay(pageNo,overlay);
+        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+        entry.rendered=true;
         const textContent=await page.getTextContent();
         const lines=[];
         for(const item of textContent.items||[]){
           if(!item.str||!item.str.trim()||!Array.isArray(item.transform))continue;
           const pt=viewport.convertToViewportPoint(item.transform[4],item.transform[5]);
           let line=lines.find(l=>Math.abs(l.y-pt[1])<4);
-          if(!line){line={y:pt[1],x:pt[0],parts:[]};lines.push(line);}
-          line.x=Math.min(line.x,pt[0]);line.parts.push(item.str.trim());
+          const itemRight=pt[0]+Math.abs(Number(item.width)||0)*viewport.scale;
+          if(!line){line={y:pt[1],x:pt[0],xEnd:itemRight,parts:[]};lines.push(line);}
+          line.x=Math.min(line.x,pt[0]);line.xEnd=Math.max(line.xEnd,itemRight);line.parts.push(item.str.trim());
         }
         lines.forEach(l=>l.text=l.parts.join(' ').replace(/\s+/g,' ').trim());
         const anchors=lines.filter(l=>/^(?:fig(?:ure)?s?\.?|table|box|algorithm)\s*[A-Z]?\d+(?:[.-]\d+)*(?:[A-Z])?\b/i.test(l.text));
@@ -666,10 +706,13 @@
         // If captions appear in both page halves, treat them as separate
         // columns. Otherwise retain a full-width crop for single/full-width
         // figures, where column inference would be too speculative.
-        const hasLeftAnchor=anchors.some(a=>a.x<pageW*.42);
-        const hasRightAnchor=anchors.some(a=>a.x>pageW*.58);
+        // A caption line that itself spans much of the page is evidence of a
+        // full-width figure/table, even when other captions sit in both columns.
+        const isWideAnchor=a=>(a.xEnd||a.x)-a.x>pageW*.56;
+        const hasLeftAnchor=anchors.some(a=>!isWideAnchor(a)&&a.x<pageW*.42);
+        const hasRightAnchor=anchors.some(a=>!isWideAnchor(a)&&a.x>pageW*.58);
         const useColumns=hasLeftAnchor&&hasRightAnchor;
-        const columnOf=a=>useColumns?(a.x<pageW*.5?'left':a.x>pageW*.5?'right':'full'):'full';
+        const columnOf=a=>isWideAnchor(a)?'full':(useColumns?(a.x<pageW*.5?'left':a.x>pageW*.5?'right':'full'):'full');
         const byColumn=new Map();
         anchors.forEach(a=>{const key=columnOf(a);if(!byColumn.has(key))byColumn.set(key,[]);byColumn.get(key).push(a);});
         for(const list of byColumn.values())list.sort((a,b)=>a.y-b.y);
@@ -692,15 +735,26 @@
             h=Math.min(pageH*.38,Math.max(110,a.y-upperLimit-5));
             y=Math.max(upperLimit,a.y-h-5);
           }
+          // Use the label as an anchor, then scan rendered pixels outward.
+          // Figures usually sit above their caption; tables usually sit below their title.
+          // Keep the old estimate when no plausible whitespace boundary is detected.
+          const scanX0=twoCol?(column==='left'?0:pageW*.52):pageW*.04;
+          const scanX1=twoCol?(column==='left'?pageW*.48:pageW):pageW*.96;
+          if(isTable){
+            const edge=workspaceFindContentEdge(canvas,scanX0,scanX1,Math.min(pageH-1,a.y+16),'down',Math.min(lowerLimit,pageH-1));
+            if(edge!==null&&edge>y+65)h=Math.min(pageH*.72,edge-y+8);
+          } else {
+            const edge=workspaceFindContentEdge(canvas,scanX0,scanX1,Math.max(0,a.y-16),'up',Math.max(upperLimit,0));
+            if(edge!==null&&edge<a.y-65){y=Math.max(upperLimit,edge-5);h=Math.max(0,a.y-y-2);}
+          }
           h=Math.min(h,pageH-y,Math.max(0,lowerLimit-y));
           if(h<40)return;
           const safeX=Math.max(0,Math.min(pageW-1,x));
           const safeW=Math.max(1,Math.min(w,pageW-safeX));
           workspaceBoxes.push({id:'auto-'+pageNo+'-'+j,page:pageNo,x:safeX,y,w:safeW,h,label:(isTable?'Table_':'Fig_')+(a.text.match(/\d+(?:[.-]\d+)*/)||['suggested'])[0],kind:isTable?'Table suggestion':'Figure suggestion',confidence:'review'});
         });
-        // Render pages as they are prepared, but cap each canvas to a modest width.
-        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
-        entry.rendered=true;workspaceDrawPage(pageNo);
+        // Canvas was rendered before pixel-boundary analysis.
+        workspaceDrawPage(pageNo);
         try{page.cleanup();}catch(_){}
       }
       workspaceRenderList();workspaceUpdateButtons();
