@@ -3659,7 +3659,7 @@
           ['Title', data.pdfLibDoc.getTitle() || meta.Title || '—'],
           ['Author', data.pdfLibDoc.getAuthor() || meta.Author || '—'],
           ['Subject', data.pdfLibDoc.getSubject() || meta.Subject || '—'],
-          ['Keywords', data.pdfLibDoc.getKeywords().join(', ') || meta.Keywords || '—'],
+          ['Keywords', data.pdfLibDoc.getKeywords() || meta.Keywords || '—'],
           ['Creator', data.pdfLibDoc.getCreator() || meta.Creator || '—'],
           ['Producer', data.pdfLibDoc.getProducer() || meta.Producer || '—'],
           ['Creation Date', meta.CreationDate || '—'],
@@ -3682,7 +3682,7 @@
         document.getElementById('meta-title').value = data.pdfLibDoc.getTitle() || meta.Title || '';
         document.getElementById('meta-author').value = data.pdfLibDoc.getAuthor() || meta.Author || '';
         document.getElementById('meta-subject').value = data.pdfLibDoc.getSubject() || meta.Subject || '';
-        document.getElementById('meta-keywords').value = data.pdfLibDoc.getKeywords().join(', ') || meta.Keywords || '';
+        document.getElementById('meta-keywords').value = data.pdfLibDoc.getKeywords() || meta.Keywords || '';
         document.getElementById('meta-creator').value = data.pdfLibDoc.getCreator() || meta.Creator || '';
         document.getElementById('meta-producer').value = data.pdfLibDoc.getProducer() || meta.Producer || '';
         document.getElementById('meta-content').style.display = 'block';
