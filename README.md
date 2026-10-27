@@ -1,6 +1,6 @@
 # PDF Toolkit · StudyMats
 
-**Client-side chapter extractor for textbooks** — built for medical students and anyone who needs clean chapter PDFs for [NotebookLM](https://notebooklm.google.com/), Anki, or syllabus-aligned study packs.
+**Browser-based PDF toolkit** — with a batch processor, chapter extraction, compression, and everyday PDF editing tools for study and document workflows.
 
 **Live demo:** https://mdfl212.github.io/pdf-toolkit/
 
@@ -70,17 +70,27 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ---
 
-## Other tools in the app
+## Tools in the app
 
-| Tool | What it does |
-|------|----------------|
-| **Merge** | Combine multiple PDFs |
-| **Split / Extract** | Custom page ranges or one file per page |
-| **Delete pages** | Remove selected pages |
-| **Rotate** | 90° / 180° / 270° |
-| **Reorder** | Drag-and-drop page order |
-| **Watermark** | Diagonal text overlay |
-| **Metadata** | Title, author, page count, etc. |
+The interface groups tools by task so beginners can start with common actions and open less-used tools when needed.
+
+| Category | Tool | What it does |
+|----------|------|----------------|
+| **Main tool** | **Batch Processor** | Run multiple PDF operations in one batch and download the results together |
+| **Quick tasks** | **Compress PDF** | Try basic PDF optimization or stronger image compression |
+| **Quick tasks** | **Merge** | Combine multiple PDFs |
+| **Quick tasks** | **Split / Extract** | Extract custom page ranges or split a document into individual pages |
+| **Organize pages** | **Delete pages** | Remove selected pages |
+| **Organize pages** | **Rotate** | Rotate pages by 90°, 180°, or 270° |
+| **Organize pages** | **Reorder** | Change page order |
+| **Study & info** | **Chapter Extractor** | Extract textbook chapters using bookmarks or an imported page-range list |
+| **Study & info** | **Metadata** | Inspect document information |
+| **More tools** | **Watermark** | Add a diagonal text overlay |
+
+### Compression notes
+
+- **Basic optimization** re-saves the PDF and keeps text selectable where supported, but size reduction varies and may be small.
+- **Stronger compression** converts pages to JPEG-backed images. This can reduce image-heavy PDFs more, but the result loses selectable/searchable text and may lose links, bookmarks, forms, and accessibility features.
 
 Everything runs **in your browser**. Files are not uploaded to a server.
 
