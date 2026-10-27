@@ -12,7 +12,7 @@
   <meta name="application-name" content="PDF Toolkit · StudyMats" />
   <meta name="description" content="Browser-based PDF toolkit with batch processing, compression, chapter extraction, and everyday PDF editing. Part of StudyMats by mdfl212." />
   <meta name="author" content="mdfl212" />
-  <title>PDF Toolkit · StudyMats — Batch Processor</title>
+  <title>PDF Toolkit · StudyMats — Chapter Extractor</title>
 
   <!-- PWA Manifest (generated at runtime for single-file support) -->
   <link rel="manifest" id="pwa-manifest" />
@@ -1577,9 +1577,9 @@
     <aside aria-label="PDF tools">
       <div class="tool-section">
         <h3>Main Tool</h3>
-        <button class="tool-btn primary-tool active" data-panel="batch">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Batch Processor
+        <button class="tool-btn primary-tool active" data-panel="chapters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Chapter Extractor
         </button>
       </div>
       <div class="tool-section">
@@ -1634,7 +1634,7 @@
 
     <main>
       <!-- ==================== CHAPTER EXTRACTOR ==================== -->
-      <div class="panel" id="panel-chapters">
+      <div class="panel active" id="panel-chapters">
         <h2>Bookmark-Based Chapter Extractor</h2>
         <p class="subtitle">Automatically extract textbook chapters using the PDF’s embedded bookmarks. No manual page hunting required.</p>
 
@@ -2038,7 +2038,7 @@
       </div>
 
       <!-- ==================== BATCH PROCESSING (QGIS-style) ==================== -->
-      <div class="panel active" id="panel-batch">
+      <div class="panel" id="panel-batch">
         <h2>Batch Processing</h2>
         <p class="subtitle">
           Run multiple PDF tasks in one batch, track each job’s status, and download the completed results together.
@@ -2098,19 +2098,19 @@
     </main>
   </div>
 
-  <!-- Mobile bottom tabs: Batch · Tools · Chapters -->
+  <!-- Mobile bottom tabs: Chapters · Tools · Batch -->
   <nav class="mobile-tabbar" aria-label="Primary">
-    <button type="button" class="mobile-tab active" data-tab="batch" aria-label="Batch Processor">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      <span>Batch</span>
+    <button type="button" class="mobile-tab active" data-tab="home" aria-label="Chapter Extractor">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Chapters</span>
     </button>
     <button type="button" class="mobile-tab" data-tab="tools" aria-label="Tools">
       <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       <span>Tools</span>
     </button>
-    <button type="button" class="mobile-tab" data-tab="home" aria-label="Chapter Extractor">
-      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5z"/></svg>
-      <span>Chapters</span>
+    <button type="button" class="mobile-tab" data-tab="batch" aria-label="Batch Processor">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Batch</span>
     </button>
   </nav>
 
@@ -2120,6 +2120,7 @@
       <div class="mobile-tools-handle"></div>
       <p style="font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:12px;color:var(--accent)">Tools</p>
       <div class="mobile-tools-grid" id="mobile-tools-grid">
+        <button type="button" class="mobile-tool-card" data-panel="chapters"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Chapters</button>
         <button type="button" class="mobile-tool-card" data-panel="batch"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Batch Processor</button>
         <button type="button" class="mobile-tool-card" data-panel="compress"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3M9 9l-3 3 3 3M15 9l3 3-3 3M6 12h12"/></svg>Compress PDF</button>
         <button type="button" class="mobile-tool-card" data-panel="merge"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Merge PDFs</button>
@@ -2127,7 +2128,6 @@
         <button type="button" class="mobile-tool-card" data-panel="delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete Pages</button>
         <button type="button" class="mobile-tool-card" data-panel="rotate"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Rotate</button>
         <button type="button" class="mobile-tool-card" data-panel="reorder"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>Reorder</button>
-        <button type="button" class="mobile-tool-card" data-panel="chapters"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Chapters</button>
         <button type="button" class="mobile-tool-card" data-panel="metadata"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Metadata</button>
         <button type="button" class="mobile-tool-card" data-panel="watermark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Watermark</button>
       </div>
