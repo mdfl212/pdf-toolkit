@@ -93,6 +93,7 @@
     $('figure-images-file-card').style.display = 'flex';
     $('figure-images-drop').style.display = 'none';
     $('figure-images-scan').disabled = busy;
+    if ($('figure-crop-render')) $('figure-crop-render').disabled = busy;
     $('figure-images-results').replaceChildren();
     $('figure-images-export').disabled = true;
     $('figure-images-result').style.display = 'none';
@@ -105,6 +106,7 @@
     $('figure-images-file-card').style.display = 'none';
     $('figure-images-drop').style.display = '';
     $('figure-images-scan').disabled = true;
+    if ($('figure-crop-render')) $('figure-crop-render').disabled = true;
     $('figure-images-export').disabled = true;
     $('figure-images-results').replaceChildren();
     $('figure-images-result').style.display = 'none';
