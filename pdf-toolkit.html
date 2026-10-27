@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="PDF Toolkit" />
   <meta name="application-name" content="PDF Toolkit · StudyMats" />
-  <meta name="description" content="Client-side PDF toolkit with bookmark-based chapter extraction. Part of the StudyMats toolkit by mdfl212. Works offline." />
+  <meta name="description" content="Browser-based PDF toolkit with batch processing, compression, chapter extraction, and everyday PDF editing. Part of StudyMats by mdfl212." />
   <meta name="author" content="mdfl212" />
   <title>PDF Toolkit · StudyMats — Chapter Extractor</title>
 
@@ -520,6 +520,24 @@
       color: var(--text-muted);
       margin-bottom: 20px;
     }
+
+
+    .advanced-tool-section > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0 8px 10px;
+      color: var(--text-muted);
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 600;
+    }
+    .advanced-tool-section > summary::-webkit-details-marker { display:none; }
+    .advanced-tool-section > summary::after { content: '＋'; float: right; color: var(--accent); }
+    .advanced-tool-section[open] > summary::after { content: '−'; }
+    #compress-quality { accent-color: var(--accent); min-width: 0; }
+    #compress-progress-wrap { width: 100%; }
+    #compress-result strong { color: var(--text); }
 
     /* ========== Chapter Extractor specific ========== */
     .bookmark-tree {
@@ -1556,16 +1574,20 @@
   </header>
 
   <div class="app">
-    <aside>
+    <aside aria-label="PDF tools">
       <div class="tool-section">
         <h3>Main Tool</h3>
         <button class="tool-btn primary-tool active" data-panel="chapters">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="6" x2="16" y2="6"/><line x1="12" y1="10" x2="16" y2="10"/><line x1="12" y1="14" x2="14" y2="14"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           Chapter Extractor
         </button>
       </div>
       <div class="tool-section">
-        <h3>Tools</h3>
+        <h3>Quick Tasks</h3>
+        <button class="tool-btn" data-panel="compress">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M9 9l-3 3 3 3"/><path d="M15 9l3 3-3 3"/><path d="M6 12h12"/></svg>
+          Compress PDF
+        </button>
         <button class="tool-btn" data-panel="merge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
           Merge PDFs
@@ -1574,6 +1596,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
           Split / Extract
         </button>
+      </div>
+      <div class="tool-section">
+        <h3>Organize Pages</h3>
         <button class="tool-btn" data-panel="delete">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           Delete Pages
@@ -1586,22 +1611,25 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Reorder Pages
         </button>
-        <button class="tool-btn" data-panel="watermark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          Watermark
+      </div>
+      <div class="tool-section">
+        <h3>Study & Info</h3>
+        <button class="tool-btn" data-panel="chapters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Chapter Extractor
         </button>
         <button class="tool-btn" data-panel="metadata">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           Metadata
         </button>
       </div>
-      <div class="tool-section">
-        <h3>Advanced</h3>
-        <button class="tool-btn primary-tool" data-panel="batch" style="margin-bottom:0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-          Batch Processing
+      <details class="tool-section advanced-tool-section">
+        <summary>More tools</summary>
+        <button class="tool-btn" data-panel="watermark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Watermark
         </button>
-      </div>
+      </details>
     </aside>
 
     <main>
@@ -1948,6 +1976,67 @@
         </div>
       </div>
 
+      <!-- ==================== PDF COMPRESSION ==================== -->
+      <div class="panel" id="panel-compress">
+        <h2>Compress PDF</h2>
+        <p class="subtitle">Try a text-preserving optimization first, or use stronger image compression when a much smaller file matters more than selectable text.</p>
+
+        <div class="drop-zone" id="compress-drop">
+          <div class="drop-icon">🗜️</div>
+          <p><strong>Drop one PDF here</strong> or click to browse</p>
+          <p class="hint">Your file is processed locally in this browser; it is not uploaded.</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="compress-input">
+        </div>
+
+        <div id="compress-file-card" class="file-item" style="display:none;margin-bottom:18px">
+          <div class="file-icon">PDF</div>
+          <div class="file-info">
+            <div class="file-name" id="compress-file-name"></div>
+            <div class="file-meta" id="compress-file-size"></div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="compress-remove">Remove</button>
+        </div>
+
+        <div class="controls" style="flex-direction:column;align-items:stretch">
+          <div class="control-group">
+            <label for="compress-mode">Compression method</label>
+            <select id="compress-mode">
+              <option value="optimize">Basic optimization — keep text selectable</option>
+              <option value="visual">Stronger compression — reduce page images</option>
+            </select>
+          </div>
+          <div id="compress-visual-options" style="display:none;gap:14px;flex-direction:column">
+            <div class="control-group">
+              <label for="compress-quality">Image quality <span id="compress-quality-value">65%</span></label>
+              <input type="range" id="compress-quality" min="35" max="90" value="65" style="width:100%">
+            </div>
+            <div class="control-group">
+              <label for="compress-scale">Resolution <span id="compress-scale-value">1.25×</span></label>
+              <select id="compress-scale">
+                <option value="1.5">High — 1.5× (clearer, larger)</option>
+                <option value="1.25" selected>Balanced — 1.25×</option>
+                <option value="1">Small — 1×</option>
+                <option value="0.75">Smallest — 0.75× (less detail)</option>
+              </select>
+            </div>
+            <div class="note" style="margin:0">
+              Stronger compression converts each page into a compressed image. The output will no longer have selectable/searchable text and may lose links, bookmarks, forms, and accessibility features. Choose Basic optimization if those matter.
+            </div>
+          </div>
+          <div class="note" id="compress-basic-note" style="margin:0">
+            Basic optimization re-saves the PDF and may reduce file size, but the result depends on how the original was created. It does not aggressively recompress embedded images.
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button type="button" class="btn btn-primary" id="compress-run" disabled>Compress PDF</button>
+            <span id="compress-status" style="color:var(--text-muted);font-size:.88rem"></span>
+          </div>
+          <div class="progress-bar" id="compress-progress-wrap" style="display:none">
+            <div class="fill" id="compress-progress-fill"></div>
+          </div>
+          <div id="compress-result" class="note" style="display:none;margin:0"></div>
+        </div>
+      </div>
+
       <!-- ==================== BATCH PROCESSING (QGIS-style) ==================== -->
       <div class="panel" id="panel-batch">
         <h2>Batch Processing</h2>
@@ -2009,17 +2098,17 @@
     </main>
   </div>
 
-  <!-- Mobile bottom tabs: Home · Tools · Batch -->
+  <!-- Mobile bottom tabs: Chapters · Tools · Batch -->
   <nav class="mobile-tabbar" aria-label="Primary">
-    <button type="button" class="mobile-tab active" data-tab="home" aria-label="Home">
-      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5z"/></svg>
-      <span>Home</span>
+    <button type="button" class="mobile-tab active" data-tab="home" aria-label="Chapter Extractor">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Chapters</span>
     </button>
     <button type="button" class="mobile-tab" data-tab="tools" aria-label="Tools">
       <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
       <span>Tools</span>
     </button>
-    <button type="button" class="mobile-tab" data-tab="batch" aria-label="Batch">
+    <button type="button" class="mobile-tab" data-tab="batch" aria-label="Batch Processor">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       <span>Batch</span>
     </button>
@@ -2031,15 +2120,16 @@
       <div class="mobile-tools-handle"></div>
       <p style="font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:12px;color:var(--accent)">Tools</p>
       <div class="mobile-tools-grid" id="mobile-tools-grid">
-        <button type="button" class="mobile-tool-card" data-panel="merge"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Merge</button>
-        <button type="button" class="mobile-tool-card" data-panel="split"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Split</button>
-        <button type="button" class="mobile-tool-card" data-panel="delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button>
+        <button type="button" class="mobile-tool-card" data-panel="chapters"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Chapters</button>
+        <button type="button" class="mobile-tool-card" data-panel="batch"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Batch Processor</button>
+        <button type="button" class="mobile-tool-card" data-panel="compress"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3M9 9l-3 3 3 3M15 9l3 3-3 3M6 12h12"/></svg>Compress PDF</button>
+        <button type="button" class="mobile-tool-card" data-panel="merge"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Merge PDFs</button>
+        <button type="button" class="mobile-tool-card" data-panel="split"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Split / Extract</button>
+        <button type="button" class="mobile-tool-card" data-panel="delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete Pages</button>
         <button type="button" class="mobile-tool-card" data-panel="rotate"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Rotate</button>
         <button type="button" class="mobile-tool-card" data-panel="reorder"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>Reorder</button>
-        <button type="button" class="mobile-tool-card" data-panel="watermark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Watermark</button>
         <button type="button" class="mobile-tool-card" data-panel="metadata"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Metadata</button>
-        <button type="button" class="mobile-tool-card" data-panel="chapters"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Chapters</button>
-        <button type="button" class="mobile-tool-card" data-panel="batch"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Batch</button>
+        <button type="button" class="mobile-tool-card" data-panel="watermark"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Watermark</button>
       </div>
     </div>
   </div>
@@ -3956,7 +4046,7 @@
 
       // 2. Service Worker for offline caching
       const swCode = `
-        const CACHE = 'pdf-toolkit-v1';
+        const CACHE = 'pdf-toolkit-v2';
         const ASSETS = [
           './',
           self.location.href,
@@ -4069,6 +4159,170 @@
         installBtn.style.display = 'none';
         document.getElementById('offline-badge').style.display = 'inline-block';
       }
+
+    // ===================== PDF COMPRESSION =====================
+    (function initCompressionTool() {
+      const input = document.getElementById('compress-input');
+      const drop = document.getElementById('compress-drop');
+      const fileCard = document.getElementById('compress-file-card');
+      const fileName = document.getElementById('compress-file-name');
+      const fileSize = document.getElementById('compress-file-size');
+      const runBtn = document.getElementById('compress-run');
+      const mode = document.getElementById('compress-mode');
+      const visualOptions = document.getElementById('compress-visual-options');
+      const basicNote = document.getElementById('compress-basic-note');
+      const quality = document.getElementById('compress-quality');
+      const qualityValue = document.getElementById('compress-quality-value');
+      const scale = document.getElementById('compress-scale');
+      const scaleValue = document.getElementById('compress-scale-value');
+      const status = document.getElementById('compress-status');
+      const result = document.getElementById('compress-result');
+      const progressWrap = document.getElementById('compress-progress-wrap');
+      const progressFill = document.getElementById('compress-progress-fill');
+      let selectedFile = null;
+
+      function setFile(file) {
+        if (!file) return;
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          status.textContent = 'Please choose a PDF file.';
+          return;
+        }
+        selectedFile = file;
+        fileName.textContent = file.name;
+        fileSize.textContent = 'Original size: ' + formatBytes(file.size);
+        fileCard.style.display = 'flex';
+        drop.style.display = 'none';
+        runBtn.disabled = false;
+        result.style.display = 'none';
+        status.textContent = '';
+      }
+
+      function clearFile() {
+        selectedFile = null;
+        input.value = '';
+        fileCard.style.display = 'none';
+        drop.style.display = '';
+        runBtn.disabled = true;
+        result.style.display = 'none';
+        status.textContent = '';
+        progressWrap.style.display = 'none';
+      }
+
+      drop.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => setFile(input.files && input.files[0]));
+      drop.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        drop.classList.add('dragover');
+      });
+      drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+      drop.addEventListener('drop', (event) => {
+        event.preventDefault();
+        drop.classList.remove('dragover');
+        setFile(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+      });
+      document.getElementById('compress-remove').addEventListener('click', clearFile);
+
+      function syncMode() {
+        const visual = mode.value === 'visual';
+        visualOptions.style.display = visual ? 'flex' : 'none';
+        basicNote.style.display = visual ? 'none' : 'block';
+      }
+      mode.addEventListener('change', syncMode);
+      quality.addEventListener('input', () => {
+        qualityValue.textContent = quality.value + '%';
+      });
+      scale.addEventListener('change', () => {
+        scaleValue.textContent = scale.value + '×';
+      });
+      syncMode();
+
+      runBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        const file = selectedFile;
+        const originalSize = file.size;
+        runBtn.disabled = true;
+        progressWrap.style.display = 'block';
+        progressFill.style.width = '5%';
+        result.style.display = 'none';
+        status.textContent = 'Preparing PDF…';
+
+        try {
+          const sourceBytes = await file.arrayBuffer();
+          let outputBytes;
+
+          if (mode.value === 'optimize') {
+            status.textContent = 'Optimizing PDF structure…';
+            const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false });
+            outputBytes = await pdf.save({ useObjectStreams: true });
+            progressFill.style.width = '100%';
+          } else {
+            status.textContent = 'Rendering pages for image compression…';
+            const pdf = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise;
+            const output = await PDFDocument.create();
+            const requestedScale = Number(scale.value);
+            const jpgQuality = Number(quality.value) / 100;
+            const pageCount = pdf.numPages;
+
+            for (let pageNo = 1; pageNo <= pageCount; pageNo++) {
+              status.textContent = 'Compressing page ' + pageNo + ' of ' + pageCount + '…';
+              progressFill.style.width = Math.round(5 + (pageNo / pageCount) * 90) + '%';
+              const page = await pdf.getPage(pageNo);
+              const baseViewport = page.getViewport({ scale: 1 });
+              let renderScale = requestedScale;
+              const maxPixels = 18000000;
+              if (baseViewport.width * baseViewport.height * renderScale * renderScale > maxPixels) {
+                renderScale = Math.sqrt(maxPixels / (baseViewport.width * baseViewport.height));
+              }
+              const viewport = page.getViewport({ scale: renderScale });
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, Math.ceil(viewport.width));
+              canvas.height = Math.max(1, Math.ceil(viewport.height));
+              const context = canvas.getContext('2d', { alpha: false });
+              if (!context) throw new Error('Your browser could not create a canvas for PDF rendering.');
+              context.fillStyle = '#ffffff';
+              context.fillRect(0, 0, canvas.width, canvas.height);
+              await page.render({ canvasContext: context, viewport, background: '#ffffff' }).promise;
+              const jpegBlob = await new Promise((resolve, reject) => {
+                canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Could not encode a compressed page image.')), 'image/jpeg', jpgQuality);
+              });
+              const jpgBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+              const embedded = await output.embedJpg(jpgBytes);
+              const outputPage = output.addPage([baseViewport.width, baseViewport.height]);
+              outputPage.drawImage(embedded, {
+                x: 0, y: 0, width: baseViewport.width, height: baseViewport.height
+              });
+              canvas.width = 0;
+              canvas.height = 0;
+            }
+            outputBytes = await output.save({ useObjectStreams: true });
+            progressFill.style.width = '100%';
+          }
+
+          const outputSize = outputBytes.byteLength;
+          const outName = sanitizeFilename(file.name.replace(/\.pdf$/i, '')) + '-compressed.pdf';
+          downloadBytes(outputBytes, outName);
+          const delta = originalSize - outputSize;
+          const percent = originalSize > 0 ? Math.abs(delta) / originalSize * 100 : 0;
+          const sizeMessage = delta >= 0
+            ? 'Reduced by ' + formatBytes(delta) + ' (' + percent.toFixed(1) + '%).'
+            : 'The output is ' + formatBytes(-delta) + ' (' + percent.toFixed(1) + '%) larger than the original.';
+          result.innerHTML = '<strong>Compression complete.</strong><br>Original: ' + formatBytes(originalSize) +
+            '<br>Output: ' + formatBytes(outputSize) + '<br>' + sizeMessage +
+            (mode.value === 'visual' ? '<br><br><strong>Reminder:</strong> this output is image-based; text is not selectable or searchable.' : '');
+          result.style.display = 'block';
+          status.textContent = 'Download started.';
+          showStatus('Compressed PDF download started');
+        } catch (error) {
+          console.error('[PDF compression]', error);
+          status.textContent = 'Compression failed: ' + (error && error.message ? error.message : 'Unknown error');
+          showStatus('Compression failed. Check that the PDF opens correctly and is not password-protected.', 'error');
+        } finally {
+          runBtn.disabled = !selectedFile;
+          setTimeout(() => { progressWrap.style.display = 'none'; }, 900);
+        }
+      });
+    })();
+
     })();
   </script>
 </body>
