@@ -209,10 +209,11 @@
   }
   function assignPageCaptions(items, captions) {
     if (!captions.length) return;
-    // This is a suggestion, not a guarantee: some PDFs don't preserve a reliable
-    // reading order. Users can edit the filename label before exporting.
+    // Auto-label only when there is one caption on the page or a one-to-one
+    // count. Other layouts are ambiguous, so leave their labels editable/manual.
+    if (captions.length !== 1 && captions.length !== items.length) return;
     items.forEach((item, index) => {
-      const cap = captions.length === 1 ? captions[0] : captions[Math.min(index, captions.length - 1)];
+      const cap = captions.length === 1 ? captions[0] : captions[index];
       if (!cap) return;
       item.figureNumber = cap.number || '';
       item.caption = cap.caption || cap.text || '';
