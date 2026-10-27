@@ -1452,10 +1452,9 @@
     }
 
 
-    /* Mobile cleanup: distinct tools launcher, compact batch cards, natural footer. */
+    /* Mobile layout: keep the app shell as the page content; the footer is desktop-only. */
     body { display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; }
     .app { flex:1 0 auto; min-height:0; }
-    .app-footer { position:relative; flex:0 0 auto; margin-top:auto; padding-bottom:22px; }
 
     @media (max-width:900px) {
       .app { flex:1 0 auto; min-height:0; }
@@ -1537,9 +1536,6 @@
         display:block; border:1px solid var(--border); border-radius:12px; padding:16px;
       }
       .batch-table tbody td[colspan]::before { content:none; }
-      .app-footer { margin-top:0; padding:18px var(--mobile-gutter) calc(20px + env(safe-area-inset-bottom,0px)); }
-      .footer-inner { width:100%; max-width:none; gap:10px; }
-      .footer-links { gap:8px 10px; line-height:1.6; }
     }
     @media (max-width:380px) {
       .mobile-tools-panel { padding:14px; }
@@ -2157,6 +2153,23 @@
     <span id="status-text"></span>
     <button type="button" class="status-close" id="status-close" aria-label="Dismiss notification" title="Close">×</button>
   </div>
+
+  <script>
+    // The branding footer is intentionally absent from the mobile experience.
+    // Toggle the actual element's hidden state at the breakpoint, including on resize/orientation change.
+    (() => {
+      const footer = document.querySelector('.app-footer');
+      if (!footer || !window.matchMedia) return;
+      const mobileViewport = window.matchMedia('(max-width: 900px)');
+      const syncFooterVisibility = () => { footer.hidden = mobileViewport.matches; };
+      syncFooterVisibility();
+      if (mobileViewport.addEventListener) {
+        mobileViewport.addEventListener('change', syncFooterVisibility);
+      } else {
+        mobileViewport.addListener(syncFooterVisibility);
+      }
+    })();
+  </script>
 
   <script type="module">
     import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
