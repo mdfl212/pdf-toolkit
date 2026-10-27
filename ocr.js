@@ -57,7 +57,7 @@
     $('ocr-progress-fill').style.width = Math.max(0, Math.min(100, p)) + '%';
   }
   function setBusy(v) {
-    busy = v; $('ocr-run').disabled = v || !file; $('ocr-cancel').disabled = !v;
+    busy = v; $('ocr-run').disabled = v || !file; $('ocr-detect').disabled = v || !file; $('ocr-cancel').disabled = !v;
     $('ocr-offline').disabled = v; $('ocr-remove').disabled = v;
   }
   function setFile(f) {
@@ -263,6 +263,7 @@
     $('ocr-drop').addEventListener('dragleave', () => $('ocr-drop').classList.remove('dragover'));
     $('ocr-drop').addEventListener('drop', e => { e.preventDefault(); $('ocr-drop').classList.remove('dragover'); setFile(e.dataTransfer?.files?.[0]); });
     $('ocr-remove').addEventListener('click', clearFile);
+    $('ocr-detect').addEventListener('click', detectScannedPages);
     $('ocr-run').addEventListener('click', run);
     $('ocr-cancel').addEventListener('click', () => { cancelled = true; status('Cancelling after the current step…'); if (worker) worker.terminate(); });
     $('ocr-offline').addEventListener('click', () => prepareOffline().catch(e => { setBusy(false); status('Offline preparation failed: ' + (e?.message || e), true); }));
