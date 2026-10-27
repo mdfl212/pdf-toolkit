@@ -1,6 +1,6 @@
 # PDF Toolkit · StudyMats
 
-**Browser-based PDF toolkit** — with a batch processor, chapter extraction, compression, and everyday PDF editing tools for study and document workflows.
+**Browser-based PDF toolkit centered on textbook Chapter Extraction** — with compression, merging, page editing, batch processing, and other everyday PDF tools for study and document workflows.
 
 **Live demo:** https://mdfl212.github.io/pdf-toolkit/
 
@@ -72,11 +72,12 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ## Tools in the app
 
-The interface groups tools by task so beginners can start with common actions and open less-used tools when needed.
+The **Chapter Extractor is the primary tool** and the first screen when the app opens. It is designed for splitting textbook PDFs by embedded bookmarks, with an optional AI-assisted page-range workflow for files without bookmarks. Other tools are grouped by task so beginners can start with common actions and open less-used tools when needed.
 
 | Category | Tool | What it does |
 |----------|------|----------------|
-| **Main tool** | **Batch Processor** | Run multiple PDF operations in one batch and download the results together |
+| **Main tool** | **Chapter Extractor** | Split textbooks into individual chapter PDFs using bookmarks or an AI-assisted page-range list |
+| **Advanced workflow** | **Batch Processor** | Run multiple PDF operations in one batch and download the results together |
 | **Quick tasks** | **Compress PDF** | Try basic PDF optimization or stronger image compression |
 | **Quick tasks** | **Merge** | Combine multiple PDFs |
 | **Quick tasks** | **Split / Extract** | Extract custom page ranges or split a document into individual pages |
