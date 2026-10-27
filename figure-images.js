@@ -349,7 +349,7 @@
         const csv = value => '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
         manifest.push([filename, item.figureNumber || '', item.caption || '', item.page, item.width, item.height].map(csv).join(','));
       });
-      zip.file('manifest.csv', manifest.join('\\r\\n'));
+      zip.file('manifest.csv', manifest.join('\r\n'));
       status('Building ZIP file…'); progress(0.9);
       const blob = await zip.generateAsync({ type: 'blob' }, meta => progress(meta.percent || 0));
       const url = URL.createObjectURL(blob), a = document.createElement('a');
