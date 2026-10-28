@@ -214,7 +214,8 @@
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
     let pdfWorker = null, doc = null, canvas = null;
     let skipped = 0, processed = 0;
-    const lowConfidence = [], recognizedTerms = new Set();
+    const lowConfidence = [];
+    let recognizedText = '';
     try {
       status('Reading PDF…');
       const bytes = await file.arrayBuffer();
@@ -281,7 +282,8 @@
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf');
       const watchwords = ($('ocr-watchwords')?.value || '').split(/[\\n,;]+/).map(x => x.trim()).filter(Boolean);
-      const missingTerms = watchwords.filter(term => !recognizedTerms.has(term.toLocaleLowerCase()));
+      const searchableRecognizedText = recognizedText.toLocaleLowerCase();
+      const missingTerms = watchwords.filter(term => !searchableRecognizedText.includes(term.toLocaleLowerCase()));
       const report = [
         'OCR QUALITY REVIEW',
         'Source: ' + file.name,
