@@ -268,6 +268,7 @@
           if (rawWord && Number.isFinite(confidence) && confidence < 65) {
             lowConfidence.push({page:number, confidence:Math.round(confidence), text:rawWord});
           }
+          recognizedText += rawWord + ' ';
           const textWord = rawWord.replace(/[^\x20-\x7E]/g, '').trim();
           if (!textWord || !word.bbox) continue;
           const b = word.bbox;
@@ -288,8 +289,12 @@
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf');
       const watchwords = ($('ocr-watchwords')?.value || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
-      const searchableRecognizedText = recognizedText.toLocaleLowerCase();
-      const missingTerms = watchwords.filter(term => !searchableRecognizedText.includes(term.toLocaleLowerCase()));
+      const normalizeForMatch = value => String(value || '').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
+      const searchableRecognizedText = normalizeForMatch(recognizedText);
+      const missingTerms = watchwords.filter(term => {
+        const normalized = normalizeForMatch(term);
+        return normalized && !searchableRecognizedText.includes(normalized);
+      });
       const report = [
         'OCR QUALITY REVIEW',
         'Source: ' + file.name,
