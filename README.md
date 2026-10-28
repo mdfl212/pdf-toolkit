@@ -92,7 +92,7 @@ The **Chapter Extractor is the primary tool** and the first screen when the app 
 ### OCR notes
 
 - **OCR & Searchable PDF** uses Tesseract.js in the browser to recognize English text on selected pages or page ranges and adds a transparent text layer over the original pages.
-- Pages that already contain selectable text are skipped to reduce duplicate text. OCR output must be reviewed; scan quality, skew, small print, tables, and handwriting can reduce accuracy.
+- Pages that already contain selectable text are skipped to reduce duplicate text. The OCR review report lists recognized words with confidence below 65/100 and user-supplied watchwords not found in the recognized text. These are review aids, not proof of correctness; OCR output must still be checked against the original, especially for drug names, doses, units, Greek letters, tables, skew, small print, and handwriting.
 - Use **Prepare OCR for offline use** while online to cache the OCR engine and English language data. This can download tens of megabytes. Offline readiness must be verified by reopening the app without internet and testing OCR; browser storage can be cleared or evicted.
 - The tool runs locally and does not upload the PDF. The initial implementation focuses on searchable text, not full preservation of every advanced PDF feature.
 
