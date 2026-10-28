@@ -168,7 +168,9 @@
     if (!file || busy) return;
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
     let pdfWorker = null, doc = null, canvas = null;
-    let skipped = 0, processed = 0;
+    let skipped = 0, processed = 0, unsupportedCharacterWords = 0, placementErrors = 0;
+    let lowConfidenceCount = 0;
+    const lowConfidence = []; // Bound memory on large textbooks; retain a review sample.
     try {
       status('Reading PDF…');
       const bytes = await file.arrayBuffer();
@@ -206,15 +208,35 @@
         if (cancelled) throw new Error('OCR cancelled.');
         const outPage = doc.getPage(number - 1);
         for (const word of (result?.data?.words || [])) {
-          const textWord = String(word.text || '').replace(/[^\x20-\x7E]/g, '').trim();
-          if (!textWord || !word.bbox) continue;
+          const rawWord = String(word.text || '').trim();
+          if (!rawWord || !word.bbox) continue;
+          if (Number.isFinite(Number(word.confidence)) && Number(word.confidence) < 65) {
+            lowConfidenceCount++;
+            if (lowConfidence.length < 1000) lowConfidence.push({page:number, confidence:Math.round(Number(word.confidence)), text:rawWord.slice(0,160)});
+          }
+          // Helvetica is a WinAnsi font. Do not silently turn a word such as
+          // "β-blocker" into "-blocker"; flag the whole word for manual review.
+          if (/[^\x20-\x7E]/.test(rawWord)) { unsupportedCharacterWords++; continue; }
+          const textWord = rawWord;
           const b = word.bbox;
-          const [x0, y0] = viewport.convertToPdfPoint(b.x0, b.y1);
-          const [x1, y1] = viewport.convertToPdfPoint(b.x1, b.y0);
-          const height = Math.max(2, Math.abs(y1-y0)), width = Math.max(1, Math.abs(x1-x0));
+          const [ax, ay] = viewport.convertToPdfPoint(b.x0, b.y1);
+          const [bx, by] = viewport.convertToPdfPoint(b.x1, b.y0);
+          const x = Math.max(0, Math.min(outPage.getWidth(), Math.min(ax, bx)));
+          const y = Math.max(0, Math.min(outPage.getHeight(), Math.min(ay, by)));
+          const width = Math.max(1, Math.min(Math.abs(bx-ax), outPage.getWidth()-x));
+          const height = Math.max(1, Math.abs(by-ay));
+          // Fit the invisible word to both its OCR box height and width. A fixed
+          // height-only font size can make words overlap adjacent words when the
+          // chosen font is wider than the glyphs in the scanned page.
+          const sizeAtOne = Math.max(0.1, font.widthOfTextAtSize(textWord, 1));
+          const size = Math.max(1, Math.min(48, height * 0.78, width / sizeAtOne));
+          const naturalWidth = font.widthOfTextAtSize(textWord, size);
+          const characterSpacing = textWord.length > 1
+            ? Math.max(0, Math.min(2, (width - naturalWidth) / (textWord.length - 1)))
+            : 0;
           try {
-            outPage.drawText(textWord, {x:Math.max(0,x0), y:Math.max(0,Math.min(y0,y1)), size:Math.max(2,Math.min(48,height*.78)), font, opacity:0, maxWidth:width*1.1});
-          } catch (_) {}
+            outPage.drawText(textWord, {x, y, size, font, opacity:0, characterSpacing});
+          } catch (_) { placementErrors++; }
         }
         processed++; progress(processed / pages.length * 95);
         canvas.width = 0; canvas.height = 0;
@@ -225,8 +247,23 @@
       const output = await doc.save({useObjectStreams:true});
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf'); progress(100);
-      $('ocr-result').innerHTML = '<strong>Searchable PDF created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Search for a word in the downloaded PDF and review OCR accuracy.';
-      $('ocr-result').style.display = 'block'; status('Download started. Review the output before relying on it.');
+      $('ocr-result').innerHTML = '<strong>Searchable PDF created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Low-confidence words flagged: ' + lowConfidenceCount + '<br>Words containing unsupported non-ASCII characters: ' + unsupportedCharacterWords + '<br>Words that could not be added to the text layer: ' + placementErrors + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Search for words in the downloaded PDF. Verify flagged words and any Greek letters, accented characters, symbols, drug names, doses, and units against the original scan.';
+      $('ocr-result').style.display = 'block';
+      if (lowConfidence.length) {
+        const review = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Review low-confidence words (first 30 of ' + lowConfidenceCount + ')';
+        review.appendChild(summary);
+        const list = document.createElement('ul');
+        for (const item of lowConfidence.slice(0, 30)) {
+          const row = document.createElement('li');
+          row.textContent = 'Page ' + item.page + ' · ' + item.confidence + '/100 · ' + item.text;
+          list.appendChild(row);
+        }
+        review.appendChild(list);
+        $('ocr-result').appendChild(review);
+      }
+      status('Download started. Review the output before relying on it.');
     } catch (e) {
       const message = e?.message || String(e);
       status(/cancelled/i.test(message) ? 'OCR cancelled. No output was downloaded.' : 'OCR failed: ' + message, !/cancelled/i.test(message));
