@@ -96,6 +96,14 @@ The **Chapter Extractor is the primary tool** and the first screen when the app 
 - Use **Prepare OCR for offline use** while online to cache the OCR engine and English language data. This can download tens of megabytes. Offline readiness must be verified by reopening the app without internet and testing OCR; browser storage can be cleared or evicted.
 - The tool runs locally and does not upload the PDF. The initial implementation focuses on searchable text, not full preservation of every advanced PDF feature.
 
+### Study Text Reconstruction (preview)
+
+- **Reconstruct Study Text** extracts text already present in a PDF's text layer and uses page coordinates to suggest headings, captions, table-like rows, and column-aware reading order.
+- Export a structured JSON document model (regions, page coordinates, reading order, type, and source) or a preliminary Markdown version.
+- Use **Check offline readiness** to inspect whether the app, PDF.js, Tesseract, and English language data appear in browser caches; then verify by reopening the app with the network disabled.
+- Scanned pages with no usable text layer are reported rather than silently fabricated. Run OCR first; OCR-to-structure integration and richer table/figure detection are planned follow-up stages.
+- This is a heuristic preview. Verify column order, heading classification, table rows, captions, and symbols against the source PDF.
+
 ### Compression notes
 
 - **Basic optimization** re-saves the PDF and keeps text selectable where supported, but size reduction varies and may be small.
