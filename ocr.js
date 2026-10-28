@@ -218,9 +218,9 @@
     const normalizeForReview = value => String(value || '')
       .normalize('NFKC')
       .toLocaleLowerCase()
-      .replace(/[^\\p{L}\\p{N}]+/gu, ' ')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
       .trim()
-      .replace(/\\s+/g, ' ');
+      .replace(/\s+/g, ' ');
     try {
       status('Reading PDF…');
       const bytes = await file.arrayBuffer();
@@ -278,7 +278,7 @@
           if (normalizedWord) recognizedTerms.add(normalizedWord);
           // Helvetica is a standard Latin font. Never strip unsupported glyphs
           // silently: doing so can create a misleading partial word or number.
-          if (/[^\\x20-\\x7E]/.test(rawWord)) { unsupportedCharacterWords++; continue; }
+          if (/[^\x20-\x7E]/.test(rawWord)) { unsupportedCharacterWords++; continue; }
           const b = word.bbox;
           const [ax, ay] = viewport.convertToPdfPoint(b.x0, b.y1);
           const [bx, by] = viewport.convertToPdfPoint(b.x1, b.y0);
@@ -304,8 +304,8 @@
       const output = await doc.save({useObjectStreams:true});
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf');
-      const watchwords = ($('ocr-watchwords')?.value || '').split(/[\\n,;]+/).map(x => x.trim()).filter(Boolean);
-      const normalizedTerms = new Set([...recognizedTerms].flatMap(term => term.split(/\\s+/)));
+      const watchwords = ($('ocr-watchwords')?.value || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+      const normalizedTerms = new Set([...recognizedTerms].flatMap(term => term.split(/\s+/)));
       const missingTerms = watchwords.filter(term => {
         const normalized = normalizeForReview(term);
         if (!normalized) return false;
@@ -330,7 +330,7 @@
         ...(missingTerms.length ? missingTerms.map(t => '- ' + t) : ['None absent, or no terms were supplied.']),
         '',
         'Important: OCR confidence is only a heuristic. Verify stock symbols, prices, signs, medical terms, doses, units, lab values, abbreviations, and non-Latin characters against the original PDF.'
-      ].join('\\n');
+      ].join('\n');
       download(new TextEncoder().encode(report), name + '-ocr-review.txt');
       progress(100);
       $('ocr-result').textContent = 'Searchable PDF and OCR review report created.\\nPages OCR-processed: ' + (processed-skipped) + '\\nPages skipped (already searchable): ' + skipped + '\\nLow-confidence words flagged: ' + lowConfidenceCount + '\\nUnsupported-character words skipped: ' + unsupportedCharacterWords + '\\nText placement errors: ' + placementErrors + '\\nUser-supplied terms not found: ' + missingTerms.length + '\\nOutput size: ' + (output.byteLength/1048576).toFixed(2) + ' MB\\n\\nDownload the review report and verify flagged words against the original scan.';
