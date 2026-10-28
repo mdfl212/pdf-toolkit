@@ -145,3 +145,7 @@ Install as an app (PWA) when served over HTTPS for offline use of cached librari
 ### OCR searchability and layout modes
 
 The OCR tool adds an invisible text layer to scanned pages so PDF viewers can search and highlight recognized words; it does not reconstruct editable tables. The page-layout selector offers automatic, single-column, single-block, and sparse-text modes so users can choose a segmentation strategy appropriate to the scan. Pages with an existing usable text layer are skipped to avoid duplicate overlapping text. Selectable text alone does not prove recognition accuracy, and defective existing text layers are not automatically repaired. Validate output in a PDF viewer by searching for known terms and confirming that highlights align with the printed text. See [the OCR searchability regression checklist](docs/OCR_SEARCHABILITY_TESTS.md).
+
+### OCR validation status
+
+The repository runs automated static regression checks for OCR layout-mode wiring, invisible text-layer insertion, render-size/resource cleanup safeguards, existing-text-layer skip behavior, service-worker cache versioning, and documentation links. These checks catch source regressions; they do **not** prove OCR spelling accuracy, PDF-viewer search/highlight alignment, or offline behavior on a real device. Use the manual acceptance checklist in [docs/OCR_SEARCHABILITY_TESTS.md](docs/OCR_SEARCHABILITY_TESTS.md) before treating an OCR change as fully validated.
