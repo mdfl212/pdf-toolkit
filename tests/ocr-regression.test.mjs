@@ -11,7 +11,8 @@ const [ocr, serviceWorker, readme, checklist] = await Promise.all([
 
 test('all user-facing OCR layout modes are mapped to Tesseract page segmentation modes', () => {
   for (const mode of ['auto', 'single-column', 'single-block', 'sparse']) {
-    assert.match(ocr, new RegExp("'" + mode.replace('-', '\\-') + "'\\s*:\\s*Tesseract\\.PSM\\."));
+    const key = mode.replace('-', '\\-');
+    assert.match(ocr, new RegExp("(?:'" + key + "'|" + key + ")\\s*:\\s*Tesseract\\.PSM\\."));
   }
   assert.match(ocr, /tessedit_pageseg_mode:\s*pageSegmentationMode/);
 });
