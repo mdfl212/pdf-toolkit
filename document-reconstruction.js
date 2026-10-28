@@ -18,7 +18,7 @@
       '<div class="controls" style="flex-direction:column;align-items:stretch;gap:12px">',
       '<div class="control-group"><label for="recon-pages">Pages to reconstruct</label><input id="recon-pages" type="text" placeholder="All pages, or e.g. 1-5, 8, 12-14" style="width:100%"><span class="hint">Start with 1–5 representative pages for large textbooks.</span></div>',
       '<div class="control-group"><label for="recon-order">Reading-order strategy</label><select id="recon-order"><option value="columns" selected>Column-aware (recommended for textbooks)</option><option value="vertical">Top-to-bottom only (for single-column pages)</option></select></div>',
-      '<div style="display:flex;flex-wrap:wrap;gap:10px"><button type="button" class="btn btn-primary" id="recon-run" disabled>Analyze document structure</button><button type="button" class="btn btn-secondary" id="recon-json" disabled>Export structured JSON</button><button type="button" class="btn btn-secondary" id="recon-md" disabled>Export Markdown</button></div>',
+      '<div style="display:flex;flex-wrap:wrap;gap:10px"><button type="button" class="btn btn-primary" id="recon-run" disabled>Analyze document structure</button><button type="button" class="btn btn-secondary" id="recon-json" disabled>Export structured JSON</button><button type="button" class="btn btn-secondary" id="recon-md" disabled>Export Markdown</button><button type="button" class="btn btn-secondary" id="recon-offline-check">Check offline readiness</button></div>',
       '<div class="progress-bar" id="recon-progress-wrap" style="display:none"><div class="fill" id="recon-progress-fill"></div></div>',
       '<div id="recon-status" class="note" role="status" aria-live="polite" style="display:none"></div><div id="recon-summary" class="note" style="display:none"></div><div id="recon-preview" style="display:none"></div></div>'
     ].join('');
@@ -34,9 +34,35 @@
     drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('dragover');}); drop.addEventListener('dragleave',()=>drop.classList.remove('dragover'));
     drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('dragover');setFile(e.dataTransfer?.files?.[0]);});
     $('recon-remove').addEventListener('click',clearFile); $('recon-run').addEventListener('click',analyze);
-    $('recon-json').addEventListener('click',()=>exportFile(JSON.stringify(resultModel,null,2),safeBase()+'-structure.json','application/json'));
+    $('recon-json').addEventListener('click',()=>exportFile(JSON.stringify(resultModel,null,2),safeBase()+'-structure.json','application/json')); $('recon-offline-check').addEventListener('click',checkOfflineReadiness);
     $('recon-md').addEventListener('click',()=>exportFile(toMarkdown(resultModel),safeBase()+'-reconstructed.md','text/markdown;charset=utf-8'));
   }
+
+  async function checkOfflineReadiness(){
+    const required=[
+      './pdf-toolkit.html','./document-reconstruction.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs',
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm',
+      'https://tessdata.projectnaptha.com/4.0.0/eng.traineddata.gz'
+    ];
+    if(!('caches' in window)){setStatus('This browser does not expose the Cache API, so cached offline assets cannot be verified here.',true);return;}
+    setStatus('Checking cached app, PDF.js, OCR engine, and English language data…');
+    try{
+      const cacheNames=await caches.keys(), missing=[];
+      for(const url of required){let hit=false;for(const name of cacheNames){const cache=await caches.open(name);if(await cache.match(new URL(url,location.href).href)){hit=true;break;}}if(!hit)missing.push(url.split('/').pop());}
+      const controlled=!!navigator.serviceWorker?.controller;
+      if(!missing.length&&controlled)setStatus('Offline asset check passed: required app, PDF.js, Tesseract, and English data assets are cached. Now test by turning off the network and reopening the app; this check cannot guarantee every browser will allow all worker assets to start offline.');
+      else{
+        const notes=[];if(!controlled)notes.push('The page is not currently controlled by the service worker; refresh after the worker registers.');if(missing.length)notes.push('Missing cached assets: '+missing.join(', ')+'. Open the OCR tool and choose “Prepare OCR for offline use” while online, then check again.');
+        setStatus('Offline readiness is incomplete. '+notes.join(' '),true);
+      }
+    }catch(e){setStatus('Could not inspect offline caches: '+(e?.message||String(e)),true);}
+  }
+
   function setFile(f) {
     if(!f)return; if(f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))return setStatus('Please select a PDF file.',true);
     selectedFile=f; resultModel=null; $('recon-file-name').textContent=f.name; $('recon-file-meta').textContent=(f.size/1048576).toFixed(2)+' MB';
