@@ -1,6 +1,6 @@
 /* PDF Toolkit service worker. */
 const CACHE = 'pdf-toolkit-v3';
-const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js',
+const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './document-reconstruction.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
