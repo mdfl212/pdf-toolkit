@@ -32,10 +32,10 @@
       '<div class="controls" style="flex-direction:column;align-items:stretch;gap:14px">',
       '<div class="control-group"><label for="ocr-pages">Pages to OCR</label><input type="text" id="ocr-pages" placeholder="All pages, or e.g. 1-5, 8, 12-14" style="min-width:100%;font-family:\'JetBrains Mono\',monospace"><span class="hint">Leave blank to process all pages. Page numbers start at 1.</span></div>',
       '<div class="control-group"><label for="ocr-scale">Recognition resolution</label><select id="ocr-scale"><option value="1.5">Fast — 1.5× resolution</option><option value="2" selected>Balanced — 2× resolution</option><option value="2.5">High — 2.5× resolution (slower)</option><option value="3">Maximum — 3× resolution (slowest; uses more memory)</option></select></div>',
-      '<div class="control-group"><label for="ocr-layout">Page layout</label><select id="ocr-layout"><option value="auto" selected>Automatic — full page / columns</option><option value="sparse">Sparse text — scattered labels and notes</option></select><span class="hint">Use Sparse text for pages with separated labels, annotations, or text around diagrams.</span></div>',
+      '<div class="control-group"><label for="ocr-layout">Page layout</label><select id="ocr-layout"><option value="auto" selected>Automatic — full page / columns</option><option value="single-column">Single column — textbook prose</option><option value="single-block">Single text block — one continuous region</option><option value="sparse">Sparse text — scattered labels and notes</option></select><span class="hint">Choose the layout that best matches the scanned page. Automatic is a good default; single column can help textbook pages, and sparse text suits labels or text around diagrams.</span></div>',
       '<div class="control-group"><label><input type="checkbox" id="ocr-clean" style="width:auto;min-width:0;margin-right:8px">Improve faint scans (grayscale + contrast normalization)</label><span class="hint">Optional preprocessing may help pale or uneven scans; inspect output for tables, symbols, and photos.</span></div>',
       '<div class="control-group"><label for="ocr-watchwords">Medical terms to watch (optional)</label><textarea id="ocr-watchwords" rows="3" placeholder="Paste one term per line, e.g. ceftriaxone, Streptococcus, mg/dL" style="width:100%;font:inherit"></textarea><span class="hint">These terms are not forced into OCR. They are checked against recognized text and included in the review report when absent, so you can verify high-risk names and units manually.</span></div>',
-      '<div class="note" style="margin:0">Pages that already contain selectable text are skipped to avoid duplicate text. OCR does not sharpen visible images; accuracy depends on scan quality. The first run needs internet unless OCR assets have been cached.</div>',
+      '<div class="note" style="margin:0">Pages with an existing text layer are skipped to avoid duplicate overlapping text. Selectable text does not guarantee OCR accuracy; this tool does not yet repair defective existing text layers. OCR adds an invisible searchable layer and does not rebuild tables or alter the intended page artwork. The first run needs internet unless OCR assets have been cached.</div>',
       '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-secondary" id="ocr-detect" disabled>Detect scanned pages</button><button type="button" class="btn btn-primary" id="ocr-run" disabled>Make Searchable PDF</button><button type="button" class="btn btn-secondary" id="ocr-cancel" disabled>Cancel</button><button type="button" class="btn btn-secondary" id="ocr-offline">Prepare OCR for offline use</button></div>',
       '<div class="progress-bar" id="ocr-progress-wrap" style="display:none"><div class="fill" id="ocr-progress-fill"></div></div>',
       '<div id="ocr-status" class="note" role="status" aria-live="polite" style="display:none;margin:0"></div><div id="ocr-result" class="note" style="display:none;margin:0"></div></div>'
@@ -173,7 +173,7 @@
       if (cancelled) throw new Error('Scan detection cancelled.');
       $('ocr-pages').value = compactRanges(scanned);
       const message = scanned.length
-        ? 'Detected ' + scanned.length + ' page(s) with little or no selectable text and selected them for OCR. ' + searchable.length + ' page(s) already contain selectable text and were left out. Review the page range before running OCR.'
+        ? 'Detected ' + scanned.length + ' page(s) with little or no selectable text and selected them for OCR. ' + searchable.length + ' page(s) already contain selectable text and were left out to prevent duplicate text. A selectable text layer is not proof of accurate OCR; defective existing layers are not automatically repaired. Review the page range before running OCR.'
         : 'All ' + doc.numPages + ' pages appear to contain selectable text. OCR may not be necessary.';
       $('ocr-result').textContent = message;
       $('ocr-result').style.display = 'block';
@@ -241,9 +241,15 @@
       });
       worker = pdfWorker;
       const layout = $('ocr-layout')?.value || 'auto';
+      const pageSegmentationMode = ({
+        auto: Tesseract.PSM.AUTO,
+        'single-column': Tesseract.PSM.SINGLE_COLUMN,
+        'single-block': Tesseract.PSM.SINGLE_BLOCK,
+        sparse: Tesseract.PSM.SPARSE_TEXT
+      })[layout] ?? Tesseract.PSM.AUTO;
       await pdfWorker.setParameters({
         preserve_interword_spaces: '1',
-        tessedit_pageseg_mode: layout === 'sparse' ? Tesseract.PSM.SPARSE_TEXT : Tesseract.PSM.AUTO
+        tessedit_pageseg_mode: pageSegmentationMode
       });
       const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
       canvas = document.createElement('canvas');
