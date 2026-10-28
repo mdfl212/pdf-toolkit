@@ -353,14 +353,23 @@
     const sw = navigator.serviceWorker.controller || reg?.active;
     if (!sw) return status('Offline caching is not active. Refresh the site once, then retry.', true);
     setBusy(true); status('Caching OCR engine, worker, language data, and PDF libraries. This may download tens of megabytes…');
-    const timeout = setTimeout(() => { if (busy) { setBusy(false); status('Cache preparation timed out. Check your connection and retry.', true); } }, 600000);
     const listener = e => {
       if (e.data?.type === 'OCR_CACHE_PROGRESS') status('Preparing offline OCR: ' + e.data.done + '/' + e.data.total + ' — ' + e.data.current);
       if (e.data?.type === 'OCR_CACHE_DONE') {
         clearTimeout(timeout); navigator.serviceWorker.removeEventListener('message', listener); setBusy(false);
-        status(e.data.failed?.length ? 'Offline preparation incomplete. Failed assets: ' + e.data.failed.join(', ') : 'Assets cached. Test by closing the app, disabling internet, reopening it, and running OCR before relying on offline use.', !!e.data.failed?.length);
+        status(e.data.failed?.length
+          ? 'Offline preparation incomplete. Failed or missing assets: ' + e.data.failed.join(', ')
+          : 'Verified ' + (e.data.checked || 'all required') + ' app and OCR assets in cache. Now test by reopening the app with internet disabled and running OCR; browser storage can still be cleared or evicted.',
+          !!e.data.failed?.length);
       }
     };
+    const timeout = setTimeout(() => {
+      if (busy) {
+        navigator.serviceWorker.removeEventListener('message', listener);
+        setBusy(false);
+        status('Cache preparation timed out. Check your connection and retry.', true);
+      }
+    }, 600000);
     navigator.serviceWorker.addEventListener('message', listener);
     sw.postMessage({type:'CACHE_OCR_ASSETS'});
   }

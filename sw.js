@@ -1,6 +1,6 @@
 /* PDF Toolkit service worker. */
 const CACHE = 'pdf-toolkit-v3';
-const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js',
+const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
@@ -51,7 +51,17 @@ self.addEventListener('message', event => {
   event.waitUntil((async () => {
     const client = await self.clients.get(event.source?.id);
     const failed = await cacheList(OCR, client);
-    client?.postMessage({type:'OCR_CACHE_DONE', failed});
+    // A successful download is not enough: verify that every required OCR and
+    // app-shell URL is actually present in Cache Storage before reporting ready.
+    const cache = await caches.open(CACHE);
+    const required = [...SHELL, ...OCR];
+    for (const url of required) {
+      const absolute = new URL(url, self.location.href).href;
+      if (!await cache.match(absolute) && !failed.some(item => item.startsWith(url + ' '))) {
+        failed.push(url + ' (not present in cache after preparation)');
+      }
+    }
+    client?.postMessage({type:'OCR_CACHE_DONE', failed, verified: failed.length === 0, checked: required.length});
   })());
 });
 self.addEventListener('fetch', event => {
