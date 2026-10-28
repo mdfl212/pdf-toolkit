@@ -260,9 +260,15 @@
         status('Recognizing page ' + number + ' (' + (i+1) + ' of ' + pages.length + ')…');
         const result = await pdfWorker.recognize(canvas);
         if (cancelled) throw new Error('OCR cancelled.');
+        recognizedText += '\n' + String(result?.data?.text || '');
         const outPage = doc.getPage(number - 1);
         for (const word of (result?.data?.words || [])) {
-          const textWord = String(word.text || '').replace(/[^\x20-\x7E]/g, '').trim();
+          const rawWord = String(word.text || '').trim();
+          const confidence = Number(word.confidence);
+          if (rawWord && Number.isFinite(confidence) && confidence < 65) {
+            lowConfidence.push({page:number, confidence:Math.round(confidence), text:rawWord});
+          }
+          const textWord = rawWord.replace(/[^\x20-\x7E]/g, '').trim();
           if (!textWord || !word.bbox) continue;
           const b = word.bbox;
           const [x0, y0] = viewport.convertToPdfPoint(b.x0, b.y1);
@@ -281,7 +287,7 @@
       const output = await doc.save({useObjectStreams:true});
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf');
-      const watchwords = ($('ocr-watchwords')?.value || '').split(/[\\n,;]+/).map(x => x.trim()).filter(Boolean);
+      const watchwords = ($('ocr-watchwords')?.value || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
       const searchableRecognizedText = recognizedText.toLocaleLowerCase();
       const missingTerms = watchwords.filter(term => !searchableRecognizedText.includes(term.toLocaleLowerCase()));
       const report = [
@@ -298,7 +304,7 @@
         ...(missingTerms.length ? missingTerms.map(t => '- ' + t) : ['None absent, or no terms were supplied.']),
         '',
         'Important: OCR confidence is only a heuristic. Always verify drug names, doses, units, lab values, abbreviations, and Greek letters against the original PDF.'
-      ].join('\\n');
+      ].join('\n');
       download(new TextEncoder().encode(report), name + '-ocr-review.txt');
       progress(100);
       $('ocr-result').innerHTML = '<strong>Searchable PDF and OCR review report created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Low-confidence words flagged: ' + lowConfidence.length + '<br>User-supplied terms not found: ' + missingTerms.length + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Download the review report and verify flagged words against the original scan.';
