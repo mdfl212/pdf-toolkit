@@ -100,6 +100,7 @@ The **Chapter Extractor is the primary tool** and the first screen when the app 
 
 - **Reconstruct Study Text** extracts text already present in a PDF's text layer and uses page coordinates to suggest headings, captions, table-like rows, and column-aware reading order.
 - Export a structured JSON document model (regions, page coordinates, reading order, type, and source) or a preliminary Markdown version.
+- Use **Check offline readiness** to inspect whether the app, PDF.js, Tesseract, and English language data appear in browser caches; then verify by reopening the app with the network disabled.
 - Scanned pages with no usable text layer are reported rather than silently fabricated. Run OCR first; OCR-to-structure integration and richer table/figure detection are planned follow-up stages.
 - This is a heuristic preview. Verify column order, heading classification, table rows, captions, and symbols against the source PDF.
 
