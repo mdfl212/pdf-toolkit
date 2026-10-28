@@ -290,7 +290,7 @@
           if (width < 0.5 || height < 0.5) { placementErrors++; continue; }
           const widthAtOne = font.widthOfTextAtSize(rawWord, 1);
           const fitSize = widthAtOne > 0 ? width / widthAtOne : 1;
-          const size = Math.max(1, Math.min(48, height * 0.78, fitSize));
+          const size = Math.max(0.1, Math.min(48, height * 0.78, fitSize));
           try {
             outPage.drawText(rawWord, {x:left, y:bottom, size, font, opacity:0});
           } catch (_) { placementErrors++; }
