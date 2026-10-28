@@ -213,8 +213,14 @@
     if (!file || busy) return;
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
     let pdfWorker = null, doc = null, canvas = null;
-    let skipped = 0, processed = 0;
+    let skipped = 0, processed = 0, lowConfidenceCount = 0, unsupportedCharacterWords = 0, placementErrors = 0;
     const lowConfidence = [], recognizedTerms = new Set();
+    const normalizeForReview = value => String(value || '')
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[^\\p{L}\\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/\\s+/g, ' ');
     try {
       status('Reading PDF…');
       const bytes = await file.arrayBuffer();
@@ -261,15 +267,33 @@
         if (cancelled) throw new Error('OCR cancelled.');
         const outPage = doc.getPage(number - 1);
         for (const word of (result?.data?.words || [])) {
-          const textWord = String(word.text || '').replace(/[^\x20-\x7E]/g, '').trim();
-          if (!textWord || !word.bbox) continue;
+          const rawWord = String(word.text || '').trim();
+          if (!rawWord || !word.bbox) continue;
+          const confidence = Number(word.confidence);
+          if (Number.isFinite(confidence) && confidence < 65) {
+            lowConfidenceCount++;
+            if (lowConfidence.length < 1000) lowConfidence.push({page:number, confidence:Math.round(confidence), text:rawWord.slice(0,160)});
+          }
+          const normalizedWord = normalizeForReview(rawWord);
+          if (normalizedWord) recognizedTerms.add(normalizedWord);
+          // Helvetica is a standard Latin font. Never strip unsupported glyphs
+          // silently: doing so can create a misleading partial word or number.
+          if (/[^\\x20-\\x7E]/.test(rawWord)) { unsupportedCharacterWords++; continue; }
           const b = word.bbox;
-          const [x0, y0] = viewport.convertToPdfPoint(b.x0, b.y1);
-          const [x1, y1] = viewport.convertToPdfPoint(b.x1, b.y0);
-          const height = Math.max(2, Math.abs(y1-y0)), width = Math.max(1, Math.abs(x1-x0));
+          const [ax, ay] = viewport.convertToPdfPoint(b.x0, b.y1);
+          const [bx, by] = viewport.convertToPdfPoint(b.x1, b.y0);
+          const pageWidth = outPage.getWidth(), pageHeight = outPage.getHeight();
+          const left = Math.max(0, Math.min(pageWidth, Math.min(ax, bx)));
+          const bottom = Math.max(0, Math.min(pageHeight, Math.min(ay, by)));
+          const width = Math.max(0, Math.min(Math.abs(bx-ax), pageWidth-left));
+          const height = Math.max(0, Math.min(Math.abs(by-ay), pageHeight-bottom));
+          if (width < 0.5 || height < 0.5) { placementErrors++; continue; }
+          const widthAtOne = font.widthOfTextAtSize(rawWord, 1);
+          const fitSize = widthAtOne > 0 ? width / widthAtOne : 1;
+          const size = Math.max(1, Math.min(48, height * 0.78, fitSize));
           try {
-            outPage.drawText(textWord, {x:Math.max(0,x0), y:Math.max(0,Math.min(y0,y1)), size:Math.max(2,Math.min(48,height*.78)), font, opacity:0, maxWidth:width*1.1});
-          } catch (_) {}
+            outPage.drawText(rawWord, {x:left, y:bottom, size, font, opacity:0});
+          } catch (_) { placementErrors++; }
         }
         processed++; progress(processed / pages.length * 95);
         canvas.width = 0; canvas.height = 0;
@@ -281,25 +305,35 @@
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf');
       const watchwords = ($('ocr-watchwords')?.value || '').split(/[\\n,;]+/).map(x => x.trim()).filter(Boolean);
-      const missingTerms = watchwords.filter(term => !recognizedTerms.has(term.toLocaleLowerCase()));
+      const normalizedTerms = new Set([...recognizedTerms].flatMap(term => term.split(/\\s+/)));
+      const missingTerms = watchwords.filter(term => {
+        const normalized = normalizeForReview(term);
+        if (!normalized) return false;
+        return normalized.includes(' ')
+          ? ![...recognizedTerms].some(found => found === normalized || found.includes(normalized))
+          : !normalizedTerms.has(normalized);
+      });
       const report = [
         'OCR QUALITY REVIEW',
         'Source: ' + file.name,
         'Pages OCR-processed: ' + (processed-skipped),
         'Pages skipped (already searchable): ' + skipped,
-        'Low-confidence recognized words (confidence below 65/100): ' + lowConfidence.length,
+        'Low-confidence words (confidence below 65/100): ' + lowConfidenceCount,
+        'Low-confidence examples recorded (maximum 1000): ' + lowConfidence.length,
+        'Words skipped because the embedded standard font cannot safely represent them: ' + unsupportedCharacterWords,
+        'Text placement errors: ' + placementErrors,
         '',
         'LOW-CONFIDENCE WORDS — verify against the original scan; these are not necessarily wrong:',
-        ...(lowConfidence.length ? lowConfidence.map(w => 'Page ' + w.page + ' | confidence ' + w.confidence + ' | ' + w.text) : ['None flagged by the confidence threshold. This does not mean OCR is error-free.']),
+        ...(lowConfidence.length ? lowConfidence.map(w => 'Page ' + w.page + ' | confidence ' + w.confidence + ' | ' + w.text) : ['None recorded. This does not mean OCR is error-free.']),
         '',
         'USER-SUPPLIED TERMS TO WATCH — absent from OCR output; verify spelling and page coverage manually:',
         ...(missingTerms.length ? missingTerms.map(t => '- ' + t) : ['None absent, or no terms were supplied.']),
         '',
-        'Important: OCR confidence is only a heuristic. Always verify drug names, doses, units, lab values, abbreviations, and Greek letters against the original PDF.'
+        'Important: OCR confidence is only a heuristic. Verify stock symbols, prices, signs, medical terms, doses, units, lab values, abbreviations, and non-Latin characters against the original PDF.'
       ].join('\\n');
       download(new TextEncoder().encode(report), name + '-ocr-review.txt');
       progress(100);
-      $('ocr-result').innerHTML = '<strong>Searchable PDF and OCR review report created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Low-confidence words flagged: ' + lowConfidence.length + '<br>User-supplied terms not found: ' + missingTerms.length + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Download the review report and verify flagged words against the original scan.';
+      $('ocr-result').textContent = 'Searchable PDF and OCR review report created.\\nPages OCR-processed: ' + (processed-skipped) + '\\nPages skipped (already searchable): ' + skipped + '\\nLow-confidence words flagged: ' + lowConfidenceCount + '\\nUnsupported-character words skipped: ' + unsupportedCharacterWords + '\\nText placement errors: ' + placementErrors + '\\nUser-supplied terms not found: ' + missingTerms.length + '\\nOutput size: ' + (output.byteLength/1048576).toFixed(2) + ' MB\\n\\nDownload the review report and verify flagged words against the original scan.';
       $('ocr-result').style.display = 'block'; status('Download started. Review the output before relying on it.');
     } catch (e) {
       const message = e?.message || String(e);
