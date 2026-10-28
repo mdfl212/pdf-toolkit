@@ -153,11 +153,12 @@
     setBusy(true);
     progress(0);
     $('ocr-result').style.display = 'none';
-    let doc = null;
+    let doc = null, pdfTask = null;
     try {
       status('Opening PDF to inspect text layers…');
       const pdf = await pdfjs();
-      doc = await pdf.getDocument({data: await file.arrayBuffer()}).promise;
+      pdfTask = pdf.getDocument({data: await file.arrayBuffer()});
+      doc = await pdfTask.promise;
       const scanned = [];
       const searchable = [];
       for (let i = 1; i <= doc.numPages; i++) {
@@ -183,6 +184,7 @@
       status(/cancelled/i.test(message) ? message : 'Scan detection failed: ' + message, !/cancelled/i.test(message));
     } finally {
       try { await doc?.destroy(); } catch (_) {}
+      try { await pdfTask?.destroy(); } catch (_) {}
       setBusy(false);
       progress(0, false);
     }
