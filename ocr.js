@@ -153,11 +153,12 @@
     setBusy(true);
     progress(0);
     $('ocr-result').style.display = 'none';
-    let doc = null;
+    let doc = null, pdfTask = null;
     try {
       status('Opening PDF to inspect text layers…');
       const pdf = await pdfjs();
-      doc = await pdf.getDocument({data: await file.arrayBuffer()}).promise;
+      pdfTask = pdf.getDocument({data: await file.arrayBuffer()});
+      doc = await pdfTask.promise;
       const scanned = [];
       const searchable = [];
       for (let i = 1; i <= doc.numPages; i++) {
@@ -183,6 +184,7 @@
       status(/cancelled/i.test(message) ? message : 'Scan detection failed: ' + message, !/cancelled/i.test(message));
     } finally {
       try { await doc?.destroy(); } catch (_) {}
+      try { await pdfTask?.destroy(); } catch (_) {}
       setBusy(false);
       progress(0, false);
     }
@@ -212,7 +214,7 @@
   async function run() {
     if (!file || busy) return;
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
-    let pdfWorker = null, doc = null, canvas = null;
+    let pdfWorker = null, doc = null, source = null, canvas = null;
     let skipped = 0, processed = 0, lowConfidenceCount = 0, unsupportedCharacterWords = 0, placementErrors = 0;
     const lowConfidence = [], recognizedTerms = new Set(), recognizedText = [];
     const normalizeForReview = value => String(value || '')
@@ -226,7 +228,7 @@
       const bytes = await file.arrayBuffer();
       doc = await PDFLib.PDFDocument.load(bytes.slice(0), { updateMetadata: false });
       const pdf = await pdfjs();
-      const source = await pdf.getDocument({data: bytes.slice(0)}).promise;
+      source = await pdf.getDocument({data: bytes.slice(0)}).promise;
       const pages = parseRanges($('ocr-pages').value, source.numPages);
       const scale = Number($('ocr-scale').value) || 2;
       status('Loading English OCR engine…');
@@ -253,8 +255,17 @@
         const textItems = (await page.getTextContent()).items || [];
         if (hasUsableTextLayer(page, textItems)) { skipped++; processed++; progress(processed / pages.length * 95); continue; }
         status('Rendering page ' + number + ' (' + (i+1) + ' of ' + pages.length + ')…');
-        const viewport = page.getViewport({scale});
+        const baseViewport = page.getViewport({scale:1});
+        // Keep large-format pages within a conservative canvas memory budget. A
+        // 3x render can otherwise allocate hundreds of MB on posters or large scans.
+        const maxPixels = 18000000;
+        const requestedPixels = baseViewport.width * baseViewport.height * scale * scale;
+        const renderScale = requestedPixels > maxPixels
+          ? Math.sqrt(maxPixels / Math.max(1, baseViewport.width * baseViewport.height))
+          : scale;
+        const viewport = page.getViewport({scale:renderScale});
         canvas.width = Math.max(1, Math.ceil(viewport.width)); canvas.height = Math.max(1, Math.ceil(viewport.height));
+        if (renderScale < scale) status('Page ' + number + ' is large; resolution capped to protect browser memory (' + renderScale.toFixed(2) + '×).');
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({canvasContext:ctx, viewport, background:'#fff'}).promise;
         if ($('ocr-clean')?.checked) {
@@ -296,6 +307,7 @@
           } catch (_) { placementErrors++; }
         }
         processed++; progress(processed / pages.length * 95);
+        try { page.cleanup(); } catch (_) {}
         canvas.width = 0; canvas.height = 0;
       }
       if (cancelled) throw new Error('OCR cancelled.');
@@ -344,6 +356,7 @@
       worker = null;
       if (canvas) { canvas.width = 0; canvas.height = 0; }
       if (doc && doc.cleanup) { try { doc.cleanup(); } catch (_) {} }
+      if (source) { try { await source.destroy(); } catch (_) {} }
       setBusy(false); progress(0, false);
     }
   }
