@@ -169,7 +169,8 @@
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
     let pdfWorker = null, doc = null, canvas = null;
     let skipped = 0, processed = 0, unsupportedCharacterWords = 0, placementErrors = 0;
-    const lowConfidence = [];
+    let lowConfidenceCount = 0;
+    const lowConfidence = []; // Bound memory on large textbooks; retain a review sample.
     try {
       status('Reading PDF…');
       const bytes = await file.arrayBuffer();
@@ -210,7 +211,8 @@
           const rawWord = String(word.text || '').trim();
           if (!rawWord || !word.bbox) continue;
           if (Number.isFinite(Number(word.confidence)) && Number(word.confidence) < 65) {
-            lowConfidence.push({page:number, confidence:Math.round(Number(word.confidence)), text:rawWord.slice(0,160)});
+            lowConfidenceCount++;
+            if (lowConfidence.length < 1000) lowConfidence.push({page:number, confidence:Math.round(Number(word.confidence)), text:rawWord.slice(0,160)});
           }
           // Helvetica is a WinAnsi font. Do not silently turn a word such as
           // "β-blocker" into "-blocker"; flag the whole word for manual review.
@@ -245,12 +247,12 @@
       const output = await doc.save({useObjectStreams:true});
       const name = file.name.replace(/\.pdf$/i,'').replace(/[\\/:*?"<>|]+/g,'_') || 'document';
       download(output, name + '-searchable.pdf'); progress(100);
-      $('ocr-result').innerHTML = '<strong>Searchable PDF created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Low-confidence words flagged: ' + lowConfidence.length + '<br>Words containing unsupported non-ASCII characters: ' + unsupportedCharacterWords + '<br>Words that could not be added to the text layer: ' + placementErrors + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Search for words in the downloaded PDF. Verify flagged words and any Greek letters, accented characters, symbols, drug names, doses, and units against the original scan.';
+      $('ocr-result').innerHTML = '<strong>Searchable PDF created.</strong><br>Pages OCR-processed: ' + (processed-skipped) + '<br>Pages skipped (already searchable): ' + skipped + '<br>Low-confidence words flagged: ' + lowConfidenceCount + '<br>Words containing unsupported non-ASCII characters: ' + unsupportedCharacterWords + '<br>Words that could not be added to the text layer: ' + placementErrors + '<br>Output size: ' + (output.byteLength/1048576).toFixed(2) + ' MB<br><br>Search for words in the downloaded PDF. Verify flagged words and any Greek letters, accented characters, symbols, drug names, doses, and units against the original scan.';
       $('ocr-result').style.display = 'block';
       if (lowConfidence.length) {
         const review = document.createElement('details');
         const summary = document.createElement('summary');
-        summary.textContent = 'Review low-confidence words (first 30 of ' + lowConfidence.length + ')';
+        summary.textContent = 'Review low-confidence words (first 30 of ' + lowConfidenceCount + ')';
         review.appendChild(summary);
         const list = document.createElement('ul');
         for (const item of lowConfidence.slice(0, 30)) {
