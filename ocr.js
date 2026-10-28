@@ -214,7 +214,7 @@
     cancelled = false; setBusy(true); progress(0); $('ocr-result').style.display = 'none';
     let pdfWorker = null, doc = null, canvas = null;
     let skipped = 0, processed = 0, lowConfidenceCount = 0, unsupportedCharacterWords = 0, placementErrors = 0;
-    const lowConfidence = [], recognizedTerms = new Set();
+    const lowConfidence = [], recognizedTerms = new Set(), recognizedText = [];
     const normalizeForReview = value => String(value || '')
       .normalize('NFKC')
       .toLocaleLowerCase()
@@ -275,7 +275,7 @@
             if (lowConfidence.length < 1000) lowConfidence.push({page:number, confidence:Math.round(confidence), text:rawWord.slice(0,160)});
           }
           const normalizedWord = normalizeForReview(rawWord);
-          if (normalizedWord) recognizedTerms.add(normalizedWord);
+          if (normalizedWord) { recognizedTerms.add(normalizedWord); recognizedText.push(normalizedWord); }
           // Helvetica is a standard Latin font. Never strip unsupported glyphs
           // silently: doing so can create a misleading partial word or number.
           if (/[^\x20-\x7E]/.test(rawWord)) { unsupportedCharacterWords++; continue; }
@@ -306,11 +306,12 @@
       download(output, name + '-searchable.pdf');
       const watchwords = ($('ocr-watchwords')?.value || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
       const normalizedTerms = new Set([...recognizedTerms].flatMap(term => term.split(/\s+/)));
+      const normalizedOCRText = recognizedText.join(' ');
       const missingTerms = watchwords.filter(term => {
         const normalized = normalizeForReview(term);
         if (!normalized) return false;
         return normalized.includes(' ')
-          ? ![...recognizedTerms].some(found => found === normalized || found.includes(normalized))
+          ? !normalizedOCRText.includes(normalized)
           : !normalizedTerms.has(normalized);
       });
       const report = [
