@@ -2473,7 +2473,7 @@
     }
 
     async function setActiveDocument(file) {
-      if (!file || (file.type !== 'application/pdf' && !/\\.pdf$/i.test(file.name))) {
+      if (!file || (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name))) {
         showStatus('Please choose a PDF file.', 'error');
         return null;
       }
@@ -2489,7 +2489,7 @@
         state.currentPdfBytes = data.bytes;
         state.currentPdfDoc = data.pdfLibDoc;
         state.currentPdfJs = data.pdfJsDoc;
-        state.sourceFileName = file.name.replace(/\\.pdf$/i, '');
+        state.sourceFileName = file.name.replace(/\.pdf$/i, '');
         state.activePdfPage = 1;
         document.getElementById('workspace-upload-drop').hidden = true;
         document.getElementById('active-document-card').hidden = false;
@@ -2750,7 +2750,7 @@
     workspaceUploadDrop.addEventListener('dragleave', () => workspaceUploadDrop.classList.remove('dragover'));
     workspaceUploadDrop.addEventListener('drop', async event => {
       event.preventDefault(); workspaceUploadDrop.classList.remove('dragover');
-      const file = Array.from(event.dataTransfer.files || []).find(item => item.type === 'application/pdf' || /\\.pdf$/i.test(item.name));
+      const file = Array.from(event.dataTransfer.files || []).find(item => item.type === 'application/pdf' || /\.pdf$/i.test(item.name));
       if (file) await setActiveDocument(file);
     });
     workspacePdfInput.addEventListener('change', async () => {
