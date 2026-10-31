@@ -5154,6 +5154,7 @@
           return;
         }
         selectedFile = file;
+        if (window.PDFToolkitSetActiveFile && window.PDFToolkitGetActiveFile?.() !== file) window.PDFToolkitSetActiveFile(file);
         fileName.textContent = file.name;
         fileSize.textContent = 'Original size: ' + formatBytes(file.size);
         fileCard.style.display = 'flex';
@@ -5162,6 +5163,8 @@
         result.style.display = 'none';
         status.textContent = '';
       }
+
+      window.PDFToolkitSetCompressionFile = setFile;
 
       function clearFile() {
         selectedFile = null;
