@@ -49,6 +49,7 @@
       document.querySelectorAll('.mobile-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'tools'));
       document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      const active = window.PDFToolkitGetActiveFile?.(); if (active && active !== file) setFile(active);
     }));
   }
   function status(msg, error) {
