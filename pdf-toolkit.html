@@ -2842,7 +2842,10 @@
       if (panelId) dropZoneHandlers.set(panelId, { onFiles, multiple });
       const dispatch = async files => {
         if (!files || (Array.isArray(files) && !files.length)) return;
-        if (multiple) return onFiles(files);
+        if (multiple) {
+          if (files[0]) await setActiveDocument(files[0]);
+          return onFiles(files);
+        }
         const file = Array.isArray(files) ? files[0] : files;
         const loaded = await setActiveDocument(file);
         if (!loaded) return;
