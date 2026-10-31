@@ -50,6 +50,7 @@
       document.querySelectorAll('.mobile-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'tools'));
       document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      const active = window.PDFToolkitGetActiveFile?.(); if (active && active !== file) setFile(active);
     }));
   }
 
@@ -74,6 +75,7 @@
     if (!selected) return;
     if (selected.type !== 'application/pdf' && !/\.pdf$/i.test(selected.name)) return status('Please choose a PDF file.', true);
     file = selected;
+    if (window.PDFToolkitSetActiveFile && window.PDFToolkitGetActiveFile?.() !== selected) window.PDFToolkitSetActiveFile(selected);
     $('pdf-images-file-name').textContent = selected.name;
     $('pdf-images-file-size').textContent = 'File size: ' + (selected.size / 1048576).toFixed(2) + ' MB';
     $('pdf-images-file-card').style.display = 'flex';
@@ -82,6 +84,7 @@
     $('pdf-images-result').style.display = 'none';
     status('');
   }
+  window.PDFToolkitSetPdfImagesFile = setFile;
   function clearFile() {
     if (busy) return;
     file = null;
