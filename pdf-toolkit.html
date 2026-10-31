@@ -257,8 +257,18 @@
     .workspace-active-chip strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); font-weight:500; }
     #pdf-loading-overlay { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(245,248,246,.76); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); opacity:0; visibility:hidden; transition:opacity .18s,visibility .18s; }
     #pdf-loading-overlay.show { opacity:1; visibility:visible; }
-    .pdf-loading-card { display:flex; align-items:center; gap:14px; padding:18px 22px; border:1px solid rgba(30,107,58,.18); border-radius:14px; background:rgba(255,255,255,.94); color:#183022; box-shadow:0 12px 40px rgba(20,40,28,.16); }
-    .pdf-loading-spinner { width:24px; height:24px; border:3px solid #dbe8de; border-top-color:#1e6b3a; border-radius:50%; animation:pdfSpin .8s linear infinite; }
+    .pdf-loading-card { display:flex; flex-direction:column; gap:12px; width:min(420px,100%); padding:22px; border:1px solid rgba(30,107,58,.18); border-radius:14px; background:rgba(255,255,255,.97); color:#183022; box-shadow:0 12px 40px rgba(20,40,28,.16); }
+    .pdf-loading-top { display:flex; align-items:center; gap:13px; width:100%; }
+    .pdf-loading-spinner { flex:0 0 24px; width:24px; height:24px; border:3px solid #dbe8de; border-top-color:#1e6b3a; border-radius:50%; animation:pdfSpin .8s linear infinite; }
+    .pdf-loading-copy { flex:1; min-width:0; }
+    #pdf-loading-label { display:block; font-size:.95rem; }
+    #pdf-loading-filename { display:block; margin-top:3px; color:#66736a; font-size:.78rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pdf-progress-track { width:100%; height:8px; overflow:hidden; border-radius:999px; background:#e5ece6; }
+    .pdf-progress-fill { width:0%; height:100%; border-radius:inherit; background:#1e6b3a; transition:width .12s linear; }
+    .pdf-progress-meta { display:flex; justify-content:space-between; width:100%; color:#66736a; font-size:.75rem; }
+    #pdf-loading-overlay[data-mode="loading"] .pdf-progress-track,
+    #pdf-loading-overlay[data-mode="loading"] .pdf-progress-meta { display:none; }
+    #pdf-loading-overlay[data-mode="loading"] .pdf-loading-spinner { animation:pdfSpin .8s linear infinite; }
     @keyframes pdfSpin { to { transform:rotate(360deg); } }
     @media (max-width:700px) {
       .workspace-document-head { align-items:flex-start; flex-wrap:wrap; }
@@ -1659,7 +1669,14 @@
 </head>
 <body>
   <div id="pdf-loading-overlay" aria-live="polite" aria-hidden="true">
-    <div class="pdf-loading-card"><span class="pdf-loading-spinner" aria-hidden="true"></span><strong id="pdf-loading-label">Opening your PDF…</strong></div>
+    <div class="pdf-loading-card" role="status" aria-live="polite">
+      <div class="pdf-loading-top">
+        <span class="pdf-loading-spinner" aria-hidden="true"></span>
+        <div class="pdf-loading-copy"><strong id="pdf-loading-label">Uploading PDF…</strong><span id="pdf-loading-filename"></span></div>
+      </div>
+      <div class="pdf-progress-track" id="pdf-progress-track"><div class="pdf-progress-fill" id="pdf-progress-fill"></div></div>
+      <div class="pdf-progress-meta"><span id="pdf-progress-detail">Preparing file…</span><strong id="pdf-progress-percent">0%</strong></div>
+    </div>
   </div>
   <header>
     <div class="logo">
@@ -2445,12 +2462,39 @@
       return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
     }
 
-    function setPdfLoading(visible, label = 'Opening your PDF…') {
+    function setPdfLoading(visible, label = 'Opening your PDF…', mode = 'loading', fileName = '') {
       const overlay = document.getElementById('pdf-loading-overlay');
       if (!overlay) return;
       document.getElementById('pdf-loading-label').textContent = label;
+      document.getElementById('pdf-loading-filename').textContent = fileName;
+      overlay.dataset.mode = mode;
       overlay.classList.toggle('show', visible);
       overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    }
+
+    function updatePdfUploadProgress(loaded, total) {
+      const percent = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+      document.getElementById('pdf-progress-fill').style.width = percent + '%';
+      document.getElementById('pdf-progress-percent').textContent = percent + '%';
+      document.getElementById('pdf-progress-detail').textContent = total > 0
+        ? formatBytes(loaded) + ' of ' + formatBytes(total)
+        : 'Reading PDF…';
+    }
+
+    function readPdfFileWithProgress(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onprogress = event => {
+          if (event.lengthComputable) updatePdfUploadProgress(event.loaded, event.total);
+        };
+        reader.onload = () => {
+          updatePdfUploadProgress(file.size, file.size);
+          resolve(reader.result);
+        };
+        reader.onerror = () => reject(reader.error || new Error('Could not read the selected file.'));
+        reader.onabort = () => reject(new Error('File reading was cancelled.'));
+        reader.readAsArrayBuffer(file);
+      });
     }
 
     async function renderWorkspacePreview() {
@@ -2476,13 +2520,19 @@
         showStatus('Please choose a PDF file.', 'error');
         return null;
       }
-      setPdfLoading(true, 'Opening ' + file.name + '…');
+      const needsRead = state.activeFile !== file || !state.activePdfBytes || !state.activePdfJsDoc;
       try {
-        if (state.activeFile !== file || !state.activePdfBytes || !state.activePdfJsDoc) {
+        if (needsRead) {
+          setPdfLoading(true, 'Uploading PDF…', 'upload', file.name);
+          updatePdfUploadProgress(0, file.size);
+          const uploadedBytes = await readPdfFileWithProgress(file);
+          setPdfLoading(true, 'Opening PDF…', 'loading', file.name);
           state.activeFile = file;
-          state.activePdfBytes = await file.arrayBuffer();
+          state.activePdfBytes = uploadedBytes;
           state.activePdfJsDoc = await pdfjsLib.getDocument({ data: state.activePdfBytes.slice(0) }).promise;
           state.loadedPanelDocuments.clear();
+        } else {
+          setPdfLoading(true, 'Opening PDF…', 'loading', file.name);
         }
         state.currentPdfBytes = state.activePdfBytes;
         state.currentPdfDoc = null; // A tool creates its own editable pdf-lib instance when opened.
@@ -2495,6 +2545,7 @@
         document.getElementById('workspace-document-meta').textContent = `PDF · ${state.activePdfJsDoc.numPages.toLocaleString()} pages · ${formatBytes(file.size)} · stored in this session`;
         document.getElementById('workspace-active-name').textContent = file.name;
         document.getElementById('workspace-active-chip').style.display = 'inline-flex';
+        setPdfLoading(true, 'Preparing preview…', 'loading', file.name);
         await renderWorkspacePreview();
         return { bytes: state.activePdfBytes, pdfJsDoc: state.activePdfJsDoc, name: file.name, size: file.size };
       } catch (error) {
