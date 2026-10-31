@@ -232,6 +232,42 @@
       .workspace-card .favorite-toggle { right:6px; top:5px; width:32px; height:32px; }
     }
 
+    /* Upload-once workspace */
+    .workspace-upload { margin: 0 0 24px; }
+    .workspace-upload-drop {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      min-height:190px; padding:28px 20px; border:2px dashed var(--border);
+      border-radius:16px; background:linear-gradient(145deg,rgba(30,107,58,.14),rgba(201,162,39,.05)),var(--surface);
+      text-align:center; cursor:pointer; transition:border-color .18s,background .18s,transform .18s;
+    }
+    .workspace-upload-drop:hover,.workspace-upload-drop.dragover { border-color:var(--accent); background:var(--surface2); }
+    .workspace-upload-drop.dragover { transform:scale(1.005); }
+    .workspace-upload-drop .upload-symbol { font-size:2.2rem; margin-bottom:8px; }
+    .workspace-upload-drop p { color:var(--text-muted); }
+    .workspace-upload-drop strong { color:var(--text); }
+    .workspace-document { border:1px solid var(--border); border-radius:16px; background:var(--surface); overflow:hidden; }
+    .workspace-document-head { display:flex; align-items:center; gap:12px; padding:14px 16px; }
+    .workspace-document-head .file-info { flex:1; min-width:0; }
+    .workspace-document-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .workspace-preview-stage { display:flex; justify-content:center; align-items:center; min-height:240px; max-height:62vh; overflow:auto; padding:18px; background:#202823; border-top:1px solid var(--border); }
+    #workspace-preview-canvas { display:block; max-width:100%; height:auto; background:#fff; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+    .workspace-preview-controls { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px 14px; border-top:1px solid var(--border); }
+    .workspace-preview-controls span { color:var(--text-muted); font: .78rem 'JetBrains Mono',monospace; }
+    .workspace-active-chip { display:none; align-items:center; gap:8px; max-width:min(42vw,420px); padding:6px 10px; border:1px solid var(--border); border-radius:999px; color:var(--text-muted); font-size:.78rem; }
+    .workspace-active-chip strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); font-weight:500; }
+    #pdf-loading-overlay { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(245,248,246,.76); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); opacity:0; visibility:hidden; transition:opacity .18s,visibility .18s; }
+    #pdf-loading-overlay.show { opacity:1; visibility:visible; }
+    .pdf-loading-card { display:flex; align-items:center; gap:14px; padding:18px 22px; border:1px solid rgba(30,107,58,.18); border-radius:14px; background:rgba(255,255,255,.94); color:#183022; box-shadow:0 12px 40px rgba(20,40,28,.16); }
+    .pdf-loading-spinner { width:24px; height:24px; border:3px solid #dbe8de; border-top-color:#1e6b3a; border-radius:50%; animation:pdfSpin .8s linear infinite; }
+    @keyframes pdfSpin { to { transform:rotate(360deg); } }
+    @media (max-width:700px) {
+      .workspace-document-head { align-items:flex-start; flex-wrap:wrap; }
+      .workspace-document-actions { width:100%; }
+      .workspace-document-actions .btn { flex:1; }
+      .workspace-preview-stage { min-height:180px; padding:10px; }
+      .workspace-active-chip { max-width:46vw; }
+    }
+
     main {
       padding: 28px;
       overflow-y: auto;
@@ -1622,6 +1658,9 @@
   <link rel="stylesheet" href="./mobile-process.css" />
 </head>
 <body>
+  <div id="pdf-loading-overlay" aria-live="polite" aria-hidden="true">
+    <div class="pdf-loading-card"><span class="pdf-loading-spinner" aria-hidden="true"></span><strong id="pdf-loading-label">Opening your PDF…</strong></div>
+  </div>
   <header>
     <div class="logo">
       <div class="logo-icon">📄</div>
@@ -1638,6 +1677,7 @@
       <button class="btn btn-secondary btn-sm" id="pwa-install-btn" style="display:none">
         Install App
       </button>
+      <span class="workspace-active-chip" id="workspace-active-chip"><span aria-hidden="true">📄</span><strong id="workspace-active-name"></strong><button class="btn btn-secondary btn-sm" id="workspace-preview-btn" type="button">Preview</button></span>
       <span class="header-hint">No uploads • No limits</span>
     </div>
   </header>
@@ -1658,7 +1698,31 @@
     <main>
       <div class="panel active" id="panel-home">
         <div class="workspace-home">
-          <div class="workspace-hero"><h1>PDF Workspace</h1><p>Choose a task or search all tools to get started.</p></div>
+          <div class="workspace-hero"><h1>PDF Workspace</h1><p>Upload once, then use the same document across your PDF tools.</p></div>
+          <section class="workspace-upload" aria-label="Active PDF document">
+            <div class="workspace-upload-drop" id="workspace-upload-drop" role="button" tabindex="0" aria-label="Upload a PDF">
+              <div class="upload-symbol" aria-hidden="true">📄</div>
+              <p><strong>Drop your PDF here</strong> or click to browse</p>
+              <p class="hint">Your document stays on this device and remains available as you switch tools.</p>
+              <input type="file" id="workspace-pdf-input" accept=".pdf,application/pdf" hidden>
+            </div>
+            <article class="workspace-document" id="active-document-card" hidden>
+              <div class="workspace-document-head">
+                <div class="file-icon">PDF</div>
+                <div class="file-info"><div class="file-name" id="workspace-document-name"></div><div class="file-meta" id="workspace-document-meta"></div></div>
+                <div class="workspace-document-actions">
+                  <button class="btn btn-secondary btn-sm" id="workspace-change-pdf" type="button">Change PDF</button>
+                  <button class="btn btn-secondary btn-sm" id="workspace-clear-pdf" type="button">Clear</button>
+                </div>
+              </div>
+              <div class="workspace-preview-stage"><canvas id="workspace-preview-canvas" aria-label="PDF page preview"></canvas></div>
+              <div class="workspace-preview-controls">
+                <button class="btn btn-secondary btn-sm" id="workspace-preview-prev" type="button" disabled>Previous</button>
+                <span id="workspace-preview-page">Page 1</span>
+                <button class="btn btn-secondary btn-sm" id="workspace-preview-next" type="button" disabled>Next</button>
+              </div>
+            </article>
+          </section>
           <label class="workspace-search"><svg class="workspace-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="tool-search" type="search" placeholder="Search tools… (e.g. merge, pages, bookmarks)" autocomplete="off" aria-label="Search PDF tools"></label>
           <nav class="mobile-category-nav" id="mobile-category-nav" aria-label="Tool categories"></nav>
           <div id="workspace-results"></div>
@@ -2303,8 +2367,14 @@
       bmSelected: new Set(), // indices into bmFlat that are selected for extraction
       bmPreviewItems: [],   // calculated ranges for preview table
       extractedFiles: [],   // {name, bytes, pages}
-      sourceFileName: ''
+      sourceFileName: '',
+      activeFile: null,
+      activePdfBytes: null,
+      activePdfJsDoc: null,
+      activePdfPage: 1,
+      loadedPanelDocuments: new Map()
     };
+    const dropZoneHandlers = new Map();
 
     // ===================== HELPERS =====================
     // Use an explicit listener instead of inline HTML handlers (which may be blocked by CSP).
@@ -2358,11 +2428,87 @@
     }
 
     async function loadPdf(file) {
-      const bytes = await file.arrayBuffer();
-      const pdfLibDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-      const pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+      let bytes, pdfJsDoc;
+      if (state.activeFile === file && state.activePdfBytes && state.activePdfJsDoc) {
+        bytes = state.activePdfBytes.slice(0);
+        pdfJsDoc = state.activePdfJsDoc;
+      } else {
+        bytes = await file.arrayBuffer();
+        pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        state.activeFile = file;
+        state.activePdfBytes = bytes;
+        state.activePdfJsDoc = pdfJsDoc;
+        state.loadedPanelDocuments.clear();
+      }
+      // Each tool gets its own mutable pdf-lib document, while the original bytes
+      // and PDF.js document remain shared as the workspace source.
+      const pdfLibDoc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
       return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
     }
+
+    function setPdfLoading(visible, label = 'Opening your PDF…') {
+      const overlay = document.getElementById('pdf-loading-overlay');
+      if (!overlay) return;
+      document.getElementById('pdf-loading-label').textContent = label;
+      overlay.classList.toggle('show', visible);
+      overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    }
+
+    async function renderWorkspacePreview() {
+      if (!state.activePdfJsDoc) return;
+      const canvas = document.getElementById('workspace-preview-canvas');
+      const pageNumber = Math.min(Math.max(1, state.activePdfPage), state.activePdfJsDoc.numPages);
+      state.activePdfPage = pageNumber;
+      const page = await state.activePdfJsDoc.getPage(pageNumber);
+      const base = page.getViewport({ scale: 1 });
+      const maxWidth = Math.min(900, Math.max(260, document.querySelector('main')?.clientWidth - 72 || 760));
+      const scale = Math.min(1.35, maxWidth / base.width);
+      const viewport = page.getViewport({ scale });
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      document.getElementById('workspace-preview-page').textContent = `Page ${pageNumber} of ${state.activePdfJsDoc.numPages}`;
+      document.getElementById('workspace-preview-prev').disabled = pageNumber <= 1;
+      document.getElementById('workspace-preview-next').disabled = pageNumber >= state.activePdfJsDoc.numPages;
+    }
+
+    async function setActiveDocument(file) {
+      if (!file || (file.type !== 'application/pdf' && !/\\.pdf$/i.test(file.name))) {
+        showStatus('Please choose a PDF file.', 'error');
+        return null;
+      }
+      setPdfLoading(true, 'Opening ' + file.name + '…');
+      try {
+        if (state.activeFile !== file) {
+          state.activeFile = file;
+          state.activePdfBytes = null;
+          state.activePdfJsDoc = null;
+          state.loadedPanelDocuments.clear();
+        }
+        const data = await loadPdf(file);
+        state.currentPdfBytes = data.bytes;
+        state.currentPdfDoc = data.pdfLibDoc;
+        state.currentPdfJs = data.pdfJsDoc;
+        state.sourceFileName = file.name.replace(/\\.pdf$/i, '');
+        state.activePdfPage = 1;
+        document.getElementById('workspace-upload-drop').hidden = true;
+        document.getElementById('active-document-card').hidden = false;
+        document.getElementById('workspace-document-name').textContent = data.name;
+        document.getElementById('workspace-document-meta').textContent = `PDF · ${data.pdfLibDoc.getPageCount().toLocaleString()} pages · ${formatBytes(data.size)} · stored in this session`;
+        document.getElementById('workspace-active-name').textContent = data.name;
+        document.getElementById('workspace-active-chip').style.display = 'inline-flex';
+        await renderWorkspacePreview();
+        return data;
+      } catch (error) {
+        showStatus('Unable to open PDF: ' + error.message, 'error');
+        return null;
+      } finally {
+        setPdfLoading(false);
+      }
+    }
+
+    window.PDFToolkitSetActiveFile = setActiveDocument;
+    window.PDFToolkitGetActiveFile = () => state.activeFile;
 
     async function renderThumb(pdfJsDoc, pageNum, canvas, maxWidth = 130, rotationOverride = null) {
       const page = await pdfJsDoc.getPage(pageNum);
@@ -2569,10 +2715,76 @@
     renderCategoryNavigation();
     renderWorkspace();
 
+    async function ensurePanelDocument(panelId) {
+      if (!state.activeFile || !panelId) return;
+      if (state.loadedPanelDocuments.get(panelId) === state.activeFile) return;
+      if (panelId === 'compress' && window.PDFToolkitSetCompressionFile) {
+        window.PDFToolkitSetCompressionFile(state.activeFile);
+        state.loadedPanelDocuments.set(panelId, state.activeFile);
+        return;
+      }
+      if (panelId === 'ocr' && window.PDFToolkitSetOCRFile) {
+        window.PDFToolkitSetOCRFile(state.activeFile);
+        state.loadedPanelDocuments.set(panelId, state.activeFile);
+        return;
+      }
+      const handler = dropZoneHandlers.get(panelId);
+      if (!handler) return;
+      try {
+        if (handler.multiple) await handler.onFiles([state.activeFile]);
+        else await handler.onFiles(state.activeFile);
+        state.loadedPanelDocuments.set(panelId, state.activeFile);
+      } catch (error) {
+        state.loadedPanelDocuments.delete(panelId);
+        showStatus('Could not prepare this tool: ' + error.message, 'error');
+      }
+    }
+
+    const workspacePdfInput = document.getElementById('workspace-pdf-input');
+    const workspaceUploadDrop = document.getElementById('workspace-upload-drop');
+    workspaceUploadDrop.addEventListener('click', () => workspacePdfInput.click());
+    workspaceUploadDrop.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); workspacePdfInput.click(); }
+    });
+    workspaceUploadDrop.addEventListener('dragover', event => { event.preventDefault(); workspaceUploadDrop.classList.add('dragover'); });
+    workspaceUploadDrop.addEventListener('dragleave', () => workspaceUploadDrop.classList.remove('dragover'));
+    workspaceUploadDrop.addEventListener('drop', async event => {
+      event.preventDefault(); workspaceUploadDrop.classList.remove('dragover');
+      const file = Array.from(event.dataTransfer.files || []).find(item => item.type === 'application/pdf' || /\\.pdf$/i.test(item.name));
+      if (file) await setActiveDocument(file);
+    });
+    workspacePdfInput.addEventListener('change', async () => {
+      const file = workspacePdfInput.files && workspacePdfInput.files[0];
+      if (file) await setActiveDocument(file);
+      workspacePdfInput.value = '';
+    });
+    document.getElementById('workspace-change-pdf').addEventListener('click', () => workspacePdfInput.click());
+    document.getElementById('workspace-preview-btn').addEventListener('click', () => {
+      showPanel('home');
+      document.getElementById('active-document-card').scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+    document.getElementById('workspace-preview-prev').addEventListener('click', async () => {
+      if (state.activePdfPage > 1) { state.activePdfPage--; await renderWorkspacePreview(); }
+    });
+    document.getElementById('workspace-preview-next').addEventListener('click', async () => {
+      if (state.activePdfJsDoc && state.activePdfPage < state.activePdfJsDoc.numPages) { state.activePdfPage++; await renderWorkspacePreview(); }
+    });
+    document.getElementById('workspace-clear-pdf').addEventListener('click', () => {
+      state.activeFile = null; state.activePdfBytes = null; state.activePdfJsDoc = null;
+      state.currentPdfBytes = null; state.currentPdfDoc = null; state.currentPdfJs = null;
+      state.loadedPanelDocuments.clear(); state.activePdfPage = 1;
+      document.getElementById('active-document-card').hidden = true;
+      document.getElementById('workspace-upload-drop').hidden = false;
+      document.getElementById('workspace-active-chip').style.display = 'none';
+      document.getElementById('workspace-preview-canvas').width = 0;
+      document.getElementById('workspace-preview-canvas').height = 0;
+    });
+
     function showPanel(panelId) {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const panel = document.getElementById('panel-' + (panelId === 'pdf-images' ? 'pdf-images' : panelId));
       if (panel) panel.classList.add('active');
+      if (panelId !== 'home') ensurePanelDocument(panelId);
       document.querySelectorAll('.tool-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.panel === panelId);
       });
@@ -2637,6 +2849,18 @@
     function setupDropZone(zoneId, inputId, onFiles, multiple = false) {
       const zone = document.getElementById(zoneId);
       const input = document.getElementById(inputId);
+      const panel = zone?.closest('.panel');
+      const panelId = panel?.id.replace(/^panel-/, '');
+      if (panelId) dropZoneHandlers.set(panelId, { onFiles, multiple });
+      const dispatch = async files => {
+        if (!files || (Array.isArray(files) && !files.length)) return;
+        if (multiple) return onFiles(files);
+        const file = Array.isArray(files) ? files[0] : files;
+        const loaded = await setActiveDocument(file);
+        if (!loaded) return;
+        if (panelId) state.loadedPanelDocuments.set(panelId, file);
+        return onFiles(file);
+      };
       zone.addEventListener('click', () => input.click());
       zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
       zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
@@ -2645,11 +2869,11 @@
         zone.classList.remove('dragover');
         const files = Array.from(e.dataTransfer.files).filter(f =>
           f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-        if (files.length) onFiles(multiple ? files : files[0]);
+        if (files.length) dispatch(multiple ? files : files[0]);
       });
       input.addEventListener('change', () => {
         if (input.files.length) {
-          onFiles(multiple ? Array.from(input.files) : input.files[0]);
+          dispatch(multiple ? Array.from(input.files) : input.files[0]);
           input.value = '';
         }
       });
