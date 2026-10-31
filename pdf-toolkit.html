@@ -1873,9 +1873,7 @@
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     ::selection { color: #f5f8f5; background: #356d48; }
     * { scrollbar-color: #43564a #17211b; }
-    .mobile-category-nav {
-      gap: 7px; margin: 0 0 20px; padding: 2px 0 8px;
-    }
+    .mobile-category-nav { display: none !important; }
     .mobile-category-nav button {
       padding: 8px 12px; border: 1px solid var(--border);
       border-radius: 999px; background: var(--surface);
@@ -2932,7 +2930,7 @@
       return svgIcon(names[id] || 'chapters');
     }
     function favoriteIconSvg(favorite) {
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths.star.replace(/<path d="|">/g,'')}" fill="${favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z" fill="${favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
     }
     function toolCard(tool) {
       const favorite = favoriteTools.has(tool.id);
