@@ -1712,7 +1712,6 @@
                 <div class="file-info"><div class="file-name" id="workspace-document-name"></div><div class="file-meta" id="workspace-document-meta"></div></div>
                 <div class="workspace-document-actions">
                   <button class="btn btn-secondary btn-sm" id="workspace-change-pdf" type="button">Change PDF</button>
-                  <button class="btn btn-secondary btn-sm" id="workspace-clear-pdf" type="button">Clear</button>
                 </div>
               </div>
               <div class="workspace-preview-stage"><canvas id="workspace-preview-canvas" aria-label="PDF page preview"></canvas></div>
@@ -2430,7 +2429,7 @@
     async function loadPdf(file) {
       let bytes, pdfJsDoc;
       if (state.activeFile === file && state.activePdfBytes && state.activePdfJsDoc) {
-        bytes = state.activePdfBytes.slice(0);
+        bytes = state.activePdfBytes;
         pdfJsDoc = state.activePdfJsDoc;
       } else {
         bytes = await file.arrayBuffer();
@@ -2479,26 +2478,25 @@
       }
       setPdfLoading(true, 'Opening ' + file.name + '…');
       try {
-        if (state.activeFile !== file) {
+        if (state.activeFile !== file || !state.activePdfBytes || !state.activePdfJsDoc) {
           state.activeFile = file;
-          state.activePdfBytes = null;
-          state.activePdfJsDoc = null;
+          state.activePdfBytes = await file.arrayBuffer();
+          state.activePdfJsDoc = await pdfjsLib.getDocument({ data: state.activePdfBytes.slice(0) }).promise;
           state.loadedPanelDocuments.clear();
         }
-        const data = await loadPdf(file);
-        state.currentPdfBytes = data.bytes;
-        state.currentPdfDoc = data.pdfLibDoc;
-        state.currentPdfJs = data.pdfJsDoc;
+        state.currentPdfBytes = state.activePdfBytes;
+        state.currentPdfDoc = null; // A tool creates its own editable pdf-lib instance when opened.
+        state.currentPdfJs = state.activePdfJsDoc;
         state.sourceFileName = file.name.replace(/\.pdf$/i, '');
         state.activePdfPage = 1;
         document.getElementById('workspace-upload-drop').hidden = true;
         document.getElementById('active-document-card').hidden = false;
-        document.getElementById('workspace-document-name').textContent = data.name;
-        document.getElementById('workspace-document-meta').textContent = `PDF · ${data.pdfLibDoc.getPageCount().toLocaleString()} pages · ${formatBytes(data.size)} · stored in this session`;
-        document.getElementById('workspace-active-name').textContent = data.name;
+        document.getElementById('workspace-document-name').textContent = file.name;
+        document.getElementById('workspace-document-meta').textContent = `PDF · ${state.activePdfJsDoc.numPages.toLocaleString()} pages · ${formatBytes(file.size)} · stored in this session`;
+        document.getElementById('workspace-active-name').textContent = file.name;
         document.getElementById('workspace-active-chip').style.display = 'inline-flex';
         await renderWorkspacePreview();
-        return data;
+        return { bytes: state.activePdfBytes, pdfJsDoc: state.activePdfJsDoc, name: file.name, size: file.size };
       } catch (error) {
         showStatus('Unable to open PDF: ' + error.message, 'error');
         return null;
@@ -2768,16 +2766,6 @@
     });
     document.getElementById('workspace-preview-next').addEventListener('click', async () => {
       if (state.activePdfJsDoc && state.activePdfPage < state.activePdfJsDoc.numPages) { state.activePdfPage++; await renderWorkspacePreview(); }
-    });
-    document.getElementById('workspace-clear-pdf').addEventListener('click', () => {
-      state.activeFile = null; state.activePdfBytes = null; state.activePdfJsDoc = null;
-      state.currentPdfBytes = null; state.currentPdfDoc = null; state.currentPdfJs = null;
-      state.loadedPanelDocuments.clear(); state.activePdfPage = 1;
-      document.getElementById('active-document-card').hidden = true;
-      document.getElementById('workspace-upload-drop').hidden = false;
-      document.getElementById('workspace-active-chip').style.display = 'none';
-      document.getElementById('workspace-preview-canvas').width = 0;
-      document.getElementById('workspace-preview-canvas').height = 0;
     });
 
     function showPanel(panelId) {
