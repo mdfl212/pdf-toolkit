@@ -2742,7 +2742,7 @@
 
     const workspacePdfInput = document.getElementById('workspace-pdf-input');
     const workspaceUploadDrop = document.getElementById('workspace-upload-drop');
-    workspaceUploadDrop.addEventListener('click', () => workspacePdfInput.click());
+    workspaceUploadDrop.addEventListener('click', event => { if (event.target !== workspacePdfInput) workspacePdfInput.click(); });
     workspaceUploadDrop.addEventListener('keydown', event => {
       if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); workspacePdfInput.click(); }
     });
