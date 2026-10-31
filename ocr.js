@@ -49,6 +49,7 @@
       document.querySelectorAll('.mobile-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'tools'));
       document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      const active = window.PDFToolkitGetActiveFile?.(); if (active && active !== file) setFile(active);
     }));
   }
   function status(msg, error) {
@@ -66,11 +67,15 @@
   function setFile(f) {
     if (!f) return;
     if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) return status('Please choose a PDF file.', true);
-    file = f; $('ocr-file-name').textContent = f.name;
+    file = f;
+    if (window.PDFToolkitSetActiveFile && window.PDFToolkitGetActiveFile?.() !== f) window.PDFToolkitSetActiveFile(f);
+    $('ocr-file-name').textContent = f.name;
     $('ocr-file-size').textContent = 'Original size: ' + (f.size / 1048576).toFixed(2) + ' MB';
     $('ocr-file-card').style.display = 'flex'; $('ocr-drop').style.display = 'none';
     $('ocr-run').disabled = busy; $('ocr-detect').disabled = busy; $('ocr-result').style.display = 'none'; status('');
   }
+  window.PDFToolkitSetOCRFile = setFile;
+
   function clearFile() {
     if (busy) return; file = null; $('ocr-input').value = '';
     $('ocr-file-card').style.display = 'none'; $('ocr-drop').style.display = '';

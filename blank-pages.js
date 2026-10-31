@@ -36,12 +36,14 @@ function addUI() {
   document.querySelectorAll('.tool-btn').forEach(t=>t.classList.toggle('active',t.dataset.panel==='blank-pages'));
   document.querySelectorAll('.mobile-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='tools'));
   document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open'); window.scrollTo({top:0,behavior:'smooth'});
+  const active=window.PDFToolkitGetActiveFile?.();if(active&&active!==file)setFile(active);
  }));
 }
 function status(msg,error=false){const el=$('blank-status');el.style.display=msg?'block':'none';el.textContent=msg||'';el.style.borderColor=error?'var(--danger)':'var(--border)';}
 function selectedPages(){return detected.filter(x=>x.selected).map(x=>x.page);}
 function setBusy(v){busy=v;$('blank-scan').disabled=v||!file;$('blank-remove-file').disabled=v;$('blank-input').disabled=v;$('blank-threshold').disabled=v;updateExportState();}
-function setFile(f){if(!f)return;if(f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))return status('Please choose a PDF file.',true);file=f;detected=[];pageCount=0;$('blank-file-name').textContent=f.name;$('blank-file-size').textContent='Size: '+(f.size/1048576).toFixed(2)+' MB';$('blank-file-card').style.display='flex';$('blank-drop').style.display='none';$('blank-scan').disabled=busy;$('blank-results').style.display='none';$('blank-select-all').disabled=true;$('blank-clear-selection').disabled=true;status('PDF selected. Scan it to identify likely blank pages.');}
+function setFile(f){if(!f)return;if(f.type!=='application/pdf'&&!/\.pdf$/i.test(f.name))return status('Please choose a PDF file.',true);file=f;if(window.PDFToolkitSetActiveFile&&window.PDFToolkitGetActiveFile?.()!==f)window.PDFToolkitSetActiveFile(f);detected=[];pageCount=0;$('blank-file-name').textContent=f.name;$('blank-file-size').textContent='Size: '+(f.size/1048576).toFixed(2)+' MB';$('blank-file-card').style.display='flex';$('blank-drop').style.display='none';$('blank-scan').disabled=busy;$('blank-results').style.display='none';$('blank-select-all').disabled=true;$('blank-clear-selection').disabled=true;status('PDF selected. Scan it to identify likely blank pages.');}
+window.PDFToolkitSetBlankPagesFile=setFile;
 function clearFile(){if(busy)return;file=null;detected=[];pageCount=0;$('blank-input').value='';$('blank-file-card').style.display='none';$('blank-drop').style.display='';$('blank-scan').disabled=true;$('blank-results').style.display='none';status('');}
 async function loadPdfJs(){const lib=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');lib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';return lib;}
 async function scan(){

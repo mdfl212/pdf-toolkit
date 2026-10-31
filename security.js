@@ -100,6 +100,7 @@
         document.querySelectorAll('.mobile-tab').forEach(item => item.classList.toggle('active', item.dataset.tab === 'tools'));
         document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        const active = window.PDFToolkitGetActiveFile?.(); if (active && active !== selectedFile) chooseFile(active);
       });
     });
   }
@@ -125,6 +126,7 @@
       return;
     }
     selectedFile = file;
+    if (window.PDFToolkitSetActiveFile && window.PDFToolkitGetActiveFile?.() !== file) window.PDFToolkitSetActiveFile(file);
     lastRecoveryKey = null;
     $('security-recovery-key-wrap').style.display = 'none';
     $('security-recovery-key-display').value = '';
@@ -136,6 +138,7 @@
     setStatus('PDF selected. Set and confirm the opening password.');
   }
 
+  window.PDFToolkitSetSecurityFile = chooseFile;
   function clearFile() {
     if (busy) return;
     selectedFile = null;

@@ -41,6 +41,7 @@
       document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-text-extract'));
       document.querySelectorAll('.tool-btn').forEach(t => t.classList.toggle('active', t.dataset.panel === 'text-extract'));
       document.querySelectorAll('.mobile-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'tools'));
+      const active = window.PDFToolkitGetActiveFile?.(); if (active && active !== file) setFile(active);
     }));
   }
 
@@ -64,6 +65,7 @@
       status('Please choose a PDF file.', true); return;
     }
     file = next;
+    if (window.PDFToolkitSetActiveFile && window.PDFToolkitGetActiveFile?.() !== next) window.PDFToolkitSetActiveFile(next);
     $('text-extract-file-name').textContent = next.name;
     $('text-extract-file-size').textContent = 'File size: ' + (next.size / 1048576).toFixed(2) + ' MB';
     $('text-extract-file-card').style.display = 'flex';
@@ -72,6 +74,7 @@
     status('');
     setBusy(false);
   }
+  window.PDFToolkitSetTextExtractFile = setFile;
   function clearFile() {
     if (busy) return;
     file = null; $('text-extract-input').value = '';
