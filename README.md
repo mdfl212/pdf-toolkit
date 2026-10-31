@@ -72,22 +72,19 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ## Tools in the app
 
-The **Chapter Extractor is the primary tool** and the first screen when the app opens. It is designed for splitting textbook PDFs by embedded bookmarks, with an optional AI-assisted page-range workflow for files without bookmarks. Other tools are grouped by task so beginners can start with common actions and open less-used tools when needed.
+The app opens to a **PDF Workspace** with common tasks, recently used tools, favorites, and search. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
 
-| Category | Tool | What it does |
-|----------|------|----------------|
-| **Main tool** | **Chapter Extractor** | Split textbooks into individual chapter PDFs using bookmarks or an AI-assisted page-range list |
-| **Advanced workflow** | **Batch Processor** | Run multiple PDF operations in one batch and download the results together |
-| **Quick tasks** | **OCR & Searchable PDF** | Add an invisible English text layer to scanned pages while keeping visible page artwork |
-| **Quick tasks** | **Compress PDF** | Try basic PDF optimization or stronger image compression |
-| **Quick tasks** | **Merge** | Combine multiple PDFs |
-| **Quick tasks** | **Split / Extract** | Extract custom page ranges or split a document into individual pages |
-| **Organize pages** | **Delete pages** | Remove selected pages |
-| **Organize pages** | **Rotate** | Rotate pages by 90°, 180°, or 270° |
-| **Organize pages** | **Reorder** | Change page order |
-| **Study & info** | **Chapter Extractor** | Extract textbook chapters using bookmarks or an imported page-range list |
-| **Study & info** | **Metadata** | Inspect document information |
-| **More tools** | **Watermark** | Add a diagonal text overlay |
+| Category | Tools |
+|----------|-------|
+| **Split & Extract** | Chapter Extractor; Split / Extract Pages; Extract Text |
+| **Merge & Organize** | Merge PDFs; Reorder Pages; Rotate Pages; Delete Pages; Bookmark Manager; Remove Blank Pages |
+| **OCR & Searchability** | OCR & Searchable PDF |
+| **Compress & Optimize** | Compress PDF |
+| **Protect & Manage** | Password Protect; Watermark |
+| **Inspect & Analyze** | PDF Metadata |
+| **Advanced Tools** | Batch Processor; Extract Figures; PDF to Images |
+
+Pin frequently used tools with the star on a tool card. Search covers tool names and descriptions; recent tools and favorites are saved in this browser.
 
 ### OCR notes
 

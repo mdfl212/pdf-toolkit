@@ -186,6 +186,52 @@
       opacity: 0.85;
     }
 
+    /* Hybrid workspace navigation */
+    .workspace-home { max-width: 1120px; margin: 0 auto; }
+    .workspace-hero { padding: 8px 0 24px; }
+    .workspace-hero h1 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 6px; }
+    .workspace-hero p { color: var(--text-muted); }
+    .workspace-search { position:relative; display:block; margin:18px 0 18px; }
+    .workspace-search input { width:100%; min-height:50px; padding:12px 16px 12px 48px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text); font-size:.95rem; }
+    .workspace-search input:focus { border-color:var(--accent); outline:2px solid rgba(201,162,39,.16); outline-offset:2px; }
+    .workspace-search-icon { position:absolute; z-index:1; left:16px; top:50%; width:19px; height:19px; color:var(--text-muted); pointer-events:none; transform:translateY(-50%); }
+    .workspace-section { margin: 0 0 28px; }
+    .workspace-section h2 { font-size:1.25rem; margin-bottom:12px; }
+    .workspace-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+    .workspace-card { position:relative; min-height:132px; border:1px solid var(--border); border-radius:14px; background:var(--surface); color:var(--text); transition:transform .15s,border-color .15s,background .15s; }
+    .workspace-card:hover { transform:translateY(-2px); border-color:var(--accent); background:var(--surface2); }
+    .workspace-card-open { display:flex; width:100%; min-height:130px; flex-direction:column; align-items:flex-start; padding:15px 48px 14px 15px; text-align:left; border:0; border-radius:14px; background:transparent; color:inherit; cursor:pointer; font:inherit; }
+    .workspace-card-open:focus-visible,.favorite-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    .workspace-card strong { margin:6px 0 3px; font-size:.98rem; line-height:1.25; }
+    .workspace-card small { color:var(--text-muted); line-height:1.4; }
+    .workspace-card .card-icon { color:var(--accent); font-size:1.35rem; }
+    .workspace-card .favorite-toggle { position:absolute; right:10px; top:10px; width:36px; height:36px; border:0; border-radius:8px; background:transparent; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
+    .workspace-card .favorite-toggle.is-favorite { color:var(--warning); }
+    .workspace-empty { color:var(--text-muted); padding:18px; border:1px dashed var(--border); border-radius:12px; }
+    .category-nav { margin:10px 0 20px; }
+    .category-nav button { display:flex; width:100%; align-items:center; gap:9px; padding:10px 12px; margin:2px 0; border:0; border-radius:8px; text-align:left; background:transparent; color:var(--text); cursor:pointer; font:inherit; }
+    .category-nav button:hover,.category-nav button.active { background:var(--surface2); color:var(--accent); }
+    .category-nav button span:last-child { margin-left:auto; color:var(--text-muted); font-size:.75rem; }
+    .home-nav { display:flex; width:100%; align-items:center; gap:9px; padding:10px 12px; border:0; border-radius:8px; background:transparent; color:var(--text); cursor:pointer; font:inherit; font-weight:600; text-align:left; }
+    .home-nav:hover,.home-nav.active { background:var(--surface2); color:var(--accent); }
+    .mobile-category-nav { display:none; }
+    @media (max-width:900px) {
+      .mobile-category-nav { display:flex; gap:9px; overflow-x:auto; margin:0 -2px 18px; padding:4px 2px 10px; scrollbar-width:thin; scrollbar-color:rgba(201,162,39,.55) var(--surface2); overscroll-behavior-x:contain; }
+      .mobile-category-nav::-webkit-scrollbar { height:6px; }
+      .mobile-category-nav::-webkit-scrollbar-track { margin:0 3px; border-radius:999px; background:var(--surface2); }
+      .mobile-category-nav::-webkit-scrollbar-thumb { border-radius:999px; background:rgba(201,162,39,.58); }
+      .mobile-category-nav::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+      .mobile-category-nav button { flex:0 0 auto; padding:7px 11px; border:1px solid var(--border); border-radius:999px; background:var(--surface); color:var(--text); white-space:nowrap; }
+      .mobile-category-nav button.active { border-color:var(--accent); color:var(--accent); background:rgba(201,162,39,.08); }
+      .workspace-cards { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+      .workspace-card { min-height:124px; }
+      .workspace-card-open { min-height:122px; padding:13px 39px 12px 13px; }
+      .workspace-card strong { font-size:.93rem; }
+      .workspace-card small { font-size:.84rem; line-height:1.38; }
+      .workspace-card .card-icon { font-size:1.2rem; }
+      .workspace-card .favorite-toggle { right:6px; top:5px; width:32px; height:32px; }
+    }
+
     main {
       padding: 28px;
       overflow-y: auto;
@@ -1598,70 +1644,28 @@
 
   <div class="app">
     <aside aria-label="PDF tools">
+      <button class="category-nav home-nav active" data-view="home">⌂ <span>Home</span></button>
       <div class="tool-section">
-        <h3>Main Tool</h3>
-        <button class="tool-btn primary-tool active" data-panel="chapters">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          Chapter Extractor
-        </button>
+        <h3>Categories</h3>
+        <nav class="category-nav" id="category-nav" aria-label="Tool categories"></nav>
       </div>
-      <div class="tool-section">
-        <h3>Quick Tasks</h3>
-        <button class="tool-btn" data-panel="compress">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M9 9l-3 3 3 3"/><path d="M15 9l3 3-3 3"/><path d="M6 12h12"/></svg>
-          Compress PDF
-        </button>
-        <button class="tool-btn" data-panel="merge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          Merge PDFs
-        </button>
-        <button class="tool-btn" data-panel="split">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-          Split / Extract
-        </button>
+      <div class="tool-section" hidden><button class="tool-btn" data-panel="compress" type="button">Tool registry</button></div>
+      <div class="tool-section" id="sidebar-favorites" hidden>
+        <h3>Favorites</h3><div id="favorite-nav"></div>
       </div>
-      <div class="tool-section">
-        <h3>Organize Pages</h3>
-        <button class="tool-btn" data-panel="delete">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Delete Pages
-        </button>
-        <button class="tool-btn" data-panel="rotate">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Rotate Pages
-        </button>
-        <button class="tool-btn" data-panel="reorder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Reorder Pages
-        </button>
-      </div>
-      <div class="tool-section">
-        <h3>Study & Info</h3>
-        <button class="tool-btn" data-panel="chapters">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          Chapter Extractor
-        </button>
-        <button class="tool-btn" data-panel="metadata">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          Metadata
-        </button>
-        <button class="tool-btn" data-panel="bookmarks">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
-          Bookmark Manager
-        </button>
-      </div>
-      <details class="tool-section advanced-tool-section">
-        <summary>More tools</summary>
-        <button class="tool-btn" data-panel="watermark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          Watermark
-        </button>
-      </details>
     </aside>
 
     <main>
+      <div class="panel active" id="panel-home">
+        <div class="workspace-home">
+          <div class="workspace-hero"><h1>PDF Workspace</h1><p>Choose a task or search all tools to get started.</p></div>
+          <label class="workspace-search"><svg class="workspace-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="tool-search" type="search" placeholder="Search tools… (e.g. merge, pages, bookmarks)" autocomplete="off" aria-label="Search PDF tools"></label>
+          <nav class="mobile-category-nav" id="mobile-category-nav" aria-label="Tool categories"></nav>
+          <div id="workspace-results"></div>
+        </div>
+      </div>
       <!-- ==================== CHAPTER EXTRACTOR ==================== -->
-      <div class="panel active" id="panel-chapters">
+      <div class="panel" id="panel-chapters">
         <h2>Bookmark-Based Chapter Extractor</h2>
         <p class="subtitle">Automatically extract textbook chapters using the PDF’s embedded bookmarks. No manual page hunting required.</p>
 
@@ -2220,9 +2224,9 @@
 
   <!-- Mobile bottom tabs: Chapters · Tools · Batch -->
   <nav class="mobile-tabbar" aria-label="Primary">
-    <button type="button" class="mobile-tab active" data-tab="home" aria-label="Chapter Extractor">
+    <button type="button" class="mobile-tab active" data-tab="home" aria-label="Home">
       <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span>Chapters</span>
+      <span>Home</span>
     </button>
     <button type="button" class="mobile-tab" data-tab="tools" aria-label="Tools">
       <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
@@ -2426,15 +2430,155 @@
     }
 
     // ===================== NAVIGATION =====================
+    const toolCatalog = [
+      { id:'chapters', name:'Chapter Extractor', category:'split', icon:'▤', description:'Split a textbook into chapters using its bookmarks.' },
+      { id:'split', name:'Split / Extract Pages', category:'split', icon:'✂', description:'Extract page ranges or split into individual pages.' },
+      { id:'text-extract', name:'Extract Text', category:'split', icon:'¶', description:'Extract searchable text from a PDF.' },
+      { id:'merge', name:'Merge PDFs', category:'merge', icon:'▧', description:'Combine PDFs and arrange their order.' },
+      { id:'reorder', name:'Reorder Pages', category:'merge', icon:'☷', description:'Drag pages into a new order.' },
+      { id:'rotate', name:'Rotate Pages', category:'merge', icon:'↻', description:'Rotate selected pages or the full document.' },
+      { id:'delete', name:'Delete Pages', category:'merge', icon:'⌫', description:'Remove selected pages from a PDF.' },
+      { id:'bookmarks', name:'Bookmark Manager', category:'merge', icon:'⚑', description:'Inspect and edit the PDF outline.' },
+      { id:'blank-pages', name:'Remove Blank Pages', category:'merge', icon:'▤', description:'Detect and remove blank pages.' },
+      { id:'ocr', name:'OCR & Searchable PDF', category:'ocr', icon:'⌕', description:'Recognize scanned text and create a searchable PDF.' },
+      { id:'compress', name:'Compress PDF', category:'compress', icon:'⇲', description:'Optimize a PDF or reduce size with image compression.' },
+      { id:'watermark', name:'Watermark', category:'protect', icon:'◈', description:'Apply a diagonal text watermark.' },
+      { id:'security', name:'Password Protect', category:'protect', icon:'◆', description:'Manage PDF password protection.' },
+      { id:'metadata', name:'PDF Metadata', category:'inspect', icon:'ⓘ', description:'View document information and properties.' },
+      { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
+      { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'▧', description:'Convert PDF pages to image files.' },
+      { id:'batch', name:'Batch Processor', category:'advanced', icon:'▦', description:'Run multiple PDF operations in one batch.' }
+    ];
+    const toolCategories = [
+      { id:'split', name:'Split & Extract', icon:'✂' },
+      { id:'merge', name:'Merge & Organize', icon:'▧' },
+      { id:'ocr', name:'OCR & Searchability', icon:'⌕' },
+      { id:'compress', name:'Compress & Optimize', icon:'⇲' },
+      { id:'protect', name:'Protect & Manage', icon:'◆' },
+      { id:'inspect', name:'Inspect & Analyze', icon:'ⓘ' },
+      { id:'advanced', name:'Advanced Tools', icon:'⚙' }
+    ];
+    const favoriteTools = new Set(JSON.parse(localStorage.getItem('pdf-toolkit-favorites') || '[]'));
+    const recentTools = JSON.parse(localStorage.getItem('pdf-toolkit-recents') || '[]');
+    let activeCategory = null;
+
+    function toolCard(tool) {
+      const favorite = favoriteTools.has(tool.id);
+      return `<article class="workspace-card"><button type="button" class="workspace-card-open" data-open-tool="${tool.id}"><span class="card-icon">${tool.icon}</span><strong>${tool.name}</strong><small>${tool.description}</small></button><button type="button" class="favorite-toggle${favorite ? ' is-favorite' : ''}" data-favorite="${tool.id}" aria-label="${favorite ? 'Remove' : 'Add'} ${tool.name} ${favorite ? 'from' : 'to'} favorites" title="${favorite ? 'Unpin favorite' : 'Pin favorite'}">${favorite ? '★' : '☆'}</button></article>`;
+    }
+
+    function renderWorkspace(query = '') {
+      const target = document.getElementById('workspace-results');
+      if (!target) return;
+      const normalized = query.trim().toLowerCase();
+      const matching = toolCatalog.filter(tool => (!activeCategory || tool.category === activeCategory) &&
+        (!normalized || `${tool.name} ${tool.description} ${toolCategories.find(c => c.id === tool.category)?.name || ''}`.toLowerCase().includes(normalized)));
+      let html = '';
+      if (!activeCategory && !normalized) {
+        const pinned = toolCatalog.filter(tool => favoriteTools.has(tool.id));
+        const recent = recentTools.map(id => toolCatalog.find(tool => tool.id === id)).filter(Boolean);
+        const common = ['chapters','split','merge','compress'].map(id => toolCatalog.find(tool => tool.id === id));
+        if (pinned.length) html += `<section class="workspace-section"><h2>Favorites</h2><div class="workspace-cards">${pinned.map(toolCard).join('')}</div></section>`;
+        html += `<section class="workspace-section"><h2>Common Tasks</h2><div class="workspace-cards">${common.map(toolCard).join('')}</div></section>`;
+        if (recent.length) html += `<section class="workspace-section"><h2>Recent Tools</h2><div class="workspace-cards">${recent.map(toolCard).join('')}</div></section>`;
+      }
+      if (activeCategory || normalized) {
+        const heading = activeCategory ? toolCategories.find(c => c.id === activeCategory)?.name : 'Search results';
+        html += `<section class="workspace-section"><h2>${heading}</h2>${matching.length ? `<div class="workspace-cards">${matching.map(toolCard).join('')}</div>` : `<p class="workspace-empty">${activeCategory === 'ocr' ? 'OCR and searchable PDF tools are not available in this version.' : 'No tools match this search.'}</p>`}</section>`;
+      } else {
+        html += `<section class="workspace-section"><h2>All Tools</h2><div class="workspace-cards">${toolCatalog.map(toolCard).join('')}</div></section>`;
+      }
+      target.innerHTML = html;
+    }
+
+    function renderCategoryNavigation() {
+      document.getElementById('category-nav').innerHTML = toolCategories.map(category => {
+        const count = toolCatalog.filter(tool => tool.category === category.id).length;
+        return `<button type="button" data-view="${category.id}" class="${activeCategory === category.id ? 'active' : ''}" aria-pressed="${activeCategory === category.id}">${category.icon}<span>${category.name}</span><span>${count || ''}</span></button>`;
+      }).join('');
+      document.getElementById('mobile-category-nav').innerHTML = `<button type="button" data-view="home" class="${activeCategory ? '' : 'active'}">All tools</button>` + toolCategories.map(category => `<button type="button" data-view="${category.id}" class="${activeCategory === category.id ? 'active' : ''}">${category.name}</button>`).join('');
+      const favorites = toolCatalog.filter(tool => favoriteTools.has(tool.id));
+      document.getElementById('sidebar-favorites').hidden = !favorites.length;
+      document.getElementById('favorite-nav').innerHTML = favorites.map(tool => `<button class="tool-btn" type="button" data-panel="${tool.id}">★ ${tool.name}</button>`).join('');
+    }
+
+    function openTool(id) {
+      recordRecentTool(id);
+      const injected = document.querySelector(`.tool-btn[data-panel="${id}"]`);
+      if (injected && id !== 'compress') { injected.click(); return; }
+      showPanel(id);
+    }
+
+    function recordRecentTool(id) {
+      if (!toolCatalog.some(tool => tool.id === id)) return;
+      const next = [id, ...recentTools.filter(item => item !== id)].slice(0, 5);
+      recentTools.splice(0, recentTools.length, ...next);
+      localStorage.setItem('pdf-toolkit-recents', JSON.stringify(recentTools));
+    }
+
+    document.getElementById('category-nav').addEventListener('click', event => {
+      const button = event.target.closest('[data-view]');
+      if (!button) return;
+      activeCategory = button.dataset.view;
+      document.querySelectorAll('.home-nav,[data-view]').forEach(item => item.classList.toggle('active', activeCategory ? item.dataset.view === activeCategory : item.dataset.view === 'home'));
+      renderCategoryNavigation();
+      renderWorkspace(document.getElementById('tool-search').value);
+      showPanel('home');
+    });
+    document.getElementById('mobile-category-nav').addEventListener('click', event => {
+      const button = event.target.closest('[data-view]');
+      if (!button) return;
+      if (button.dataset.view === 'home') document.querySelector('.home-nav').click();
+      else {
+        activeCategory = button.dataset.view;
+        renderCategoryNavigation(); renderWorkspace(document.getElementById('tool-search').value); showPanel('home');
+      }
+    });
+    document.getElementById('favorite-nav').addEventListener('click', event => {
+      const button = event.target.closest('[data-panel]');
+      if (button) openTool(button.dataset.panel);
+    });
+    document.querySelector('.home-nav').addEventListener('click', () => {
+      activeCategory = null;
+      document.getElementById('tool-search').value = '';
+      document.querySelectorAll('.home-nav,[data-view]').forEach(item => item.classList.toggle('active', item.dataset.view === 'home'));
+      renderCategoryNavigation();
+      renderWorkspace('');
+      showPanel('home');
+    });
+    document.getElementById('tool-search').addEventListener('input', event => {
+      if (event.target.value) { activeCategory = null; renderCategoryNavigation(); document.querySelector('.home-nav').classList.add('active'); }
+      renderWorkspace(event.target.value);
+    });
+    document.getElementById('workspace-results').addEventListener('click', event => {
+      const favoriteButton = event.target.closest('[data-favorite]');
+      if (favoriteButton) {
+        event.preventDefault(); event.stopPropagation();
+        const id = favoriteButton.dataset.favorite;
+        favoriteTools.has(id) ? favoriteTools.delete(id) : favoriteTools.add(id);
+        localStorage.setItem('pdf-toolkit-favorites', JSON.stringify([...favoriteTools]));
+        renderCategoryNavigation(); renderWorkspace(document.getElementById('tool-search').value); return;
+      }
+      const card = event.target.closest('[data-open-tool]');
+      if (card) openTool(card.dataset.openTool);
+    });
+    document.getElementById('mobile-tools-grid').addEventListener('click', event => {
+      const card = event.target.closest('.mobile-tool-card[data-panel]');
+      if (card) recordRecentTool(card.dataset.panel);
+    });
+    renderCategoryNavigation();
+    renderWorkspace();
+
     function showPanel(panelId) {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      const panel = document.getElementById('panel-' + panelId);
+      const panel = document.getElementById('panel-' + (panelId === 'pdf-images' ? 'pdf-images' : panelId));
       if (panel) panel.classList.add('active');
       document.querySelectorAll('.tool-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.panel === panelId);
       });
+      if (panelId !== 'home') recordRecentTool(panelId);
       // Sync mobile tabs
-      const tab = panelId === 'chapters' ? 'home' : panelId === 'batch' ? 'batch' : 'tools';
+      const tab = panelId === 'home' || panelId === 'chapters' ? 'home' : panelId === 'batch' ? 'batch' : 'tools';
       document.querySelectorAll('.mobile-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tab);
       });
@@ -2450,7 +2594,10 @@
         const tab = tabBtn.dataset.tab;
         if (tab === 'home') {
           closeMobileTools();
-          showPanel('chapters');
+          activeCategory = null;
+          document.getElementById('tool-search').value = '';
+          renderCategoryNavigation(); renderWorkspace();
+          showPanel('home');
         } else if (tab === 'batch') {
           closeMobileTools();
           showPanel('batch');
