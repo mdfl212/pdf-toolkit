@@ -2600,8 +2600,22 @@
 
   <div class="status" id="status" role="status" aria-live="polite" aria-hidden="true">
     <span id="status-text"></span>
+    <button type="button" class="status-close" id="status-diagnostics-btn" aria-label="Show developer error details" title="Developer details" hidden>⚙</button>
     <button type="button" class="status-close" id="status-close" aria-label="Dismiss notification" title="Close">×</button>
   </div>
+  <dialog id="error-diagnostics-dialog" aria-labelledby="error-diagnostics-title" style="width:min(760px,calc(100% - 28px));max-height:85vh;border:1px solid var(--border);border-radius:14px;padding:0;background:var(--surface);color:var(--text);box-shadow:0 20px 70px rgba(0,0,0,.35)">
+    <div style="padding:18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div><h2 id="error-diagnostics-title" style="margin:0;font-size:1.1rem">Developer error details</h2><p style="margin:5px 0 0;color:var(--text-muted);font-size:.85rem">Technical information to help diagnose this problem.</p></div>
+      <button type="button" class="btn btn-secondary btn-sm" id="error-diagnostics-close">Close</button>
+    </div>
+    <div style="padding:18px">
+      <pre id="error-diagnostics-content" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:52vh;overflow:auto;padding:14px;border-radius:8px;background:var(--surface-alt,var(--background));font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace"></pre>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button type="button" class="btn btn-primary" id="error-diagnostics-copy">Copy diagnostic report</button>
+      </div>
+      <p style="font-size:.8rem;color:var(--text-muted);margin:12px 0 0">The report may include the PDF filename and browser details, but not the PDF's contents. Review it before sharing.</p>
+    </div>
+  </dialog>
 
   <script type="module">
     import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
@@ -2642,7 +2656,34 @@
       status?.setAttribute('aria-hidden', 'true');
     });
 
-    function showStatus(msg, type = 'info') {
+    let latestErrorDiagnostic = '';
+    function formatErrorDiagnostic(error, context = {}) {
+      const parts = [
+        'PDF Toolkit diagnostic report',
+        'Time: ' + new Date().toISOString(),
+        'Page: ' + location.href,
+        'Browser: ' + navigator.userAgent,
+        'Online: ' + navigator.onLine,
+        ...Object.entries(context).map(([key, value]) => key + ': ' + (value ?? 'not available')),
+        '',
+        'ERROR'
+      ];
+      let current = error;
+      let depth = 0;
+      while (current && depth < 5) {
+        parts.push(
+          (depth ? 'CAUSE ' + depth : 'Primary error') + ': ' +
+          (current.name || 'Error') + ': ' + (current.message || String(current))
+        );
+        if (current.stack) parts.push('Stack:\\n' + current.stack);
+        current = current.cause;
+        depth++;
+      }
+      if (!error) parts.push('No Error object was provided. The displayed message is: ' + (context.message || 'not available'));
+      return parts.join('\\n');
+    }
+
+    function showStatus(msg, type = 'info', error = null, context = {}) {
       const el = document.getElementById('status');
       // Routine progress and success messages never open the toast.
       if (type !== 'error') {
@@ -2650,14 +2691,44 @@
         el.setAttribute('aria-hidden', 'true');
         return;
       }
+      latestErrorDiagnostic = formatErrorDiagnostic(error, { ...context, message: msg });
+      document.getElementById('error-diagnostics-content').textContent = latestErrorDiagnostic;
+      document.getElementById('status-diagnostics-btn').hidden = false;
       document.getElementById('status-text').textContent = msg;
       el.setAttribute('aria-hidden', 'false');
       el.className = 'status show error';
-      setTimeout(() => {
+      clearTimeout(window.__pdfToolkitErrorToastTimer);
+      window.__pdfToolkitErrorToastTimer = setTimeout(() => {
         el.classList.remove('show');
         el.setAttribute('aria-hidden', 'true');
-      }, 3500);
+      }, 10000);
     }
+
+    document.getElementById('status-diagnostics-btn')?.addEventListener('click', () => {
+      const dialog = document.getElementById('error-diagnostics-dialog');
+      if (dialog && !dialog.open) dialog.showModal();
+    });
+    document.getElementById('error-diagnostics-close')?.addEventListener('click', () => {
+      document.getElementById('error-diagnostics-dialog')?.close();
+    });
+    document.getElementById('error-diagnostics-copy')?.addEventListener('click', async () => {
+      const button = document.getElementById('error-diagnostics-copy');
+      try {
+        await navigator.clipboard.writeText(latestErrorDiagnostic);
+        button.textContent = 'Copied';
+      } catch {
+        const area = document.createElement('textarea');
+        area.value = latestErrorDiagnostic;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const copied = document.execCommand('copy');
+        area.remove();
+        button.textContent = copied ? 'Copied' : 'Select and copy the report';
+      }
+      setTimeout(() => { button.textContent = 'Copy diagnostic report'; }, 2200);
+    });
 
     // Restart clears temporary app assets and in-memory PDF state, but leaves
     // localStorage (favorites/recent tools) and downloaded files untouched.
@@ -2723,7 +2794,7 @@
           pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
         } catch (error) {
           console.error('[PDF.js parse stage]', error);
-          throw new Error('PDF.js could not read this file: ' + (error?.message || String(error)));
+          throw new Error('PDF.js could not read this file: ' + (error?.message || String(error)), { cause: error });
         }
         state.activeFile = file;
         state.activePdfBytes = bytes;
@@ -2746,7 +2817,8 @@
           'PDF.js can read this PDF, but the editing engine (pdf-lib) cannot parse its internal structure. ' +
           'This usually indicates a malformed or non-standard PDF object/reference. ' +
           'The file may still be viewable, but editing, splitting, or merging with this engine may fail. ' +
-          'Details: ' + detail
+          'Details: ' + detail,
+          { cause: error }
         );
       }
       return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
@@ -2844,7 +2916,7 @@
         const message = /Expected instance of .*got instance of undefined/i.test(detail)
           ? 'The PDF viewer could not initialize correctly. Select Restart App, then upload the PDF again. If it continues, reopen the app while online.'
           : 'Unable to open PDF: ' + detail;
-        showStatus(message, 'error');
+        showStatus(message, 'error', error, { fileName: file?.name, fileSize: file?.size, stage: 'PDF workspace upload' });
         return null;
       } finally {
         setPdfLoading(false);
