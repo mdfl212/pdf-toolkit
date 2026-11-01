@@ -2420,6 +2420,34 @@
         </div>
       </div>
 
+      <!-- ==================== PDF REPAIR ==================== -->
+      <div class="panel" id="panel-repair">
+        <h2>Repair PDF</h2>
+        <p class="subtitle">Rebuild recoverable PDF structure locally before trying chapter extraction, page editing, or optimization again.</p>
+        <div class="note" style="margin-bottom:18px">
+          Repair creates a new copy and keeps the original untouched. It can rebuild damaged cross-reference data and rewrite recoverable objects, but it cannot recreate missing or unrecoverable page content. Always compare the repaired copy with your original.
+        </div>
+        <div class="drop-zone" id="repair-drop">
+          <div class="drop-icon">🩹</div>
+          <p><strong>Drop one PDF here</strong> or click to browse</p>
+          <p class="hint">The PDF is processed on this device. The repair engine is downloaded separately when first used.</p>
+          <input type="file" accept=".pdf,application/pdf" hidden id="repair-input">
+        </div>
+        <div id="repair-file-card" class="file-item" style="display:none;margin-bottom:18px">
+          <div class="file-icon">PDF</div>
+          <div class="file-info"><div class="file-name" id="repair-file-name"></div><div class="file-meta" id="repair-file-size"></div></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="repair-remove">Remove</button>
+        </div>
+        <div class="controls" style="align-items:center">
+          <button type="button" class="btn btn-primary" id="repair-run" disabled>Repair PDF and download copy</button>
+          <span id="repair-status" role="status" style="color:var(--text-muted);font-size:.88rem"></span>
+        </div>
+        <div id="repair-progress-wrap" style="display:none;margin-bottom:16px">
+          <div class="progress-track"><div class="progress-fill" id="repair-progress-fill"></div></div>
+        </div>
+        <div id="repair-result" class="note" style="display:none"></div>
+      </div>
+
       <!-- ==================== PDF COMPRESSION ==================== -->
       <div class="panel" id="panel-compress">
         <h2>Compress PDF</h2>
@@ -2845,6 +2873,34 @@
       });
     }
 
+    async function repairPdfWithQpdf(inputBytes) {
+      const packageUrl = 'https://cdn.jsdelivr.net/npm/qpdf-run@0.2.3';
+      const { createQpdfRunner } = await import(packageUrl + '/src/index.js');
+      const runner = await createQpdfRunner({
+        workerUrl: new URL('./qpdf-worker.js', document.baseURI).href,
+        qpdfJsUrl: packageUrl + '/vendor/qpdf/lib/qpdf.js',
+        wasmUrl: packageUrl + '/vendor/qpdf/lib/qpdf.wasm',
+        timeoutMs: 120000
+      });
+      try {
+        const result = await runner.run({
+          inputs: { 'input.pdf': new Uint8Array(inputBytes) },
+          args: ['--warning-exit-0', '--', 'input.pdf', 'repaired.pdf'],
+          outputs: ['repaired.pdf']
+        });
+        const repairedBytes = result.outputs && result.outputs['repaired.pdf'];
+        if (!repairedBytes || !repairedBytes.byteLength) {
+          throw new Error('qpdf did not produce a repaired PDF. ' + (result.stderr || []).join(' ').slice(0, 500));
+        }
+        return {
+          bytes: repairedBytes,
+          warnings: [...(result.warnings || []), ...(result.stderr || [])].filter(Boolean)
+        };
+      } finally {
+        await runner.destroy();
+      }
+    }
+
     async function createPdfJsDocument(bytes, file = null, stage = 'PDF loading') {
       const cachedPassword = file ? state.pdfPasswords.get(file) : null;
       const loadingTask = pdfjsLib.getDocument({
@@ -3101,6 +3157,7 @@
       { id:'watermark', name:'Watermark', category:'protect', icon:'◈', description:'Apply a diagonal text watermark.' },
       { id:'security', name:'Password Protect', category:'protect', icon:'◆', description:'Manage PDF password protection.' },
       { id:'metadata', name:'PDF Metadata', category:'inspect', icon:'ⓘ', description:'View document information and properties.' },
+      { id:'repair', name:'Repair PDF', category:'inspect', icon:'🩹', description:'Rebuild recoverable PDF structure before editing or extracting pages.' },
       { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
       { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'▧', description:'Convert PDF pages to image files.' },
       { id:'batch', name:'Batch Processor', category:'advanced', icon:'▦', description:'Run multiple PDF operations in one batch.' }
@@ -3133,6 +3190,7 @@
       watermark:'<path d="M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h5"/>',
       security:'<path d="M12 3 19 6v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/>',
       metadata:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+      repair:'<path d="M14.5 6.5a4 4 0 0 0-5.6 5.6l-4.4 4.4a2 2 0 0 0 2.8 2.8l4.4-4.4a4 4 0 0 0 5.6-5.6l-2.2 2.2-2.8-2.8z"/>',
       image:'<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m5 17 5-5 3 3 2-2 4 4"/>',
       images:'<rect x="4" y="5" width="13" height="14" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v12M6 16l4-4 3 3 2-2 2 2"/>',
       batch:'<path d="M5 6h2M10 6h9M5 12h2M10 12h9M5 18h2M10 18h9"/><path d="m5 6 .7.7L7 5M5 12l.7.7L7 11M5 18l.7.7L7 17"/>',
@@ -5781,6 +5839,102 @@
         installBtn.style.display = 'none';
         document.getElementById('offline-badge').style.display = 'inline-block';
       }
+
+    // ===================== PDF REPAIR =====================
+    (function initRepairTool() {
+      const input = document.getElementById('repair-input');
+      const drop = document.getElementById('repair-drop');
+      const fileCard = document.getElementById('repair-file-card');
+      const fileName = document.getElementById('repair-file-name');
+      const fileSize = document.getElementById('repair-file-size');
+      const runBtn = document.getElementById('repair-run');
+      const status = document.getElementById('repair-status');
+      const progressWrap = document.getElementById('repair-progress-wrap');
+      const progressFill = document.getElementById('repair-progress-fill');
+      const resultBox = document.getElementById('repair-result');
+      let selectedFile = null;
+
+      function setFile(file) {
+        if (!file) return;
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          status.textContent = 'Please choose a PDF file.';
+          return;
+        }
+        selectedFile = file;
+        if (window.PDFToolkitSetActiveFile && window.PDFToolkitGetActiveFile?.() !== file) window.PDFToolkitSetActiveFile(file);
+        fileName.textContent = file.name;
+        fileSize.textContent = 'Original size: ' + formatBytes(file.size);
+        fileCard.style.display = 'flex';
+        drop.style.display = 'none';
+        runBtn.disabled = false;
+        resultBox.style.display = 'none';
+        status.textContent = '';
+      }
+
+      window.PDFToolkitSetRepairFile = setFile;
+
+      function clearFile() {
+        selectedFile = null;
+        input.value = '';
+        fileCard.style.display = 'none';
+        drop.style.display = '';
+        runBtn.disabled = true;
+        resultBox.style.display = 'none';
+        status.textContent = '';
+        progressWrap.style.display = 'none';
+      }
+
+      drop.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => setFile(input.files && input.files[0]));
+      drop.addEventListener('dragover', event => { event.preventDefault(); drop.classList.add('dragover'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+      drop.addEventListener('drop', event => {
+        event.preventDefault();
+        drop.classList.remove('dragover');
+        setFile(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+      });
+      document.getElementById('repair-remove').addEventListener('click', clearFile);
+
+      runBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        const file = selectedFile;
+        runBtn.disabled = true;
+        resultBox.style.display = 'none';
+        progressWrap.style.display = 'block';
+        progressFill.style.width = '12%';
+        status.textContent = 'Loading the local repair engine…';
+        try {
+          const sourceBytes = await file.arrayBuffer();
+          progressFill.style.width = '35%';
+          status.textContent = 'Rebuilding PDF structure…';
+          const repaired = await repairPdfWithQpdf(sourceBytes);
+          progressFill.style.width = '92%';
+          const outName = sanitizeFilename(file.name.replace(/\.pdf$/i, '')) + '-repaired.pdf';
+          downloadBytes(repaired.bytes, outName);
+          progressFill.style.width = '100%';
+          const warningText = repaired.warnings.length
+            ? '<br><br><strong>Engine messages:</strong><br>' + repaired.warnings.slice(0, 8).map(line => escapeHtml(String(line))).join('<br>')
+            : '<br><br>qpdf completed without reporting warnings.';
+          resultBox.innerHTML = '<strong>Repair copy created.</strong><br>Original: ' + formatBytes(file.size) +
+            '<br>Repaired: ' + formatBytes(repaired.bytes.byteLength) +
+            '<br><br>Try the repaired copy in Chapter Extractor or the other editing tools. Keep the original until you have checked the result.' + warningText;
+          resultBox.style.display = 'block';
+          status.textContent = 'Repaired PDF download started.';
+          showStatus('Repaired PDF download started');
+        } catch (error) {
+          console.error('[PDF repair]', error);
+          status.textContent = 'Repair failed: ' + (error?.message || String(error));
+          showStatus('PDF repair failed: ' + (error?.message || String(error)), 'error', error, {
+            fileName: file.name,
+            fileSize: file.size,
+            stage: 'qpdf PDF repair'
+          });
+        } finally {
+          runBtn.disabled = !selectedFile;
+          setTimeout(() => { progressWrap.style.display = 'none'; }, 1200);
+        }
+      });
+    })();
 
     // ===================== PDF COMPRESSION =====================
     (function initCompressionTool() {
