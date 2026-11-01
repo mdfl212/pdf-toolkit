@@ -2719,15 +2719,36 @@
         pdfJsDoc = state.activePdfJsDoc;
       } else {
         bytes = await file.arrayBuffer();
-        pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        try {
+          pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        } catch (error) {
+          console.error('[PDF.js parse stage]', error);
+          throw new Error('PDF.js could not read this file: ' + (error?.message || String(error)));
+        }
         state.activeFile = file;
         state.activePdfBytes = bytes;
         state.activePdfJsDoc = pdfJsDoc;
         state.loadedPanelDocuments.clear();
       }
-      // Each tool gets its own mutable pdf-lib document, while the original bytes
-      // and PDF.js document remain shared as the workspace source.
-      const pdfLibDoc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+      // Keep the viewer/parser stages separate so malformed PDFs are diagnosed
+      // accurately instead of being reported as a generic PDF loading failure.
+      let pdfLibDoc;
+      try {
+        pdfLibDoc = await PDFDocument.load(bytes.slice(0), {
+          ignoreEncryption: true,
+          updateMetadata: false,
+          throwOnInvalidObject: false
+        });
+      } catch (error) {
+        console.error('[pdf-lib parse stage; PDF.js opened the file]', error);
+        const detail = error?.message || String(error);
+        throw new Error(
+          'PDF.js can read this PDF, but the editing engine (pdf-lib) cannot parse its internal structure. ' +
+          'This usually indicates a malformed or non-standard PDF object/reference. ' +
+          'The file may still be viewable, but editing, splitting, or merging with this engine may fail. ' +
+          'Details: ' + detail
+        );
+      }
       return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
     }
 
