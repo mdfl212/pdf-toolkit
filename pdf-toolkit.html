@@ -2822,6 +2822,10 @@
       return (bytes / 1048576).toFixed(2) + ' MB';
     }
 
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>\"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[char]));
+    }
+
     function sanitizeFilename(name) {
       return name
         .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
@@ -3201,7 +3205,7 @@
       return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] || iconPaths.chapters}</g></svg>`;
     }
     function toolIconSvg(id) {
-      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', 'figure-images':'image', 'pdf-images':'images', batch:'batch' };
+      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'pdf-images':'images', batch:'batch' };
       return svgIcon(names[id] || 'chapters');
     }
     function categoryIconSvg(id) {
@@ -4125,7 +4129,7 @@
         const detail = err?.message || String(err);
         if (/Expected instance of .*got instance of undefined/i.test(detail) && state.currentPdfJs) {
           const tryRepairFirst = window.confirm(
-            'This PDF can be read by the viewer, but the editing engine cannot copy its page structure.\\n\\n' +
+            'This PDF can be read by the viewer, but the editing engine cannot copy its page structure.\n\n' +
             'Would you like to try repairing the PDF first? This keeps text and page content intact when recoverable, then downloads a repaired copy for you to retry.'
           );
           let repairSucceeded = false;
@@ -4135,7 +4139,7 @@
               const repairSource = state.currentPdfBytes || state.activePdfBytes;
               if (!repairSource) throw new Error('The original PDF bytes are no longer available. Please upload the PDF again.');
               const repaired = await repairPdfWithQpdf(repairSource);
-              const repairedName = sanitizeFilename((state.sourceFileName || 'document').replace(/\\.pdf$/i, '')) + '-repaired.pdf';
+              const repairedName = sanitizeFilename((state.sourceFileName || 'document').replace(/\.pdf$/i, '')) + '-repaired.pdf';
               downloadBytes(repaired.bytes, repairedName);
               repairSucceeded = true;
               document.getElementById('bm-extract-status').textContent = 'Repaired copy downloaded. Upload that copy and retry chapter extraction.';
@@ -4151,7 +4155,7 @@
           }
           if (!repairSucceeded) {
             const useImageFallback = window.confirm(
-              'Would you like to use image-based chapter extraction as a last resort?\\n\\n' +
+              'Would you like to use image-based chapter extraction as a last resort?\n\n' +
               'The pages will look similar, but text will no longer be selectable or searchable.'
             );
             if (useImageFallback) {
