@@ -3443,7 +3443,10 @@
         zipBtn.disabled = true;
 
         const outline = await data.pdfJsDoc.getOutline();
-        const totalPages = data.pdfLibDoc.getPageCount();
+        // PDF.js is the viewer/parser of record for document page count. pdf-lib's
+        // getPageCount() lazily walks the PDF page tree and can throw on malformed
+        // but otherwise readable PDFs before users can even inspect their outline.
+        const totalPages = data.pdfJsDoc.numPages;
 
         if (!outline || outline.length === 0) {
           document.getElementById('chapters-info').innerHTML =
@@ -5689,7 +5692,11 @@
 
           if (mode.value === 'optimize') {
             status.textContent = 'Optimizing PDF structure…';
-            const pdf = await PDFDocument.load(sourceBytes, { updateMetadata: false });
+            const pdf = await PDFDocument.load(sourceBytes, {
+              ignoreEncryption: true,
+              updateMetadata: false,
+              throwOnInvalidObject: false
+            });
             outputBytes = await pdf.save({ useObjectStreams: true });
             progressFill.style.width = '100%';
           } else {
@@ -5752,7 +5759,12 @@
         } catch (error) {
           console.error('[PDF compression]', error);
           status.textContent = 'Compression failed: ' + (error && error.message ? error.message : 'Unknown error');
-          showStatus('Compression failed. Check that the PDF opens correctly and is not password-protected.', 'error');
+          showStatus('Compression failed: ' + (error?.message || 'Unknown error'), 'error', error, {
+            fileName: file.name,
+            fileSize: file.size,
+            mode: mode.value,
+            stage: 'PDF compression'
+          });
         } finally {
           runBtn.disabled = !selectedFile;
           setTimeout(() => { progressWrap.style.display = 'none'; }, 900);
