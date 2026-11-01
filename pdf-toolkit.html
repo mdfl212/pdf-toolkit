@@ -3977,7 +3977,7 @@
         const bytes = await output.save({ useObjectStreams: true });
         const safeTitle = sanitizeFilename(item.title);
         const num = String(done + 1).padStart(2, '0');
-        const filename = `${prefix}${num} - ${safeTitle}.pdf`.replace(/\\s+/g, ' ').trim();
+        const filename = `${prefix}${num} - ${safeTitle}.pdf`.replace(/\s+/g, ' ').trim();
         state.extractedFiles.push({ name: filename, bytes, pages: item.pageCount, title: item.title, imageBased: true });
         const row = document.createElement('div');
         row.className = 'result-item';
