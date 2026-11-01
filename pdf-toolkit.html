@@ -2617,6 +2617,20 @@
     </div>
   </dialog>
 
+  <dialog id="pdf-password-dialog" aria-labelledby="pdf-password-title" style="width:min(440px,calc(100% - 28px));border:1px solid var(--border);border-radius:14px;padding:0;background:var(--surface);color:var(--text);box-shadow:0 20px 70px rgba(0,0,0,.35)">
+    <form id="pdf-password-form" style="padding:20px">
+      <h2 id="pdf-password-title" style="margin:0 0 8px;font-size:1.15rem">Password-protected PDF</h2>
+      <p id="pdf-password-message" style="color:var(--text-muted);font-size:.9rem;margin:0 0 14px">This PDF requires a password to open.</p>
+      <label for="pdf-password-input" style="display:block;font-weight:600;margin-bottom:6px">PDF password</label>
+      <input id="pdf-password-input" type="password" autocomplete="current-password" required style="width:100%;box-sizing:border-box;margin-bottom:16px" />
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button type="button" class="btn btn-secondary" id="pdf-password-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Unlock PDF</button>
+      </div>
+      <p style="font-size:.78rem;color:var(--text-muted);margin:14px 0 0">The password is used locally in this browser session only. It is not uploaded or saved to storage.</p>
+    </form>
+  </dialog>
+
   <script type="module">
     import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
@@ -2642,7 +2656,8 @@
       activePdfBytes: null,
       activePdfJsDoc: null,
       activePdfPage: 1,
-      loadedPanelDocuments: new Map()
+      loadedPanelDocuments: new Map(),
+      pdfPasswords: new WeakMap()
     };
     const dropZoneHandlers = new Map();
 
@@ -2710,6 +2725,10 @@
     });
     document.getElementById('error-diagnostics-close')?.addEventListener('click', () => {
       document.getElementById('error-diagnostics-dialog')?.close();
+    });
+    document.getElementById('pdf-password-dialog')?.addEventListener('close', () => {
+      const input = document.getElementById('pdf-password-input');
+      if (input) input.value = '';
     });
     document.getElementById('error-diagnostics-copy')?.addEventListener('click', async () => {
       const button = document.getElementById('error-diagnostics-copy');
@@ -2783,6 +2802,83 @@
         .slice(0, 120) || 'untitled';
     }
 
+    function requestPdfPassword(fileName, reason) {
+      const dialog = document.getElementById('pdf-password-dialog');
+      const form = document.getElementById('pdf-password-form');
+      const input = document.getElementById('pdf-password-input');
+      const message = document.getElementById('pdf-password-message');
+      if (!dialog || !form || !input || !message) {
+        return Promise.reject(new Error('The PDF password dialog is unavailable.'));
+      }
+      if (dialog.open) {
+        return Promise.reject(new Error('Another PDF password prompt is already open.'));
+      }
+      message.textContent = reason === 2
+        ? 'That password was not accepted. Try again to open ' + fileName + '.'
+        : fileName + ' is password-protected. Enter its password to continue.';
+      input.value = '';
+      return new Promise(resolve => {
+        let settled = false;
+        const finish = value => {
+          if (settled) return;
+          settled = true;
+          form.removeEventListener('submit', onSubmit);
+          document.getElementById('pdf-password-cancel').removeEventListener('click', onCancel);
+          dialog.removeEventListener('cancel', onCancel);
+          if (dialog.open) dialog.close();
+          resolve(value);
+        };
+        const onSubmit = event => {
+          event.preventDefault();
+          const value = input.value;
+          if (value) finish(value);
+        };
+        const onCancel = event => {
+          if (event) event.preventDefault();
+          finish(null);
+        };
+        form.addEventListener('submit', onSubmit);
+        document.getElementById('pdf-password-cancel').addEventListener('click', onCancel);
+        dialog.addEventListener('cancel', onCancel);
+        dialog.showModal();
+        requestAnimationFrame(() => input.focus());
+      });
+    }
+
+    async function createPdfJsDocument(bytes, file = null, stage = 'PDF loading') {
+      const cachedPassword = file ? state.pdfPasswords.get(file) : null;
+      const loadingTask = pdfjsLib.getDocument({
+        data: bytes.slice(0),
+        ...(cachedPassword ? { password: cachedPassword } : {})
+      });
+      let enteredPassword = cachedPassword || null;
+      let cancelled = false;
+      loadingTask.onPassword = (updatePassword, reason) => {
+        requestPdfPassword(file?.name || 'This PDF', reason).then(password => {
+          if (password === null) {
+            cancelled = true;
+            loadingTask.destroy();
+            return;
+          }
+          enteredPassword = password;
+          updatePassword(password);
+        }).catch(error => {
+          console.error('[PDF password prompt]', error);
+          cancelled = true;
+          loadingTask.destroy();
+        });
+      };
+      try {
+        const documentProxy = await loadingTask.promise;
+        if (file && enteredPassword) state.pdfPasswords.set(file, enteredPassword);
+        return documentProxy;
+      } catch (error) {
+        if (cancelled) throw new Error('PDF password entry was cancelled.', { cause: error });
+        console.error('[PDF.js ' + stage + ']', error);
+        throw error;
+      }
+    }
+
     async function loadPdf(file) {
       let bytes, pdfJsDoc;
       if (state.activeFile === file && state.activePdfBytes && state.activePdfJsDoc) {
@@ -2791,7 +2887,7 @@
       } else {
         bytes = await file.arrayBuffer();
         try {
-          pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+          pdfJsDoc = await createPdfJsDocument(bytes, file, 'parse stage');
         } catch (error) {
           console.error('[PDF.js parse stage]', error);
           throw new Error('PDF.js could not read this file: ' + (error?.message || String(error)), { cause: error });
@@ -2891,7 +2987,7 @@
           setPdfLoading(true, 'Opening PDF…', 'loading', file.name);
           state.activeFile = file;
           state.activePdfBytes = uploadedBytes;
-          state.activePdfJsDoc = await pdfjsLib.getDocument({ data: state.activePdfBytes.slice(0) }).promise;
+          state.activePdfJsDoc = await createPdfJsDocument(state.activePdfBytes, file, 'workspace upload');
           state.loadedPanelDocuments.clear();
         } else {
           setPdfLoading(true, 'Opening PDF…', 'loading', file.name);
@@ -4973,7 +5069,7 @@
       try {
         const bytes = await file.arrayBuffer();
         const pdfLibDoc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
-        const pdfJsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        const pdfJsDoc = await createPdfJsDocument(bytes, file, 'bookmark manager');
         const rows = await readBookmarkRows(pdfJsDoc);
         bookmarkManagerState.file = file;
         bookmarkManagerState.bytes = bytes;
@@ -5701,7 +5797,7 @@
             progressFill.style.width = '100%';
           } else {
             status.textContent = 'Rendering pages for image compression…';
-            const pdf = await pdfjsLib.getDocument({ data: sourceBytes.slice(0) }).promise;
+            const pdf = await createPdfJsDocument(sourceBytes, file, 'compression');
             const output = await PDFDocument.create();
             const requestedScale = Number(scale.value);
             const jpgQuality = Number(quality.value) / 100;
@@ -5759,7 +5855,13 @@
         } catch (error) {
           console.error('[PDF compression]', error);
           status.textContent = 'Compression failed: ' + (error && error.message ? error.message : 'Unknown error');
-          showStatus('Compression failed: ' + (error?.message || 'Unknown error'), 'error', error, {
+          const detail = error?.message || 'Unknown error';
+          const message = /password entry was cancelled/i.test(detail)
+            ? 'PDF password entry was cancelled.'
+            : /passwordexception|password/i.test(detail)
+              ? 'This PDF needs a valid password. Enter it when prompted, then try again.'
+              : 'Compression failed: ' + detail;
+          showStatus(message, 'error', error, {
             fileName: file.name,
             fileSize: file.size,
             mode: mode.value,
