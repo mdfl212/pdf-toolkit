@@ -2909,13 +2909,11 @@
       } catch (error) {
         console.error('[pdf-lib parse stage; PDF.js opened the file]', error);
         const detail = error?.message || String(error);
-        throw new Error(
-          'PDF.js can read this PDF, but the editing engine (pdf-lib) cannot parse its internal structure. ' +
-          'This usually indicates a malformed or non-standard PDF object/reference. ' +
-          'The file may still be viewable, but editing, splitting, or merging with this engine may fail. ' +
-          'Details: ' + detail,
-          { cause: error }
-        );
+        const passwordProtected = state.pdfPasswords.has(file);
+        const explanation = passwordProtected
+          ? 'PDF.js accepted the password and can read/render this PDF, but pdf-lib cannot decrypt password-protected files. Viewing and Visual compression are available; editing, chapter extraction, merging, and other pdf-lib operations are not supported for this encrypted file.'
+          : 'PDF.js can read this PDF, but the editing engine (pdf-lib) cannot parse its internal structure. This usually indicates a malformed or non-standard PDF object/reference. The file may still be viewable, but editing, splitting, or merging with this engine may fail.';
+        throw new Error(explanation + ' Details: ' + detail, { cause: error });
       }
       return { bytes, pdfLibDoc, pdfJsDoc, name: file.name, size: file.size };
     }
@@ -5068,8 +5066,11 @@
       status.textContent = 'Reading PDF bookmarks…';
       try {
         const bytes = await file.arrayBuffer();
-        const pdfLibDoc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
         const pdfJsDoc = await createPdfJsDocument(bytes, file, 'bookmark manager');
+        if (state.pdfPasswords.has(file)) {
+          throw new Error('The password was accepted and PDF.js can read this document, but the bookmark editor uses pdf-lib, which cannot decrypt password-protected PDFs. Remove protection using an authorized PDF editor, then reopen the unprotected copy to edit bookmarks.');
+        }
+        const pdfLibDoc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
         const rows = await readBookmarkRows(pdfJsDoc);
         bookmarkManagerState.file = file;
         bookmarkManagerState.bytes = bytes;
