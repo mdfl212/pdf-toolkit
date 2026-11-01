@@ -3939,6 +3939,62 @@
       });
     });
 
+    // Fallback for PDFs that PDF.js can render but pdf-lib cannot copy structurally.
+    // This preserves visual appearance, but the extracted pages become image-only.
+    async function extractChaptersAsImages(items, prefix, fill, results) {
+      state.extractedFiles = [];
+      results.innerHTML = '';
+      let done = 0;
+      for (const item of items) {
+        const output = await PDFDocument.create();
+        for (let pageNo = item.start; pageNo <= item.end; pageNo++) {
+          const sourcePage = await state.currentPdfJs.getPage(pageNo);
+          const baseViewport = sourcePage.getViewport({ scale: 1 });
+          let renderScale = 1.5;
+          const maxPixels = 18000000;
+          if (baseViewport.width * baseViewport.height * renderScale * renderScale > maxPixels) {
+            renderScale = Math.sqrt(maxPixels / (baseViewport.width * baseViewport.height));
+          }
+          const viewport = sourcePage.getViewport({ scale: renderScale });
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.ceil(viewport.width));
+          canvas.height = Math.max(1, Math.ceil(viewport.height));
+          const context = canvas.getContext('2d', { alpha: false });
+          if (!context) throw new Error('Your browser could not create a canvas for image-based chapter extraction.');
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          await sourcePage.render({ canvasContext: context, viewport, background: '#ffffff' }).promise;
+          const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob(value => value ? resolve(value) : reject(new Error('Could not encode an extracted page image.')), 'image/jpeg', 0.94);
+          });
+          const jpgBytes = new Uint8Array(await blob.arrayBuffer());
+          const embedded = await output.embedJpg(jpgBytes);
+          const outputPage = output.addPage([baseViewport.width, baseViewport.height]);
+          outputPage.drawImage(embedded, { x: 0, y: 0, width: baseViewport.width, height: baseViewport.height });
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        const bytes = await output.save({ useObjectStreams: true });
+        const safeTitle = sanitizeFilename(item.title);
+        const num = String(done + 1).padStart(2, '0');
+        const filename = `${prefix}${num} - ${safeTitle}.pdf`.replace(/\\s+/g, ' ').trim();
+        state.extractedFiles.push({ name: filename, bytes, pages: item.pageCount, title: item.title, imageBased: true });
+        const row = document.createElement('div');
+        row.className = 'result-item';
+        row.innerHTML = `<div class="file-icon">PDF</div><div class="ri-name"></div><div class="ri-meta">${item.pageCount} pages · image-based</div><button class="btn btn-secondary btn-sm ri-dl">Download</button>`;
+        row.querySelector('.ri-name').textContent = filename;
+        row.querySelector('.ri-dl').addEventListener('click', () => downloadBytes(bytes, filename));
+        results.appendChild(row);
+        done++;
+        fill.style.width = Math.round((done / items.length) * 100) + '%';
+      }
+      const zipBtn = document.getElementById('bm-zip-btn');
+      zipBtn.style.display = 'inline-flex';
+      zipBtn.disabled = false;
+      document.getElementById('bm-extract-status').textContent = `Extracted ${done} image-based file(s) — ready for ZIP`;
+      showStatus(`Extracted ${done} chapter(s) as image-based PDFs. Text is not searchable.`);
+    }
+
     // ===================== EXTRACTION =====================
     document.getElementById('bm-extract-btn').addEventListener('click', async () => {
       const items = state.bmPreviewItems.filter(it => it.include && it.start && it.end && it.end >= it.start);
@@ -4007,8 +4063,40 @@
           `Extracted ${done} file(s) — ready for ZIP`;
         showStatus(`Successfully extracted ${done} chapter(s)`);
       } catch (err) {
-        console.error(err);
-        showStatus('Extraction failed: ' + err.message, 'error');
+        console.error('[Chapter extraction]', err);
+        const detail = err?.message || String(err);
+        if (/Expected instance of .*got instance of undefined/i.test(detail) && state.currentPdfJs) {
+          const useImageFallback = window.confirm(
+            'This PDF can be read by the viewer, but the editing engine cannot copy its page structure.\\n\\n' +
+            'Would you like to extract the chapters as image-based PDFs instead?\\n\\n' +
+            'The pages will look similar, but text will no longer be selectable or searchable.'
+          );
+          if (useImageFallback) {
+            try {
+              document.getElementById('bm-extract-status').textContent = 'Creating image-based chapter PDFs…';
+              await extractChaptersAsImages(items, prefix, fill, results);
+            } catch (fallbackError) {
+              console.error('[Image-based chapter extraction]', fallbackError);
+              showStatus('Image-based extraction failed: ' + (fallbackError?.message || String(fallbackError)), 'error', fallbackError, {
+                fileName: state.sourceFileName,
+                chapterCount: items.length,
+                stage: 'Image-based chapter extraction'
+              });
+            }
+          } else {
+            showStatus('Extraction cancelled. The original page-copy method could not process this PDF.', 'error', err, {
+              fileName: state.sourceFileName,
+              chapterCount: items.length,
+              stage: 'Chapter extraction'
+            });
+          }
+        } else {
+          showStatus('Extraction failed: ' + detail, 'error', err, {
+            fileName: state.sourceFileName,
+            chapterCount: items.length,
+            stage: 'Chapter extraction'
+          });
+        }
       } finally {
         setTimeout(() => { progress.style.display = 'none'; }, 800);
       }
