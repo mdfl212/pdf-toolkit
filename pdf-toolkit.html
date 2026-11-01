@@ -4124,29 +4124,55 @@
         console.error('[Chapter extraction]', err);
         const detail = err?.message || String(err);
         if (/Expected instance of .*got instance of undefined/i.test(detail) && state.currentPdfJs) {
-          const useImageFallback = window.confirm(
+          const tryRepairFirst = window.confirm(
             'This PDF can be read by the viewer, but the editing engine cannot copy its page structure.\\n\\n' +
-            'Would you like to extract the chapters as image-based PDFs instead?\\n\\n' +
-            'The pages will look similar, but text will no longer be selectable or searchable.'
+            'Would you like to try repairing the PDF first? This keeps text and page content intact when recoverable, then downloads a repaired copy for you to retry.'
           );
-          if (useImageFallback) {
+          let repairSucceeded = false;
+          if (tryRepairFirst) {
             try {
-              document.getElementById('bm-extract-status').textContent = 'Creating image-based chapter PDFs…';
-              await extractChaptersAsImages(items, prefix, fill, results);
-            } catch (fallbackError) {
-              console.error('[Image-based chapter extraction]', fallbackError);
-              showStatus('Image-based extraction failed: ' + (fallbackError?.message || String(fallbackError)), 'error', fallbackError, {
+              document.getElementById('bm-extract-status').textContent = 'Repairing PDF structure…';
+              const repairSource = state.currentPdfBytes || state.activePdfBytes;
+              if (!repairSource) throw new Error('The original PDF bytes are no longer available. Please upload the PDF again.');
+              const repaired = await repairPdfWithQpdf(repairSource);
+              const repairedName = sanitizeFilename((state.sourceFileName || 'document').replace(/\\.pdf$/i, '')) + '-repaired.pdf';
+              downloadBytes(repaired.bytes, repairedName);
+              repairSucceeded = true;
+              document.getElementById('bm-extract-status').textContent = 'Repaired copy downloaded. Upload that copy and retry chapter extraction.';
+              showStatus('Repaired PDF downloaded. Re-upload it in Chapter Extractor and try again.');
+            } catch (repairError) {
+              console.error('[Chapter extraction qpdf repair]', repairError);
+              showStatus('Automatic repair did not complete: ' + (repairError?.message || String(repairError)), 'error', repairError, {
                 fileName: state.sourceFileName,
                 chapterCount: items.length,
-                stage: 'Image-based chapter extraction'
+                stage: 'Chapter extraction repair'
               });
             }
-          } else {
-            showStatus('Extraction cancelled. The original page-copy method could not process this PDF.', 'error', err, {
-              fileName: state.sourceFileName,
-              chapterCount: items.length,
-              stage: 'Chapter extraction'
-            });
+          }
+          if (!repairSucceeded) {
+            const useImageFallback = window.confirm(
+              'Would you like to use image-based chapter extraction as a last resort?\\n\\n' +
+              'The pages will look similar, but text will no longer be selectable or searchable.'
+            );
+            if (useImageFallback) {
+              try {
+                document.getElementById('bm-extract-status').textContent = 'Creating image-based chapter PDFs…';
+                await extractChaptersAsImages(items, prefix, fill, results);
+              } catch (fallbackError) {
+                console.error('[Image-based chapter extraction]', fallbackError);
+                showStatus('Image-based extraction failed: ' + (fallbackError?.message || String(fallbackError)), 'error', fallbackError, {
+                  fileName: state.sourceFileName,
+                  chapterCount: items.length,
+                  stage: 'Image-based chapter extraction'
+                });
+              }
+            } else if (!tryRepairFirst) {
+              showStatus('Extraction cancelled. You can use the Repair PDF tool and retry.', 'error', err, {
+                fileName: state.sourceFileName,
+                chapterCount: items.length,
+                stage: 'Chapter extraction'
+              });
+            }
           }
         } else {
           showStatus('Extraction failed: ' + detail, 'error', err, {
@@ -6058,6 +6084,7 @@
         progressFill.style.width = '5%';
         result.style.display = 'none';
         mode.dataset.usedFallback = '';
+        mode.dataset.usedRepair = '';
         status.textContent = 'Preparing PDF…';
 
         try {
@@ -6081,24 +6108,36 @@
             } catch (optimizeError) {
               const detail = optimizeError?.message || String(optimizeError);
               if (!/Expected instance of .*got instance of undefined/i.test(detail)) throw optimizeError;
-              const useVisualFallback = window.confirm(
-                'This PDF can be opened by the viewer, but its internal page structure cannot be processed by the Optimize engine.\\n\\n' +
-                'Would you like to compress it using Visual compression instead?\\n\\n' +
-                'This fallback renders every page as an image. Text will no longer be selectable or searchable, and bookmarks/forms may not be preserved.'
-              );
-              if (!useVisualFallback) throw new Error('Optimization cancelled. The PDF structure is not supported by the Optimize engine.', { cause: optimizeError });
-              status.textContent = 'Preparing visual compression…';
-              const pdfJsDoc = await createPdfJsDocument(sourceBytes, file, 'compression fallback');
-              outputBytes = await renderPdfAsImagePdf(
-                pdfJsDoc,
-                Number(scale.value),
-                Number(quality.value) / 100,
-                (pageNo, pageCount) => {
-                  status.textContent = 'Compressing page ' + pageNo + ' of ' + pageCount + '…';
-                  progressFill.style.width = Math.round(5 + (pageNo / pageCount) * 90) + '%';
-                }
-              );
-              mode.dataset.usedFallback = 'visual';
+              let repairedSuccessfully = false;
+              try {
+                status.textContent = 'Trying structural repair with qpdf…';
+                const repaired = await repairPdfWithQpdf(sourceBytes);
+                outputBytes = repaired.bytes;
+                mode.dataset.usedRepair = 'qpdf';
+                repairedSuccessfully = true;
+              } catch (repairError) {
+                console.warn('[Optimize qpdf repair]', repairError);
+              }
+              if (!repairedSuccessfully) {
+                const useVisualFallback = window.confirm(
+                  'The Optimize engine could not process this PDF, and structural repair did not complete.\\n\\n' +
+                  'Would you like to use Visual compression as a last resort?\\n\\n' +
+                  'This converts every page to an image. Text will no longer be selectable or searchable, and bookmarks/forms may not be preserved.'
+                );
+                if (!useVisualFallback) throw new Error('Optimization and structural repair failed. Keep the original PDF and try the Repair PDF tool.', { cause: optimizeError });
+                status.textContent = 'Preparing visual compression…';
+                const pdfJsDoc = await createPdfJsDocument(sourceBytes, file, 'compression fallback');
+                outputBytes = await renderPdfAsImagePdf(
+                  pdfJsDoc,
+                  Number(scale.value),
+                  Number(quality.value) / 100,
+                  (pageNo, pageCount) => {
+                    status.textContent = 'Compressing page ' + pageNo + ' of ' + pageCount + '…';
+                    progressFill.style.width = Math.round(5 + (pageNo / pageCount) * 90) + '%';
+                  }
+                );
+                mode.dataset.usedFallback = 'visual';
+              }
             }
             progressFill.style.width = '100%';
           } else {
@@ -6124,7 +6163,10 @@
           const sizeMessage = delta >= 0
             ? 'Reduced by ' + formatBytes(delta) + ' (' + percent.toFixed(1) + '%).'
             : 'The output is ' + formatBytes(-delta) + ' (' + percent.toFixed(1) + '%) larger than the original.';
-          result.innerHTML = '<strong>Compression complete.</strong><br>Original: ' + formatBytes(originalSize) +
+          result.innerHTML = (mode.dataset.usedRepair === 'qpdf'
+            ? '<strong>Structural repair complete.</strong><br>The PDF was rewritten with qpdf to recover its structure. Text and page content are preserved when recoverable; this process may not reduce file size.'
+            : '<strong>Compression complete.</strong>') +
+            '<br>Original: ' + formatBytes(originalSize) +
             '<br>Output: ' + formatBytes(outputSize) + '<br>' + sizeMessage +
             ((mode.value === 'visual' || mode.dataset.usedFallback === 'visual') ? '<br><br><strong>Reminder:</strong> this output is image-based; text is not selectable or searchable. Bookmarks and interactive form elements may not be preserved.' : '');
           result.style.display = 'block';
