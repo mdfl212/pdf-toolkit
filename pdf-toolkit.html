@@ -2425,7 +2425,7 @@
         <h2>Repair PDF</h2>
         <p class="subtitle">Rebuild recoverable PDF structure locally before trying chapter extraction, page editing, or optimization again.</p>
         <div class="note" style="margin-bottom:18px">
-          Repair creates a new copy and keeps the original untouched. It can rebuild damaged cross-reference data and rewrite recoverable objects, but it cannot recreate missing or unrecoverable page content. Always compare the repaired copy with your original.
+          Repair creates a new copy and keeps the original untouched. It can rebuild damaged cross-reference data and rewrite recoverable objects, but it cannot recreate missing or unrecoverable page content. Password-protected PDFs may need to be unlocked first. Always compare the repaired copy with your original.
         </div>
         <div class="drop-zone" id="repair-drop">
           <div class="drop-icon">🩹</div>
@@ -2884,7 +2884,7 @@
         workerUrl: new URL('./qpdf-worker.js', document.baseURI).href,
         qpdfJsUrl: packageUrl + '/vendor/qpdf/lib/qpdf.js',
         wasmUrl: packageUrl + '/vendor/qpdf/lib/qpdf.wasm',
-        timeoutMs: 120000
+        timeoutMs: 300000
       });
       try {
         const result = await runner.run({
@@ -6089,6 +6089,7 @@
         result.style.display = 'none';
         mode.dataset.usedFallback = '';
         mode.dataset.usedRepair = '';
+        mode.dataset.repairWarnings = '';
         status.textContent = 'Preparing PDF…';
 
         try {
@@ -6118,6 +6119,7 @@
                 const repaired = await repairPdfWithQpdf(sourceBytes);
                 outputBytes = repaired.bytes;
                 mode.dataset.usedRepair = 'qpdf';
+                mode.dataset.repairWarnings = (repaired.warnings || []).join(' | ');
                 repairedSuccessfully = true;
               } catch (repairError) {
                 console.warn('[Optimize qpdf repair]', repairError);
@@ -6172,6 +6174,7 @@
             : '<strong>Compression complete.</strong>') +
             '<br>Original: ' + formatBytes(originalSize) +
             '<br>Output: ' + formatBytes(outputSize) + '<br>' + sizeMessage +
+            (mode.dataset.usedRepair === 'qpdf' && mode.dataset.repairWarnings ? '<br><br><strong>qpdf messages:</strong> ' + escapeHtml(mode.dataset.repairWarnings.slice(0, 1200)) : '') +
             ((mode.value === 'visual' || mode.dataset.usedFallback === 'visual') ? '<br><br><strong>Reminder:</strong> this output is image-based; text is not selectable or searchable. Bookmarks and interactive form elements may not be preserved.' : '');
           result.style.display = 'block';
           status.textContent = 'Download started.';
