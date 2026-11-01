@@ -35,7 +35,6 @@
   <script src="./text-extract.js" defer></script>
   <script src="./pdf-to-images.js" defer></script>
   <script src="./figure-images.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
   <style>
     :root {
       /* Dark mode · CSU green + gold */
@@ -1931,6 +1930,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:12px;font-size:0.85rem;color:var(--text-muted)">
       <span id="offline-badge" style="display:none;background:rgba(52,211,153,0.15);color:var(--success);padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:500">Offline support</span>
+      <button class="btn btn-secondary btn-sm" id="restart-app-btn" type="button" title="Clear temporary app files and reload">Restart App</button>
       <button class="btn btn-secondary btn-sm" id="pwa-install-btn" style="display:none">
         Install App
       </button>
@@ -2659,6 +2659,35 @@
       }, 3500);
     }
 
+    // Restart clears temporary app assets and in-memory PDF state, but leaves
+    // localStorage (favorites/recent tools) and downloaded files untouched.
+    document.getElementById('restart-app-btn')?.addEventListener('click', async () => {
+      const confirmed = window.confirm(
+        'Restart PDF Toolkit? This clears temporary app files and reloads the app. ' +
+        'Your saved favorites and downloaded PDFs will not be deleted. ' +
+        'You will need to upload your current PDF again; offline OCR files may need to be prepared again.'
+      );
+      if (!confirmed) return;
+      const button = document.getElementById('restart-app-btn');
+      if (button) { button.disabled = true; button.textContent = 'Restarting…'; }
+      try {
+        await state.activePdfJsDoc?.destroy();
+      } catch (error) {
+        console.warn('[Restart] Could not close the active PDF viewer cleanly:', error);
+      }
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys
+            .filter(key => key.startsWith('pdf-toolkit-'))
+            .map(key => caches.delete(key)));
+        }
+      } catch (error) {
+        console.warn('[Restart] Could not clear every temporary cache:', error);
+      }
+      window.location.reload();
+    });
+
     function downloadBytes(bytes, filename) {
       const blob = new Blob([bytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -2789,7 +2818,12 @@
         await renderWorkspacePreview();
         return { bytes: state.activePdfBytes, pdfJsDoc: state.activePdfJsDoc, name: file.name, size: file.size };
       } catch (error) {
-        showStatus('Unable to open PDF: ' + error.message, 'error');
+        console.error('[PDF workspace load]', error);
+        const detail = error && error.message ? error.message : 'Unknown error';
+        const message = /Expected instance of .*got instance of undefined/i.test(detail)
+          ? 'The PDF viewer could not initialize correctly. Select Restart App, then upload the PDF again. If it continues, reopen the app while online.'
+          : 'Unable to open PDF: ' + detail;
+        showStatus(message, 'error');
         return null;
       } finally {
         setPdfLoading(false);
