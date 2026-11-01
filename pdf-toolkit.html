@@ -3481,8 +3481,12 @@
         updatePreviewTable();
         showStatus(`Found ${state.bmFlat.length} bookmarks`);
       } catch (err) {
-        console.error(err);
-        showStatus('Failed to load PDF: ' + err.message, 'error');
+        console.error('[Chapter Extractor PDF load]', err);
+        showStatus('Failed to load PDF: ' + (err?.message || String(err)), 'error', err, {
+          fileName: file?.name,
+          fileSize: file?.size,
+          stage: 'Chapter Extractor PDF upload'
+        });
       }
     });
 
@@ -4103,7 +4107,11 @@
         showStatus(`Loaded ${data.name} (${data.pdfLibDoc.getPageCount()} pages)`);
         return data;
       } catch (err) {
-        showStatus('Failed to load PDF: ' + err.message, 'error');
+        showStatus('Failed to load PDF: ' + (err?.message || String(err)), 'error', err, {
+          fileName: file?.name,
+          fileSize: file?.size,
+          stage: 'Shared PDF tool loader'
+        });
       }
     }
 
