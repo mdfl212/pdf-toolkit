@@ -5787,6 +5787,11 @@
           let outputBytes;
 
           if (mode.value === 'optimize') {
+            status.textContent = 'Checking PDF access…';
+            await createPdfJsDocument(sourceBytes, file, 'compression preflight');
+            if (state.pdfPasswords.has(file)) {
+              throw new Error('This PDF is password-protected. The Optimize mode uses pdf-lib, which cannot decrypt password-protected documents. Choose Visual compression instead; it can render the pages after you enter the password, but the result will be image-based and text will not remain searchable.');
+            }
             status.textContent = 'Optimizing PDF structure…';
             const pdf = await PDFDocument.load(sourceBytes, {
               ignoreEncryption: true,
