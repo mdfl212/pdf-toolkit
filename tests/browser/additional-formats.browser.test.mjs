@@ -65,9 +65,10 @@ test('Batch 5 browser conversion smoke and compatibility pass',{timeout:900000},
   page=await context.newPage();
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/pdf-toolkit.html',{waitUntil:'domcontentloaded',timeout:60000});
-  await page.waitForSelector('#panel-additional-formats',{timeout:60000});
+  await page.waitForSelector('#panel-additional-formats',{state:'attached',timeout:60000});
   await page.waitForFunction(()=>!!window.JSZip,{timeout:60000});
   await page.locator('.tool-btn[data-panel="additional-formats"]').click();
+  await page.waitForSelector('#panel-additional-formats.active',{timeout:15000});
   await t.test('XLSX worksheet rendering',async()=>{
     await uploadAndRender(payload('qa-workbook.xlsx',await makeXlsx(),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),/QA XLSX CELL/);
     assert.match(await page.locator('#additional-pdf-preview').innerText(),/QA Worksheet/); await clear();
