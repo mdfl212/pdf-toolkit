@@ -55,7 +55,6 @@ function appendText(parent,tag,text,className=''){const node=document.createElem
 function status(message,error=false){const node=$('assistant-status');if(node){node.textContent=message||'';node.style.color=error?'var(--danger)':'var(--text-muted)';}}
 function setBusy(value){busy=value;$('assistant-analyze').disabled=value||!selectedFile;$('assistant-cancel').disabled=!value;$('assistant-change-file').disabled=value;$('assistant-file-input').disabled=value;}
 async function setFile(file){if(!file)return;if(!/\.pdf$/i.test(file.name||'')&&file.type!=='application/pdf'){status('Please choose a PDF file.',true);return;}selectedFile=file;analysis=null;lastEvidence=null;$('assistant-file-name').textContent=file.name;$('assistant-file-meta').textContent=(file.size/1048576).toFixed(2)+' MB · selected for local analysis';$('assistant-results').hidden=true;$('assistant-export').disabled=true;status('PDF selected. Select Analyze document to begin.');setBusy(false);}
-window.PDFToolkitSetAssistantFile=setFile;
 async function chooseFile(file){if(!file)return;try{if(window.PDFToolkitGetActiveFile?.()!==file){const loaded=await window.PDFToolkitSetActiveFile?.(file);if(!loaded)return;}await setFile(file);}catch(error){status('Unable to open PDF: '+(error?.message||error),true);}}
 function renderAnalysis(result){
  $('assistant-results').hidden=false;const stats=$('assistant-stats');stats.replaceChildren();[[result.pageCount,'PDF pages'],[result.textPages,'pages with text'],[result.emptyPages,'pages without text'],[(result.characterCount/1000).toFixed(1)+'k','characters']].forEach(([value,label])=>appendText(stats,'span',String(value)+' '+label,'assistant-stat'));
@@ -75,5 +74,8 @@ function init(){
  $('assistant-change-file').addEventListener('click',()=>$('assistant-file-input').click());$('assistant-file-input').addEventListener('change',event=>chooseFile(event.target.files?.[0]));$('assistant-analyze').addEventListener('click',runAnalysis);$('assistant-cancel').addEventListener('click',()=>{cancelled=true;status('Cancelling after the current page…');});$('assistant-question-form').addEventListener('submit',askQuestion);$('assistant-export').addEventListener('click',exportNotes);
  document.addEventListener('pdf-toolkit:panel-change',event=>{if(event.detail?.panelId==='assistant'&&event.detail.activeFile&&event.detail.activeFile!==selectedFile)setFile(event.detail.activeFile);});const active=window.PDFToolkitGetActiveFile?.();if(active)setFile(active);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-window.PDFToolkitSmartAssistant={analyzePdfFile,extractiveSummary,extractKeyTerms,rankQuestionEvidence};
+if(typeof window!=='undefined'&&typeof document!=='undefined'){
+ window.PDFToolkitSetAssistantFile=setFile;
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+ window.PDFToolkitSmartAssistant={analyzePdfFile,extractiveSummary,extractKeyTerms,rankQuestionEvidence};
+}
