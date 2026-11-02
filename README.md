@@ -144,5 +144,5 @@ Install as an app (PWA) when served over HTTPS for offline use of cached librari
 Run the format-detection unit tests with Node.js:
 
 ```bash
-node --test tests/file-detection.test.mjs
+node --experimental-default-type=module --test tests/file-detection.test.mjs
 ```
