@@ -18,6 +18,7 @@ test('reconstructs text items into reading-order lines with inferred spaces', ()
   const lines = reconstructPdfLines(items, { Arial: { fontFamily: 'Arial' } });
   assert.deepEqual(lines.map(line => line.text), ['Hello World', 'Second line']);
   assert.equal(lines[0].font, 'Arial');
+  assert.equal(lines[0].runs.map(run => run.text).join(''), 'Hello World');
 });
 
 test('detects bold and italic font hints', () => {
