@@ -72,7 +72,7 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ## Tools in the app
 
-The app opens to a **PDF Workspace** with common tasks, recently used tools, favorites, and search. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
+The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified with their planned conversion phase clearly shown. Conversion engines for those non-PDF formats are added in subsequent development batches. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
 
 | Category | Tools |
 |----------|-------|
@@ -100,7 +100,7 @@ Pin frequently used tools with the star on a tool card. Search covers tool names
 - **Basic optimization** re-saves the PDF and keeps text selectable where supported, but size reduction varies and may be small.
 - **Stronger compression** converts pages to JPEG-backed images. This can reduce image-heavy PDFs more, but the result loses selectable/searchable text and may lose links, bookmarks, forms, and accessibility features.
 
-Everything runs **in your browser**. Files are not uploaded to a server.
+Smart file detection and existing PDF processing run **in your browser**. File detection checks content signatures and document package structure rather than trusting the filename extension alone. Non-PDF conversion routes are introduced progressively; a detected format is not advertised as convertible until its conversion engine is implemented and tested. Files are not uploaded to a server.
 
 ---
 
@@ -137,3 +137,12 @@ Install as an app (PWA) when served over HTTPS for offline use of cached librari
 - Not affiliated with PDF Labs, PDFtk, Google, or NotebookLM.
 - Respect copyright and your institution’s rules when splitting and uploading textbooks.
 - Provided as-is for personal study workflows.
+
+
+### Smart file detection tests
+
+Run the format-detection unit tests with Node.js:
+
+```bash
+node --experimental-default-type=module --test tests/file-detection.test.mjs
+```

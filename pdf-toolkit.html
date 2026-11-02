@@ -1904,6 +1904,26 @@
       .workspace-card small, .category-copy small { font-size: .74rem; }
       .category-count { font-size: .68rem; }
     }
+    .workspace-detection-results { margin:-4px 0 24px; border:1px solid var(--border); border-radius:13px; background:var(--surface); overflow:hidden; }
+    .workspace-detection-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border); }
+    .workspace-detection-head h2 { margin:0; font-size:1.05rem; }
+    .workspace-detection-head p { margin:3px 0 0; color:var(--text-muted); font-size:.78rem; }
+    .workspace-detection-list { display:flex; flex-direction:column; }
+    .workspace-detection-item { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--border); }
+    .workspace-detection-item:last-child { border-bottom:0; }
+    .workspace-detection-icon { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--accent); font:600 .67rem 'JetBrains Mono',monospace; overflow:hidden; }
+    .workspace-detection-details { display:flex; flex:1; flex-direction:column; min-width:0; gap:2px; }
+    .workspace-detection-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.9rem; }
+    .workspace-detection-meta,.workspace-detection-status,.workspace-detection-warning { color:var(--text-muted); font-size:.76rem; line-height:1.4; }
+    .workspace-detection-warning { color:var(--warning); }
+    .workspace-detection-phase { flex:0 0 auto; color:var(--text-muted); font:.7rem 'JetBrains Mono',monospace; white-space:nowrap; }
+    .workspace-detection-action { flex:0 0 auto; }
+    @media (max-width:700px) {
+      .workspace-detection-head { align-items:flex-start; }
+      .workspace-detection-item { align-items:flex-start; flex-wrap:wrap; padding:12px; }
+      .workspace-detection-icon { flex-basis:40px; width:40px; height:40px; }
+      .workspace-detection-action,.workspace-detection-phase { margin-left:52px; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .workspace-card, .category-row, .workspace-upload-drop, .btn { transition: none !important; }
     }
@@ -1955,20 +1975,20 @@
     <main>
       <div class="panel active" id="panel-home">
         <div class="workspace-home">
-          <div class="workspace-hero"><h1>Your PDF workspace</h1><p>Upload once. Use the same document across your tools.</p></div>
-          <section class="workspace-upload" aria-label="Active PDF document">
-            <div class="workspace-upload-drop" id="workspace-upload-drop" role="button" tabindex="0" aria-label="Upload a PDF">
+          <div class="workspace-hero"><h1>Your document workspace</h1><p>Drop a document. We’ll identify its format and guide you to the right PDF action.</p></div>
+          <section class="workspace-upload" aria-label="Upload and detect a document">
+            <div class="workspace-upload-drop" id="workspace-upload-drop" role="button" tabindex="0" aria-label="Upload a document">
               <div class="upload-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3.75h8l4 4V20.25H6z"/><path d="M14 3.75v4h4M12 16v-5m-2 2 2-2 2 2"/></svg></div>
-              <p><strong>Drop your PDF here</strong> or click to browse</p>
-              <p class="hint">Your document stays on this device and remains available as you switch tools.</p>
-              <input type="file" id="workspace-pdf-input" accept=".pdf,application/pdf" hidden>
+              <p><strong>Drop any document here</strong> or click to browse</p>
+              <p class="hint">PDF, images, Word and other recognized formats · detected locally on this device</p>
+              <input type="file" id="workspace-pdf-input" multiple hidden>
             </div>
             <article class="workspace-document" id="active-document-card" hidden>
               <div class="workspace-document-head">
                 <div class="file-icon">PDF</div>
                 <div class="file-info"><div class="file-name" id="workspace-document-name"></div><div class="file-meta" id="workspace-document-meta"></div></div>
                 <div class="workspace-document-actions">
-                  <button class="btn btn-secondary btn-sm" id="workspace-change-pdf" type="button">Change PDF</button>
+                  <button class="btn btn-secondary btn-sm" id="workspace-change-pdf" type="button">Change file</button>
                 </div>
               </div>
               <div class="workspace-preview-stage"><canvas id="workspace-preview-canvas" aria-label="PDF page preview"></canvas></div>
@@ -1978,6 +1998,10 @@
                 <button class="btn btn-secondary btn-sm" id="workspace-preview-next" type="button" disabled>Next</button>
               </div>
             </article>
+          </section>
+          <section class="workspace-detection-results" id="workspace-detection-results" aria-live="polite" hidden>
+            <div class="workspace-detection-head"><div><h2 id="workspace-detection-title">Detected files</h2><p id="workspace-detection-summary"></p></div><button class="btn btn-secondary btn-sm" id="workspace-detection-clear" type="button">Clear results</button></div>
+            <div class="workspace-detection-list" id="workspace-detection-list"></div>
           </section>
           <label class="workspace-search"><svg class="workspace-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="tool-search" type="search" placeholder="Search tools… (e.g. merge, pages, bookmarks)" autocomplete="off" aria-label="Search PDF tools"></label>
           <nav class="mobile-category-nav" id="mobile-category-nav" aria-label="Tool categories"></nav>
@@ -2661,6 +2685,7 @@
 
   <script type="module">
     import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
+    import { detectFileFormat, formatFileSize as formatDetectedFileSize } from './file-detection.js';
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
 
     const { PDFDocument, degrees, rgb, StandardFonts } = PDFLib;
@@ -3031,8 +3056,8 @@
       document.getElementById('workspace-preview-next').disabled = pageNumber >= state.activePdfJsDoc.numPages;
     }
 
-    async function setActiveDocument(file) {
-      if (!file || (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name))) {
+    async function setActiveDocument(file, detection = null) {
+      if (!file || (detection?.format !== 'pdf' && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name))) {
         showStatus('Please choose a PDF file.', 'error');
         return null;
       }
@@ -3371,15 +3396,98 @@
     });
     workspaceUploadDrop.addEventListener('dragover', event => { event.preventDefault(); workspaceUploadDrop.classList.add('dragover'); });
     workspaceUploadDrop.addEventListener('dragleave', () => workspaceUploadDrop.classList.remove('dragover'));
+    async function renderWorkspaceDetectionResults(results) {
+      const section = document.getElementById('workspace-detection-results');
+      const list = document.getElementById('workspace-detection-list');
+      const summary = document.getElementById('workspace-detection-summary');
+      const title = document.getElementById('workspace-detection-title');
+      list.replaceChildren();
+      section.hidden = false;
+      title.textContent = results.length === 1 ? 'File detected' : 'Detected files';
+      const pdfCount = results.filter(item => item.detection.isPdf).length;
+      summary.textContent = results.length + ' file' + (results.length === 1 ? '' : 's') +
+        ' inspected locally · ' + pdfCount + ' PDF' + (pdfCount === 1 ? '' : 's') + ' ready to open';
+
+      for (const item of results) {
+        const { file, detection } = item;
+        const row = document.createElement('article');
+        row.className = 'workspace-detection-item';
+        const icon = document.createElement('span');
+        icon.className = 'workspace-detection-icon';
+        icon.textContent = detection.code;
+        const details = document.createElement('div');
+        details.className = 'workspace-detection-details';
+        const name = document.createElement('strong');
+        name.className = 'workspace-detection-name';
+        name.textContent = file.name;
+        const meta = document.createElement('span');
+        meta.className = 'workspace-detection-meta';
+        meta.textContent = detection.label + ' · ' + formatDetectedFileSize(file.size);
+        const status = document.createElement('span');
+        status.className = 'workspace-detection-status';
+        if (detection.isPdf) status.textContent = 'Verified PDF · ready to open in your existing workspace';
+        else if (detection.route.batch) status.textContent = 'Recognized · ' + detection.route.label + ' is planned for ' + detection.route.batch;
+        else if (detection.format === 'zip') status.textContent = 'ZIP archive recognized, but its document type is not supported yet';
+        else status.textContent = 'Format not recognized · no conversion route is available';
+        details.append(name, meta, status);
+        if (detection.warning) {
+          const warning = document.createElement('span');
+          warning.className = 'workspace-detection-warning';
+          warning.textContent = detection.warning;
+          details.append(warning);
+        }
+        row.append(icon, details);
+        if (detection.isPdf) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-primary btn-sm workspace-detection-action';
+          button.textContent = 'Open PDF';
+          button.addEventListener('click', () => setActiveDocument(file, detection));
+          row.append(button);
+        } else {
+          const phase = document.createElement('span');
+          phase.className = 'workspace-detection-phase';
+          phase.textContent = detection.route.batch || 'Unsupported';
+          row.append(phase);
+        }
+        list.append(row);
+      }
+    }
+
+    async function inspectWorkspaceFiles(files) {
+      const selected = Array.from(files || []).filter(file => file && typeof file.slice === 'function');
+      if (!selected.length) return;
+      const results = [];
+      for (const file of selected) {
+        try { results.push({ file, detection: await detectFileFormat(file) }); }
+        catch (error) {
+          results.push({ file, detection: {
+            format:'unknown', label:'Could not inspect file', code:'ERR', isPdf:false,
+            warning:error?.message || 'File inspection failed.', route:{available:false,batch:null}
+          }});
+        }
+      }
+      if (results.length === 1 && results[0].detection.isPdf) {
+        document.getElementById('workspace-detection-results').hidden = true;
+        document.getElementById('workspace-detection-list').replaceChildren();
+        await setActiveDocument(results[0].file, results[0].detection);
+        return;
+      }
+      await renderWorkspaceDetectionResults(results);
+    }
+
     workspaceUploadDrop.addEventListener('drop', async event => {
-      event.preventDefault(); workspaceUploadDrop.classList.remove('dragover');
-      const file = Array.from(event.dataTransfer.files || []).find(item => item.type === 'application/pdf' || /\.pdf$/i.test(item.name));
-      if (file) await setActiveDocument(file);
+      event.preventDefault();
+      workspaceUploadDrop.classList.remove('dragover');
+      await inspectWorkspaceFiles(event.dataTransfer.files);
     });
     workspacePdfInput.addEventListener('change', async () => {
-      const file = workspacePdfInput.files && workspacePdfInput.files[0];
-      if (file) await setActiveDocument(file);
+      await inspectWorkspaceFiles(workspacePdfInput.files);
       workspacePdfInput.value = '';
+    });
+    document.getElementById('workspace-detection-clear').addEventListener('click', () => {
+      document.getElementById('workspace-detection-results').hidden = true;
+      document.getElementById('workspace-detection-list').replaceChildren();
     });
     document.getElementById('workspace-change-pdf').addEventListener('click', () => workspacePdfInput.click());
     document.getElementById('workspace-preview-btn').addEventListener('click', () => {
