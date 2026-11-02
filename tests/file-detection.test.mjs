@@ -68,6 +68,16 @@ test('detects RTF, HTML, and TXT',async()=>{
     assert.equal(r.route.available,true,name);
   }
 });
+test('detects UTF-16LE and UTF-16BE text files',async()=>{
+  const encode=(text,little)=>{
+    const bytes=new Uint8Array(2+text.length*2);
+    bytes[0]=little?0xff:0xfe; bytes[1]=little?0xfe:0xff;
+    for(let i=0;i<text.length;i++){const code=text.charCodeAt(i),p=2+i*2;bytes[p]=little?code&255:code>>8;bytes[p+1]=little?code>>8:code&255;}
+    return bytes;
+  };
+  assert.equal((await detectFileFormat(file('notes-le.txt',encode('UTF-16 little endian',true)))).format,'txt');
+  assert.equal((await detectFileFormat(file('notes-be.txt',encode('UTF-16 big endian',false)))).format,'txt');
+});
 test('does not trust a false PDF extension',async()=>{
   const r=await detectFileFormat(file('fake.pdf','not a PDF'));assert.equal(r.format,'unknown');assert.match(r.warning,/filename suggests/i);
 });
