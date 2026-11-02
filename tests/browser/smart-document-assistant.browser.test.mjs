@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {chromium,firefox,webkit} from 'playwright';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..'),mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8'};
+let server,browser,context,origin;
+async function startServer(){server=http.createServer(async(req,res)=>{try{const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname),target=path.resolve(root,'.'+pathname);if(target!==root&&!target.startsWith(root+path.sep))throw new Error('Invalid path');const stat=await fs.stat(target),file=stat.isDirectory()?path.join(target,'index.html'):target;res.writeHead(200,{'content-type':mime[path.extname(file)]||'application/octet-stream','cache-control':'no-store'});res.end(await fs.readFile(file));}catch{res.writeHead(404);res.end('Not found');}});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));origin='http://127.0.0.1:'+server.address().port;}
+test('Smart Document Assistant analyzes a PDF, cites evidence, and exports notes',{timeout:300000},async()=>{
+ await startServer();const engine=process.env.BROWSER||'chromium',launchers={chromium,firefox,webkit};browser=await launchers[engine].launch({headless:true});context=await browser.newContext({viewport:{width:1280,height:900},serviceWorkers:'block',ignoreHTTPSErrors:true,acceptDownloads:true});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(origin+'/pdf-toolkit.html',{waitUntil:'domcontentloaded',timeout:60000});await page.waitForFunction(()=>!!window.PDFLib&&!!window.PDFToolkitSetActiveFile,{timeout:60000});await page.evaluate(()=>window.PDFToolkitOpenSmartAssistant?.());await page.waitForSelector('#panel-assistant');
+ const bytes=await page.evaluate(async()=>{const pdf=await PDFLib.PDFDocument.create(),font=await pdf.embedFont(PDFLib.StandardFonts.Helvetica),p1=pdf.addPage([612,792]);p1.drawText('Acute leukemia is a malignant disorder of blood-forming cells.',{x:50,y:700,size:13,font});p1.drawText('Common symptoms include fatigue, fever, and bleeding.',{x:50,y:675,size:13,font});p1.drawText('Diagnosis uses blood studies and bone marrow evaluation.',{x:50,y:650,size:13,font});const p2=pdf.addPage([612,792]);p2.drawText('Treatment depends on leukemia subtype and risk classification.',{x:50,y:700,size:13,font});p2.drawText('Chemotherapy is a major treatment approach.',{x:50,y:675,size:13,font});return Array.from(await pdf.save());});
+ const file=await page.evaluateHandle(bytes=>new File([new Uint8Array(bytes)],'assistant-qa.pdf',{type:'application/pdf'}),bytes);await page.evaluate(async f=>{await window.PDFToolkitSetActiveFile(f);await window.PDFToolkitSetAssistantFile(f);},file);
+ await page.locator('#assistant-analyze').click();await page.waitForFunction(()=>document.querySelector('#assistant-status').textContent.includes('Analysis ready'),{timeout:120000});assert.match(await page.locator('#assistant-summary').innerText(),/leukemia/i);assert.match(await page.locator('#assistant-topics').innerText(),/leukemia/i);
+ await page.locator('#assistant-question').fill('What are common symptoms of acute leukemia?');await page.locator('#assistant-question-form button[type=submit]').click();assert.match(await page.locator('#assistant-answer').innerText(),/PDF page 1/);assert.match(await page.locator('#assistant-answer').innerText(),/fatigue|fever|bleeding/i);
+ const downloadPromise=page.waitForEvent('download');await page.locator('#assistant-export').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/assistant-qa-analysis\.md/);assert.deepEqual(errors,[]);await context.close();
+});
+test.after(async()=>{await browser?.close();if(server)await new Promise(resolve=>server.close(resolve));});
