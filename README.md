@@ -72,7 +72,7 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ## Tools in the app
 
-The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified and routed to the conversion workflows that are currently available. Images can now be combined into a PDF or PDF pages exported as images. DOCX files can be rendered locally and sent to the browser's native Print / Save as PDF workflow; legacy DOC and other document formats remain outside this batch. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
+The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified and routed to the conversion workflows that are currently available. Images can now be combined into a PDF or PDF pages exported as images. DOCX, XLSX, PPTX, ODT, RTF, HTML, and TXT files can be rendered locally and sent to the browser's native Print / Save as PDF workflow; legacy binary DOC remains outside this batch. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
 
 | Category | Tools |
 |----------|-------|
@@ -99,6 +99,16 @@ Pin frequently used tools with the star on a tool card. Search covers tool names
 - The document is processed locally; it is not uploaded to a conversion server. The DOCX renderer is loaded from a pinned CDN version and is cached by the service worker after it has been fetched once.
 - DOCX layout is not guaranteed to match Microsoft Word exactly. Pagination, fonts, floating objects, advanced tables, tracked changes, and unsupported Word features can differ. Review the preview and the saved PDF.
 - The browser controls the final Save as PDF action; the app cannot silently create a file from the native print dialog. Legacy .doc files are not supported by this batch.
+
+### Additional formats to PDF notes
+
+- **XLSX**: each worksheet is rendered as a printable table using cached cell values. Formulas are not recalculated, and charts, drawings, macros, and exact Excel print settings are not preserved. Workbooks larger than 250,000 printable cells are rejected to protect browser memory.
+- **PPTX**: slides are rendered locally to SVG for the print preview. Animations and transitions are static; advanced effects, embedded media, SmartArt, and uncommon fonts may differ from PowerPoint. Presentations over 200 slides are rejected to protect browser memory.
+- **ODT**: the converter reconstructs paragraphs, headings, lists, and basic tables from the OpenDocument XML package. Images, charts, tracked changes, and advanced styles may be omitted.
+- **RTF**: supported rich-text formatting is rendered with rtf.js. Some embedded image formats and uncommon RTF controls may not be reproduced.
+- **HTML**: active content is removed before preview and printing. Scripts, forms, embedded frames, remote images, external stylesheets, and inline styles are not included.
+- **TXT**: UTF-8 and UTF-16 text is rendered with line breaks preserved.
+- All six workflows run in the browser. Review the preview and choose **Print / Save as PDF** in the browser's print dialog. This is a browser-rendered PDF, not a byte-for-byte conversion by Microsoft Office or LibreOffice. Page layout can vary by browser and device.
 
 ### PDF to editable DOCX notes
 

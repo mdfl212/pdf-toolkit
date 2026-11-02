@@ -39,6 +39,7 @@
   <script type="module" src="./docx-to-pdf.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@9.15.1/dist/index.iife.js" defer></script>
   <script type="module" src="./pdf-to-docx.js"></script>
+  <script type="module" src="./additional-formats-to-pdf.js"></script>
   <script src="./figure-images.js" defer></script>
   <style>
     :root {
@@ -3248,6 +3249,7 @@
       { id:'repair', name:'Repair PDF', category:'inspect', icon:'🩹', description:'Rebuild recoverable PDF structure before editing or extracting pages.' },
       { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
       { id:'docx-pdf', name:'Word (DOCX) to PDF', category:'advanced', icon:'docx', description:'Render a Word document locally and print or save it as a searchable PDF.' },
+      { id:'additional-formats', name:'Additional formats to PDF', category:'advanced', icon:'office', description:'Convert Excel, PowerPoint, ODT, RTF, HTML, and text files using local browser rendering.' },
       { id:'pdf-docx', name:'PDF to editable DOCX', category:'advanced', icon:'docx', description:'Rebuild selectable PDF text into editable Word paragraphs.' },
       { id:'image-pdf', name:'Images to PDF', category:'advanced', icon:'image', description:'Combine, preview and reorder images into one PDF.' },
       { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'image', description:'Export selected PDF pages as PNG or JPEG images.' },
@@ -3284,6 +3286,7 @@
       repair:'<path d="M14.5 6.5a4 4 0 0 0-5.6 5.6l-4.4 4.4a2 2 0 0 0 2.8 2.8l4.4-4.4a4 4 0 0 0 5.6-5.6l-2.2 2.2-2.8-2.8z"/>',
       image:'<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m5 17 5-5 3 3 2-2 4 4"/>',
       docx:'<path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 15h6M9 18h4"/>',
+      office:'<path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 11h6M9 14h6M9 17h4"/><path d="M4 7v14h12"/>',
       images:'<rect x="4" y="5" width="13" height="14" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v12M6 16l4-4 3 3 2-2 2 2"/>',
       batch:'<path d="M5 6h2M10 6h9M5 12h2M10 12h9M5 18h2M10 18h9"/><path d="m5 6 .7.7L7 5M5 12l.7.7L7 11M5 18l.7.7L7 17"/>',
       arrow:'<path d="M7 17 17 7M8 7h9v9"/>',
@@ -3293,7 +3296,7 @@
       return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] || iconPaths.chapters}</g></svg>`;
     }
     function toolIconSvg(id) {
-      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'docx-pdf':'docx', 'pdf-docx':'docx', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
+      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'docx-pdf':'docx', 'additional-formats':'office', 'pdf-docx':'docx', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
       return svgIcon(names[id] || 'chapters');
     }
     function categoryIconSvg(id) {
@@ -3531,6 +3534,13 @@
           button.className = 'btn btn-primary btn-sm workspace-detection-action';
           button.textContent = 'Convert DOCX';
           button.addEventListener('click', () => window.PDFToolkitOpenDocxConverter?.(file));
+          row.append(button);
+        } else if (detection.route.available && ['xlsx','pptx','odt','rtf','html','txt'].includes(detection.format)) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-primary btn-sm workspace-detection-action';
+          button.textContent = 'Convert to PDF';
+          button.addEventListener('click', () => window.PDFToolkitOpenAdditionalFormats?.(file));
           row.append(button);
         } else if (detection.route.available && ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(detection.format)) {
           const button = document.createElement('button');

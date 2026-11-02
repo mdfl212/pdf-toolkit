@@ -9,12 +9,12 @@ const DEFINITIONS = {
   heic: ['HEIC / HEIF image','HEIC',['heic','heif'],true,null,'Convert image to PDF'],
   docx: ['Microsoft Word document','DOCX',['docx'],true,null,'Convert Word document to PDF'],
   doc: ['Legacy Microsoft Word document','DOC',['doc'],false,'Later batch','Convert legacy Word document to PDF'],
-  xlsx: ['Microsoft Excel workbook','XLSX',['xlsx'],false,'Batch 5','Convert spreadsheet to PDF'],
-  pptx: ['Microsoft PowerPoint presentation','PPTX',['pptx'],false,'Batch 5','Convert presentation to PDF'],
-  odt: ['OpenDocument text document','ODT',['odt'],false,'Batch 5','Convert document to PDF'],
-  rtf: ['Rich Text Format document','RTF',['rtf'],false,'Batch 5','Convert document to PDF'],
-  html: ['HTML document','HTML',['html','htm'],false,'Batch 5','Convert HTML to PDF'],
-  txt: ['Plain text document','TXT',['txt'],false,'Batch 5','Convert text to PDF']
+  xlsx: ['Microsoft Excel workbook','XLSX',['xlsx'],true,null,'Convert spreadsheet to PDF'],
+  pptx: ['Microsoft PowerPoint presentation','PPTX',['pptx'],true,null,'Convert presentation to PDF'],
+  odt: ['OpenDocument text document','ODT',['odt'],true,null,'Convert document to PDF'],
+  rtf: ['Rich Text Format document','RTF',['rtf'],true,null,'Convert document to PDF'],
+  html: ['HTML document','HTML',['html','htm'],true,null,'Convert HTML to PDF'],
+  txt: ['Plain text document','TXT',['txt'],true,null,'Convert text to PDF']
 };
 const EXTENSIONS = Object.fromEntries(Object.entries(DEFINITIONS).flatMap(([key, value]) => value[2].map(ext => [ext,key])));
 const decoder = new TextDecoder();
