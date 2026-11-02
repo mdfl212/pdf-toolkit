@@ -12,20 +12,21 @@
     if (quick) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'tool-btn'; b.dataset.panel = 'ocr';
-      b.textContent = '🔎 OCR & Searchable PDF';
+      b.textContent = '🔎 OCR & Searchable PDF · WIP';
       quick.insertBefore(b, quick.querySelector('[data-panel="compress"]'));
     }
     const mobile = $('mobile-tools-grid');
     if (mobile) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'mobile-tool-card'; b.dataset.panel = 'ocr';
-      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span>OCR</span>';
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span>OCR · WIP</span>';
       mobile.insertBefore(b, mobile.querySelector('[data-panel="compress"]'));
     }
     const panel = document.createElement('section');
     panel.className = 'panel'; panel.id = 'panel-ocr';
     panel.innerHTML = [
-      '<h2>OCR & Searchable PDF</h2>',
+      '<h2>OCR &amp; Searchable PDF <span class="tool-status" aria-label="Work in progress">WIP · TROUBLESHOOTING</span></h2>',
+      '<div class="tool-wip-notice" role="note"><strong>Work in progress — troubleshooting required.</strong> OCR is available for testing, but its recognition quality and edge cases have not yet been fully validated. Check the searchable text against the original scan before relying on the output, especially for names, numbers, medical terms, tables, and units.</div>',
       '<p class="subtitle">Recognize English text on scanned pages and add an invisible searchable text layer while preserving the original page artwork. For offline use, prepare the assets once while online.</p>',
       '<div class="drop-zone" id="ocr-drop"><div class="drop-icon">🔎</div><p><strong>Drop a scanned PDF here</strong> or click to browse</p><p class="hint">Your file is processed locally in this browser; it is not uploaded.</p><input type="file" accept=".pdf,application/pdf" hidden id="ocr-input"></div>',
       '<div id="ocr-file-card" class="file-item" style="display:none;margin-bottom:18px"><div class="file-icon">PDF</div><div class="file-info"><div class="file-name" id="ocr-file-name"></div><div class="file-meta" id="ocr-file-size"></div></div><button type="button" class="btn btn-secondary btn-sm" id="ocr-remove">Remove</button></div>',
