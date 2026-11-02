@@ -208,7 +208,7 @@ function odtToHtml(xml) {
 }
 function sanitizeHtmlSource(source) {
   const parsed = new DOMParser().parseFromString(source, 'text/html');
-  parsed.querySelectorAll('script,iframe,frame,object,embed,form,input,button,textarea,select,option,link,base,meta[http-equiv],video,audio,source').forEach(node => node.remove());
+  parsed.querySelectorAll('script,style,iframe,frame,object,embed,form,input,button,textarea,select,option,link,base,meta[http-equiv],video,audio,source,svg').forEach(node => node.remove());
   parsed.querySelectorAll('*').forEach(node => {
     [...node.attributes].forEach(attribute => {
       const name = attribute.name.toLowerCase();
