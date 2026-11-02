@@ -3081,7 +3081,6 @@
         state.sourceFileName = file.name.replace(/\.pdf$/i, '');
         state.activePdfPage = 1;
         document.getElementById('workspace-upload-drop').hidden = true;
-        document.getElementById('workspace-detection-results').hidden = true;
         document.getElementById('active-document-card').hidden = false;
         document.getElementById('workspace-document-name').textContent = file.name;
         document.getElementById('workspace-document-meta').textContent = `PDF · ${state.activePdfJsDoc.numPages.toLocaleString()} pages · ${formatBytes(file.size)} · stored in this session`;
@@ -3469,6 +3468,8 @@
         }
       }
       if (results.length === 1 && results[0].detection.isPdf) {
+        document.getElementById('workspace-detection-results').hidden = true;
+        document.getElementById('workspace-detection-list').replaceChildren();
         await setActiveDocument(results[0].file, results[0].detection);
         return;
       }
