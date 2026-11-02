@@ -71,7 +71,15 @@ function signatureType(bytes, ext) {
 }
 
 function textType(bytes,ext) {
-  if(!bytes.length||bytes.includes(0)) return null;
+  if(!bytes.length) return null;
+  if(ext==='txt' && bytes.length>=2 && ((bytes[0]===0xff&&bytes[1]===0xfe)||(bytes[0]===0xfe&&bytes[1]===0xff))) {
+    let text;
+    try { text=new TextDecoder(bytes[0]===0xff?'utf-16le':'utf-16be',{fatal:true}).decode(bytes.subarray(2)); } catch { return null; }
+    const sample=text.trim();
+    if(sample && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(sample)) return ['txt','UTF-16 text content and .txt extension'];
+    return null;
+  }
+  if(bytes.includes(0)) return null;
   let text;
   try { text=new TextDecoder('utf-8',{fatal:true}).decode(bytes); } catch { return null; }
   const trimmed=text.replace(/^\uFEFF/,'').trimStart();
