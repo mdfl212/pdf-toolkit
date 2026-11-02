@@ -62,7 +62,6 @@ test('Batch 5 browser conversion smoke and compatibility pass',{timeout:900000},
   assert.ok(launchers[engine],'BROWSER must be chromium, firefox, or webkit');
   browser=await launchers[engine].launch({headless:true});
   const context=await browser.newContext({viewport:{width:1280,height:900},serviceWorkers:'block',ignoreHTTPSErrors:true});
-  await context.addInitScript(() => { window.print = () => {}; });
   page=await context.newPage();
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/pdf-toolkit.html',{waitUntil:'domcontentloaded',timeout:60000});
@@ -103,6 +102,15 @@ test('Batch 5 browser conversion smoke and compatibility pass',{timeout:900000},
     const buf=Buffer.from([0xff,0xfe,...Buffer.from('QA UTF16 LINE ONE\nQA UTF16 LINE TWO','utf16le')]);
     await uploadAndRender(payload('qa-text.txt',buf,'text/plain'),/QA UTF16 LINE ONE/);
     assert.equal(await page.locator('#additional-pdf-preview pre').innerText(),'QA UTF16 LINE ONE\nQA UTF16 LINE TWO');
+    await page.evaluate(() => {
+      const append = document.body.append.bind(document.body);
+      document.body.append = (...nodes) => {
+        append(...nodes);
+        for (const node of nodes) if (node?.id === 'additional-pdf-print-frame' && node.contentWindow) {
+          try { node.contentWindow.print = () => {}; } catch {}
+        }
+      };
+    });
     await page.locator('#additional-pdf-print').click(); await page.waitForSelector('#additional-pdf-print-frame',{state:'attached'});
     const srcdoc=await page.locator('#additional-pdf-print-frame').getAttribute('srcdoc');
     assert.match(srcdoc,/QA UTF16 LINE ONE/); assert.match(srcdoc,/default-src/); await clear();
