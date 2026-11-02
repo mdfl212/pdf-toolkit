@@ -62,6 +62,7 @@ test('Batch 5 browser conversion smoke and compatibility pass',{timeout:900000},
   assert.ok(launchers[engine],'BROWSER must be chromium, firefox, or webkit');
   browser=await launchers[engine].launch({headless:true});
   const context=await browser.newContext({viewport:{width:1280,height:900},serviceWorkers:'block',ignoreHTTPSErrors:true});
+  await context.addInitScript(() => { window.print = () => {}; });
   page=await context.newPage();
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/pdf-toolkit.html',{waitUntil:'domcontentloaded',timeout:60000});
