@@ -1,0 +1,33 @@
+name: Batch 5 browser QA
+on:
+  pull_request:
+    paths: ['additional-formats-to-pdf.js', 'file-detection.js', 'pdf-toolkit.html', 'sw.js', 'tests/**', '.github/workflows/browser-qa.yml']
+  push:
+    branches: [main]
+    paths: ['additional-formats-to-pdf.js', 'file-detection.js', 'pdf-toolkit.html', 'sw.js', 'tests/**', '.github/workflows/browser-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    name: ${{ matrix.browser }} browser smoke
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test dependencies
+        run: npm install --no-save playwright jszip pptxgenjs
+      - name: Install browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run existing unit tests
+        run: node --experimental-default-type=module --test tests/*.test.mjs
+      - name: Run Batch 5 browser QA
+        env:
+          BROWSER: ${{ matrix.browser }}
+        run: node --test tests/browser/*.browser.test.mjs

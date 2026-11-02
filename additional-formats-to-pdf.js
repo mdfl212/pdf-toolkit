@@ -213,9 +213,9 @@ function sanitizeHtmlSource(source) {
     [...node.attributes].forEach(attribute => {
       const name = attribute.name.toLowerCase();
       const value = attribute.value.trim();
-      if (name.startsWith('on') || ['srcdoc','formaction','action','style','srcset','background'].includes(name)) node.removeAttribute(attribute.name);
-      else if (['href','src','xlink:href'].includes(name) && /^(?:javascript|vbscript|file):/i.test(value)) node.removeAttribute(attribute.name);
-      else if (['src','href','xlink:href'].includes(name) && /^https?:/i.test(value)) node.removeAttribute(attribute.name);
+      if (name.startsWith('on') || ['srcdoc','formaction','action','style','srcset','background','href','xlink:href'].includes(name)) node.removeAttribute(attribute.name);
+      else if (name === 'src' && /^(?:javascript|vbscript|file):/i.test(value)) node.removeAttribute(attribute.name);
+      else if (name === 'src' && /^https?:/i.test(value)) node.removeAttribute(attribute.name);
     });
   });
   parsed.querySelectorAll('img').forEach(node => {
