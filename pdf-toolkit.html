@@ -37,6 +37,8 @@
   <script type="module" src="./image-to-pdf.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js" defer></script>
   <script type="module" src="./docx-to-pdf.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@9.15.1/dist/index.iife.js" defer></script>
+  <script type="module" src="./pdf-to-docx.js"></script>
   <script src="./figure-images.js" defer></script>
   <style>
     :root {
@@ -3246,6 +3248,7 @@
       { id:'repair', name:'Repair PDF', category:'inspect', icon:'🩹', description:'Rebuild recoverable PDF structure before editing or extracting pages.' },
       { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
       { id:'docx-pdf', name:'Word (DOCX) to PDF', category:'advanced', icon:'docx', description:'Render a Word document locally and print or save it as a searchable PDF.' },
+      { id:'pdf-docx', name:'PDF to editable DOCX', category:'advanced', icon:'docx', description:'Rebuild selectable PDF text into editable Word paragraphs.' },
       { id:'image-pdf', name:'Images to PDF', category:'advanced', icon:'image', description:'Combine, preview and reorder images into one PDF.' },
       { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'image', description:'Export selected PDF pages as PNG or JPEG images.' },
       { id:'batch', name:'Batch Processor', category:'advanced', icon:'▦', description:'Run multiple PDF operations in one batch.' }
@@ -3290,7 +3293,7 @@
       return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] || iconPaths.chapters}</g></svg>`;
     }
     function toolIconSvg(id) {
-      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'docx-pdf':'docx', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
+      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'docx-pdf':'docx', 'pdf-docx':'docx', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
       return svgIcon(names[id] || 'chapters');
     }
     function categoryIconSvg(id) {
@@ -3511,12 +3514,17 @@
         }
         row.append(icon, details);
         if (detection.isPdf) {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'btn btn-primary btn-sm workspace-detection-action';
-          button.textContent = 'Open PDF';
-          button.addEventListener('click', () => setActiveDocument(file, detection));
-          row.append(button);
+          const openButton = document.createElement('button');
+          openButton.type = 'button';
+          openButton.className = 'btn btn-primary btn-sm workspace-detection-action';
+          openButton.textContent = 'Open PDF';
+          openButton.addEventListener('click', () => setActiveDocument(file, detection));
+          const convertButton = document.createElement('button');
+          convertButton.type = 'button';
+          convertButton.className = 'btn btn-secondary btn-sm workspace-detection-action';
+          convertButton.textContent = 'Convert to DOCX';
+          convertButton.addEventListener('click', () => window.PDFToolkitOpenPdfToDocx?.(file));
+          row.append(openButton, convertButton);
         } else if (detection.format === 'docx' && detection.route.available) {
           const button = document.createElement('button');
           button.type = 'button';

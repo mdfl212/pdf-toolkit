@@ -38,3 +38,8 @@ Copyright (c) 2016-2023 Volodymyr Baydalka. Licensed under the Apache License, V
 Source: https://github.com/VolodymyrBaydalka/docxjs
 A copy of the license is included at `licenses/docx-preview-Apache-2.0.txt`.
 
+
+## docx
+
+This project loads the browser build of `docx` 9.15.1 from jsDelivr to generate editable Office Open XML documents. Copyright (c) 2016 Dolan. Licensed under the MIT License. A copy is included at `licenses/docx-MIT.txt`.
+Source: https://github.com/dolanmiu/docx

@@ -82,7 +82,7 @@ The app opens to a **document workspace** with smart local file detection, commo
 | **Compress & Optimize** | Compress PDF |
 | **Protect & Manage** | Password Protect; Watermark |
 | **Inspect & Analyze** | PDF Metadata |
-| **Advanced Tools** | Word (DOCX) to PDF; Images to PDF; PDF to Images; Batch Processor; Extract Figures |
+| **Advanced Tools** | Word (DOCX) to PDF; PDF to editable DOCX; Images to PDF; PDF to Images; Batch Processor; Extract Figures |
 
 Pin frequently used tools with the star on a tool card. Search covers tool names and descriptions; recent tools and favorites are saved in this browser.
 
@@ -99,6 +99,14 @@ Pin frequently used tools with the star on a tool card. Search covers tool names
 - The document is processed locally; it is not uploaded to a conversion server. The DOCX renderer is loaded from a pinned CDN version and is cached by the service worker after it has been fetched once.
 - DOCX layout is not guaranteed to match Microsoft Word exactly. Pagination, fonts, floating objects, advanced tables, tracked changes, and unsupported Word features can differ. Review the preview and the saved PDF.
 - The browser controls the final Save as PDF action; the app cannot silently create a file from the native print dialog. Legacy .doc files are not supported by this batch.
+
+### PDF to editable DOCX notes
+
+- **PDF to editable DOCX** extracts the PDF's selectable text with PDF.js and rebuilds it as editable Word paragraphs using the browser build of the `docx` library.
+- Text is grouped into visual lines using PDF coordinates; font size, basic bold/italic hints, approximate headings, page breaks, and page dimensions are carried over where possible.
+- This is a reconstruction, not recovery of the original Word source. Multi-column reading order, complex tables, equations, charts, images, floating objects, and exact typography may not survive. Images are not embedded in this first batch.
+- Scanned/image-only PDFs need a text layer first. Run **OCR & Searchable PDF**, save the OCR output, then convert that searchable PDF. Pages with no text are reported and marked; a file with no selectable text is rejected rather than producing an empty DOCX.
+- Password-protected PDFs must be unlocked and saved before conversion. Processing and DOCX generation run locally in the browser; the PDF is not uploaded.
 
 ### OCR notes
 

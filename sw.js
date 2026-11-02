@@ -1,8 +1,8 @@
 /* PDF Toolkit service worker. */
-const CACHE = 'pdf-toolkit-v9';
-const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js', './file-detection.js', './image-to-pdf.js', './docx-to-pdf.js',
-  'https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js', './docx-to-pdf.js',
+const CACHE = 'pdf-toolkit-v10';
+const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js', './file-detection.js', './image-to-pdf.js', './docx-to-pdf.js', './pdf-to-docx.js',
   'https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js',
+  'https://cdn.jsdelivr.net/npm/docx@9.15.1/dist/index.iife.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
