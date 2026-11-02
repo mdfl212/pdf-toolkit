@@ -125,7 +125,7 @@
   }
   function addPagePreview(blob, pageNumber, baseName, extension) {
     const preview = $('pdf-images-preview');
-    if (!preview || pageNumber > 24) return;
+    if (!preview || preview.children.length >= 24) return;
     const url = URL.createObjectURL(blob); previewUrls.push(url);
     const card = document.createElement('article'); card.className = 'pdf-images-preview-card';
     const image = document.createElement('img'); image.src = url; image.alt = 'Preview of PDF page ' + pageNumber;
