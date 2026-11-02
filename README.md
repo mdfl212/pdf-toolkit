@@ -81,7 +81,7 @@ The app opens to a **document workspace** with smart local file detection, commo
 | **OCR & Searchability** | OCR & Searchable PDF |
 | **Compress & Optimize** | Compress PDF |
 | **Protect & Manage** | Password Protect; Watermark |
-| **Inspect & Analyze** | PDF Metadata |
+| **Inspect & Analyze** | PDF Metadata; Smart Document Assistant; Repair PDF |
 | **Advanced Tools** | Word (DOCX) to PDF; PDF to editable DOCX; Images to PDF; PDF to Images; Batch Processor; Extract Figures |
 
 Pin frequently used tools with the star on a tool card. Search covers tool names and descriptions; recent tools and favorites are saved in this browser.
@@ -117,6 +117,15 @@ Pin frequently used tools with the star on a tool card. Search covers tool names
 - This is a reconstruction, not recovery of the original Word source. Multi-column reading order, complex tables, equations, charts, images, floating objects, and exact typography may not survive. Images are not embedded in this first batch.
 - Scanned/image-only PDFs need a text layer first. Run **OCR & Searchable PDF**, save the OCR output, then convert that searchable PDF. Pages with no text are reported and marked; a file with no selectable text is rejected rather than producing an empty DOCX.
 - Password-protected PDFs must be unlocked and saved before conversion. Processing and DOCX generation run locally in the browser; the PDF is not uploaded.
+
+### Smart Document Assistant notes
+
+- **Smart Document Assistant** analyzes the active PDF locally with PDF.js. It extracts selectable text page by page, reads embedded PDF bookmarks when present, and reports pages without selectable text.
+- The overview is an **extractive summary**: it selects sentences from the source and includes page references. Key topics are frequency-based terms, and study prompts are generic review questions generated from those terms.
+- **Ask this document** ranks matching source sentences and displays quoted evidence with PDF page numbers. It does not generate free-form answers; if it cannot find matching evidence, it says so. Verify the cited page in the original document.
+- Scanned pages need a text layer. Run **OCR & Searchable PDF**, save the searchable result, and analyze that PDF. Partial-text documents are analyzed with a warning for pages that lack text.
+- No document content is sent to an AI service or remote API. The PDF is not saved to browser storage by the assistant. Analysis is temporary for the current page session and can be exported as Markdown notes.
+- Text extraction order can be imperfect in multi-column pages, tables, equations, and complex layouts. This tool is a study aid, not a substitute for checking the source.
 
 ### OCR notes
 
