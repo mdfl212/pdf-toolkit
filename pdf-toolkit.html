@@ -1835,6 +1835,10 @@
     }
     .card-icon svg, .category-icon svg { width: 18px; height: 18px; }
     .tool-card-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+    .tool-card-title { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+    .tool-status { display:inline-flex; align-items:center; border:1px solid rgba(232,197,71,.42); border-radius:999px; padding:2px 7px; background:rgba(232,197,71,.1); color:var(--warning); font:600 .62rem 'JetBrains Mono',monospace; letter-spacing:.035em; line-height:1.4; white-space:nowrap; }
+    .tool-wip-notice { margin:0 0 14px; padding:10px 12px; border:1px solid rgba(232,197,71,.35); border-radius:9px; background:rgba(232,197,71,.07); color:var(--text-muted); font-size:.82rem; }
+    .tool-wip-notice strong { color:var(--warning); }
     .workspace-card strong { margin: 0; font-size: .88rem; font-weight: 620; line-height: 1.3; }
     .workspace-card small { color: var(--text-muted); font-size: .77rem; line-height: 1.35; }
     .tool-card-arrow { display: grid; place-items: center; color: #829287; }
@@ -2106,8 +2110,9 @@
       <section class="panel" id="panel-assistant">
         <div class="assistant-header">
           <div><h2>Smart Document Assistant</h2><p class="subtitle">Understand a PDF and find evidence without sending your document to a server.</p></div>
-          <span class="badge">Local · Evidence-first</span>
+          <span class="badge">WIP · Troubleshooting</span>
         </div>
+        <div class="tool-wip-notice" role="note"><strong>Work in progress — troubleshooting required.</strong> This feature is not yet considered reliable. Use it for testing only and verify all output against the original PDF.</div>
         <div class="assistant-intro note">This assistant analyzes selectable PDF text in your browser. Summaries are extractive, and answers are matched passages with page references—not free-form AI claims. For scanned pages, run OCR &amp; Searchable PDF first.</div>
         <section class="assistant-source">
           <div class="assistant-source-row">
@@ -3324,12 +3329,12 @@
       { id:'watermark', name:'Watermark', category:'protect', icon:'◈', description:'Apply a diagonal text watermark.' },
       { id:'security', name:'Password Protect', category:'protect', icon:'◆', description:'Manage PDF password protection.' },
       { id:'metadata', name:'PDF Metadata', category:'inspect', icon:'ⓘ', description:'View document information and properties.' },
-      { id:'assistant', name:'Smart Document Assistant', category:'inspect', icon:'✦', description:'Summarize a PDF, explore its outline, and ask questions with page-cited evidence.' },
+      { id:'assistant', name:'Smart Document Assistant', category:'inspect', icon:'✦', description:'Summarize a PDF, explore its outline, and ask questions with page-cited evidence.', status:'WIP' },
       { id:'repair', name:'Repair PDF', category:'inspect', icon:'🩹', description:'Rebuild recoverable PDF structure before editing or extracting pages.' },
       { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
-      { id:'docx-pdf', name:'Word (DOCX) to PDF', category:'advanced', icon:'docx', description:'Render a Word document locally and print or save it as a searchable PDF.' },
-      { id:'additional-formats', name:'Additional formats to PDF', category:'advanced', icon:'office', description:'Convert Excel, PowerPoint, ODT, RTF, HTML, and text files using local browser rendering.' },
-      { id:'pdf-docx', name:'PDF to editable DOCX', category:'advanced', icon:'docx', description:'Rebuild selectable PDF text into editable Word paragraphs.' },
+      { id:'docx-pdf', name:'Word (DOCX) to PDF', category:'advanced', icon:'docx', description:'Render a Word document locally and print or save it as a searchable PDF.', status:'WIP' },
+      { id:'additional-formats', name:'Additional formats to PDF', category:'advanced', icon:'office', description:'Convert Excel, PowerPoint, ODT, RTF, HTML, and text files using local browser rendering.', status:'WIP' },
+      { id:'pdf-docx', name:'PDF to editable DOCX', category:'advanced', icon:'docx', description:'Rebuild selectable PDF text into editable Word paragraphs.', status:'WIP' },
       { id:'image-pdf', name:'Images to PDF', category:'advanced', icon:'image', description:'Combine, preview and reorder images into one PDF.' },
       { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'image', description:'Export selected PDF pages as PNG or JPEG images.' },
       { id:'batch', name:'Batch Processor', category:'advanced', icon:'▦', description:'Run multiple PDF operations in one batch.' }
@@ -3391,7 +3396,7 @@
       return `<article class="workspace-card">
         <button type="button" class="workspace-card-open" data-open-tool="${tool.id}">
           <span class="card-icon">${toolIconSvg(tool.id)}</span>
-          <span class="tool-card-copy"><strong>${tool.name}</strong><small>${tool.description}</small></span>
+          <span class="tool-card-copy"><strong class="tool-card-title">${tool.name}${tool.status ? `<span class="tool-status" aria-label="Work in progress">${tool.status} · TROUBLESHOOTING</span>` : ''}</strong><small>${tool.description}</small></span>
           <span class="tool-card-arrow" aria-hidden="true">${svgIcon('arrow')}</span>
         </button>
         <button type="button" class="favorite-toggle${favorite ? ' is-favorite' : ''}" data-favorite="${tool.id}" aria-label="${favorite ? 'Remove' : 'Add'} ${tool.name} ${favorite ? 'from' : 'to'} favorites" title="${favorite ? 'Unpin favorite' : 'Pin favorite'}">${favoriteIconSvg(favorite)}</button>
@@ -3431,7 +3436,7 @@
       document.getElementById('mobile-category-nav').innerHTML = `<button type="button" data-view="home" class="${activeCategory ? '' : 'active'}">All tools</button>` + toolCategories.map(category => `<button type="button" data-view="${category.id}" class="${activeCategory === category.id ? 'active' : ''}">${category.name}</button>`).join('');
       const favorites = toolCatalog.filter(tool => favoriteTools.has(tool.id));
       document.getElementById('sidebar-favorites').hidden = !favorites.length;
-      document.getElementById('favorite-nav').innerHTML = favorites.map(tool => `<button class="tool-btn" type="button" data-panel="${tool.id}">${favoriteIconSvg(true)}<span>${tool.name}</span></button>`).join('');
+      document.getElementById('favorite-nav').innerHTML = favorites.map(tool => `<button class="tool-btn" type="button" data-panel="${tool.id}">${favoriteIconSvg(true)}<span>${tool.name}${tool.status ? ` <span class="tool-status">${tool.status}</span>` : ''}</span></button>`).join('');
     }
 
     function openTool(id) {
