@@ -12,7 +12,9 @@ on:
   pull_request:
     paths:
       - 'file-detection.js'
-      - 'tests/file-detection.test.mjs'
+      - 'image-to-pdf.js'
+      - 'pdf-to-images.js'
+      - 'tests/**'
       - '.github/workflows/file-detection-tests.yml'
 
 jobs:
