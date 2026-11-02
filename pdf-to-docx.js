@@ -261,7 +261,13 @@ async function convert() {
       const width = Math.max(2880, Math.min(31680, Math.round(page.width * 20)));
       const height = Math.max(2880, Math.min(31680, Math.round(page.height * 20)));
       return {
-        properties: { page: { size: { width, height }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+        properties: {
+          type: api.SectionType.NEXT_PAGE,
+          page: {
+            size: { width, height, orientation: width > height ? api.PageOrientation.LANDSCAPE : api.PageOrientation.PORTRAIT },
+            margin: { top: 720, right: 720, bottom: 720, left: 720 }
+          }
+        },
         children
       };
     });
