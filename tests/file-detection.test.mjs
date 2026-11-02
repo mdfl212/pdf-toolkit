@@ -41,7 +41,7 @@ test('detects common image signatures',async t=>{
     ['photo.heic',[...'0000ftypheic'].map(c=>c.charCodeAt(0)),'heic']
   ];
   for(const [name,bytes,expected] of cases) await t.test(name,async()=>{
-    const r=await detectFileFormat(file(name,bytes));assert.equal(r.format,expected);assert.equal(r.route.phase,'Batch 2');
+    const r=await detectFileFormat(file(name,bytes));assert.equal(r.format,expected);assert.equal(r.route.available,true);assert.equal(r.route.phase,null);
   });
 });
 test('identifies DOCX, XLSX, and PPTX from ZIP package entries',async t=>{
