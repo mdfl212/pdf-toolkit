@@ -72,7 +72,7 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ## Tools in the app
 
-The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified with their planned conversion phase clearly shown. Conversion engines for those non-PDF formats are added in subsequent development batches. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
+The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified and routed to the conversion workflows that are currently available. Images can now be combined into a PDF or PDF pages exported as images; Word conversion is planned for Batch 3 and other document formats for a later batch. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
 
 | Category | Tools |
 |----------|-------|
@@ -82,9 +82,16 @@ The app opens to a **document workspace** with smart local file detection, commo
 | **Compress & Optimize** | Compress PDF |
 | **Protect & Manage** | Password Protect; Watermark |
 | **Inspect & Analyze** | PDF Metadata |
-| **Advanced Tools** | Batch Processor; Extract Figures; PDF to Images |
+| **Advanced Tools** | Images to PDF; PDF to Images; Batch Processor; Extract Figures |
 
 Pin frequently used tools with the star on a tool card. Search covers tool names and descriptions; recent tools and favorites are saved in this browser.
+
+### Image conversion notes
+
+- **Images to PDF** combines multiple images into one PDF, with one image per page. Review thumbnails, move images up or down, remove unwanted files, and choose A4, US Letter, or a page fitted to each image.
+- JPEG and PNG files are embedded directly. Other recognized image formats are decoded by the browser and converted to PNG before being embedded; HEIC/HEIF and TIFF decoding depends on browser support.
+- **PDF to Images** exports selected pages as PNG or JPEG, with standard/high/very high/maximum resolution choices. It previews and offers individual downloads for the first 24 selected pages; the ZIP contains every selected page.
+- Both directions run locally in the browser. Large images, high resolutions, or very long PDFs can consume substantial memory. The original files are not modified.
 
 ### OCR notes
 
