@@ -52,8 +52,12 @@ test('identifies DOCX, XLSX, and PPTX from ZIP package entries',async t=>{
     ['notes.odt',['content.xml','META-INF/manifest.xml'],'odt']
   ];
   for(const [name,entries,expected] of cases) await t.test(name,async()=>{
-    const r=await detectFileFormat(file(name,await zip(entries).arrayBuffer()));assert.equal(r.format,expected);
+    const r=await detectFileFormat(file(name,await zip(entries).arrayBuffer()));assert.equal(r.format,expected);if(expected==='docx')assert.equal(r.route.available,true);
   });
+});
+test('keeps legacy binary DOC files outside the DOCX converter route',async()=>{
+  const r=await detectFileFormat(file('legacy.doc',[208,207,17,224,161,177,26,225]));
+  assert.equal(r.format,'doc');assert.equal(r.route.available,false);
 });
 test('detects RTF, HTML, and TXT',async()=>{
   assert.equal((await detectFileFormat(file('note.rtf','{\\rtf1 Hello}'))).format,'rtf');

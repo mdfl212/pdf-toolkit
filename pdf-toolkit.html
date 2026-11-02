@@ -35,6 +35,8 @@
   <script src="./text-extract.js" defer></script>
   <script src="./pdf-to-images.js" defer></script>
   <script type="module" src="./image-to-pdf.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js" defer></script>
+  <script type="module" src="./docx-to-pdf.js"></script>
   <script src="./figure-images.js" defer></script>
   <style>
     :root {
@@ -1928,6 +1930,37 @@
       .image-pdf-item-actions { margin-left:88px; }
       .image-pdf-toolbar { align-items:flex-start; flex-direction:column; }
     }
+    .docx-pdf-filebar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; margin:14px 0; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+    .docx-pdf-filebar > div { display:flex; flex-direction:column; min-width:0; gap:2px; }
+    .docx-pdf-filebar strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .docx-pdf-filebar span,.docx-pdf-preview-heading span { color:var(--text-muted); font-size:.76rem; }
+    .docx-pdf-actions { display:flex; flex-wrap:wrap; gap:9px; margin:14px 0; }
+    .docx-pdf-progress { display:flex; align-items:center; gap:10px; padding:12px 0; color:var(--text-muted); }
+    .docx-pdf-spinner { width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:docx-pdf-spin .8s linear infinite; }
+    @keyframes docx-pdf-spin { to { transform:rotate(360deg); } }
+    .docx-pdf-preview-heading { display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px; }
+    .docx-pdf-preview { overflow:auto; max-height:72vh; padding:16px; border:1px solid var(--border); border-radius:12px; background:#555; }
+    .docx-pdf-preview .docx-wrapper { margin:0 auto; }
+    .docx-pdf-style-host { display:none; }
+    .docx-pdf-note { margin-top:16px; }
+    #docx-pdf-status[data-error="true"] { border-color:var(--danger); }
+    @media (max-width:600px) { .docx-pdf-filebar { align-items:flex-start; flex-direction:column; } .docx-pdf-preview { padding:6px; } }
+    @media print {
+      body.printing-docx { background:#fff !important; color:#000 !important; }
+      body.printing-docx > * { visibility:hidden !important; }
+      body.printing-docx #panel-docx-pdf, body.printing-docx #panel-docx-pdf * { visibility:visible !important; }
+      body.printing-docx header, body.printing-docx aside, body.printing-docx .mobile-tabbar, body.printing-docx .app-footer,
+      body.printing-docx #pdf-loading-overlay, body.printing-docx .status, body.printing-docx .docx-pdf-actions,
+      body.printing-docx #docx-pdf-drop, body.printing-docx #docx-pdf-filebar, body.printing-docx #docx-pdf-progress,
+      body.printing-docx #docx-pdf-status, body.printing-docx #docx-pdf-preview-heading, body.printing-docx .docx-pdf-note { display:none !important; }
+      body.printing-docx .app, body.printing-docx main { display:block !important; width:100% !important; max-width:none !important; margin:0 !important; padding:0 !important; }
+      body.printing-docx #panel-docx-pdf { display:block !important; position:static !important; width:100% !important; margin:0 !important; padding:0 !important; border:0 !important; background:#fff !important; }
+      body.printing-docx #docx-pdf-preview { max-height:none !important; overflow:visible !important; padding:0 !important; border:0 !important; background:#fff !important; }
+      body.printing-docx #docx-pdf-preview .docx-wrapper { margin:0 !important; padding:0 !important; background:#fff !important; }
+      body.printing-docx #docx-pdf-preview .docx { margin:0 !important; box-shadow:none !important; break-after:page; page-break-after:always; }
+      body.printing-docx #docx-pdf-preview .docx:last-child { break-after:auto; page-break-after:auto; }
+      @page { margin:0; }
+    }
     .workspace-detection-results { margin:-4px 0 24px; border:1px solid var(--border); border-radius:13px; background:var(--surface); overflow:hidden; }
     .workspace-detection-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border); }
     .workspace-detection-head h2 { margin:0; font-size:1.05rem; }
@@ -3212,6 +3245,7 @@
       { id:'metadata', name:'PDF Metadata', category:'inspect', icon:'ⓘ', description:'View document information and properties.' },
       { id:'repair', name:'Repair PDF', category:'inspect', icon:'🩹', description:'Rebuild recoverable PDF structure before editing or extracting pages.' },
       { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
+      { id:'docx-pdf', name:'Word (DOCX) to PDF', category:'advanced', icon:'docx', description:'Render a Word document locally and print or save it as a searchable PDF.' },
       { id:'image-pdf', name:'Images to PDF', category:'advanced', icon:'image', description:'Combine, preview and reorder images into one PDF.' },
       { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'image', description:'Export selected PDF pages as PNG or JPEG images.' },
       { id:'batch', name:'Batch Processor', category:'advanced', icon:'▦', description:'Run multiple PDF operations in one batch.' }
@@ -3246,6 +3280,7 @@
       metadata:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
       repair:'<path d="M14.5 6.5a4 4 0 0 0-5.6 5.6l-4.4 4.4a2 2 0 0 0 2.8 2.8l4.4-4.4a4 4 0 0 0 5.6-5.6l-2.2 2.2-2.8-2.8z"/>',
       image:'<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m5 17 5-5 3 3 2-2 4 4"/>',
+      docx:'<path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 15h6M9 18h4"/>',
       images:'<rect x="4" y="5" width="13" height="14" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v12M6 16l4-4 3 3 2-2 2 2"/>',
       batch:'<path d="M5 6h2M10 6h9M5 12h2M10 12h9M5 18h2M10 18h9"/><path d="m5 6 .7.7L7 5M5 12l.7.7L7 11M5 18l.7.7L7 17"/>',
       arrow:'<path d="M7 17 17 7M8 7h9v9"/>',
@@ -3255,7 +3290,7 @@
       return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] || iconPaths.chapters}</g></svg>`;
     }
     function toolIconSvg(id) {
-      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
+      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'docx-pdf':'docx', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
       return svgIcon(names[id] || 'chapters');
     }
     function categoryIconSvg(id) {
@@ -3431,9 +3466,11 @@
       title.textContent = results.length === 1 ? 'File detected' : 'Detected files';
       const pdfCount = results.filter(item => item.detection.isPdf).length;
       const imageFiles = results.filter(item => ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(item.detection.format) && item.detection.route.available).map(item => item.file);
+      const docxCount = results.filter(item => item.detection.format === 'docx' && item.detection.route.available).length;
       summary.textContent = results.length + ' file' + (results.length === 1 ? '' : 's') +
         ' inspected locally · ' + pdfCount + ' PDF' + (pdfCount === 1 ? '' : 's') + ' ready to open' +
-        (imageFiles.length ? ' · ' + imageFiles.length + ' image' + (imageFiles.length === 1 ? '' : 's') + ' ready to convert' : '');
+        (imageFiles.length ? ' · ' + imageFiles.length + ' image' + (imageFiles.length === 1 ? '' : 's') + ' ready to convert' : '') +
+        (docxCount ? ' · ' + docxCount + ' DOCX document' + (docxCount === 1 ? '' : 's') + ' ready to convert' : '');
       section.querySelector('#workspace-convert-images')?.remove();
       if (imageFiles.length) {
         const convertAll = document.createElement('button');
@@ -3479,6 +3516,13 @@
           button.className = 'btn btn-primary btn-sm workspace-detection-action';
           button.textContent = 'Open PDF';
           button.addEventListener('click', () => setActiveDocument(file, detection));
+          row.append(button);
+        } else if (detection.format === 'docx' && detection.route.available) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-primary btn-sm workspace-detection-action';
+          button.textContent = 'Convert DOCX';
+          button.addEventListener('click', () => window.PDFToolkitOpenDocxConverter?.(file));
           row.append(button);
         } else if (detection.route.available && ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(detection.format)) {
           const button = document.createElement('button');
