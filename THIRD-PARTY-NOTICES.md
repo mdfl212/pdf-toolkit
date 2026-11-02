@@ -34,8 +34,7 @@ Web Worker and are not uploaded to the CDN.
 ## docx-preview
 
 This project loads docx-preview 0.4.1 from jsDelivr at runtime.
-Copyright (c) 2016-2023 Volodymyr Baydalka.
-Licensed under the Apache License, Version 2.0.
+Copyright (c) 2016-2023 Volodymyr Baydalka. Licensed under the Apache License, Version 2.0.
 Source: https://github.com/VolodymyrBaydalka/docxjs
-License: https://www.apache.org/licenses/LICENSE-2.0
+A copy of the license is included at `licenses/docx-preview-Apache-2.0.txt`.
 
