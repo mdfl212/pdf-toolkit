@@ -127,6 +127,13 @@ function init(){
 }
 if(typeof window!=='undefined'){
   window.PDFToolkitSetImageFiles=files=>{if(document.getElementById('panel-image-pdf'))addFiles(files);};
-  window.PDFToolkitOpenImageConverter=files=>{window.PDFToolkitSetImageFiles(files);document.querySelector('[data-panel="image-pdf"]')?.click();};
+  window.PDFToolkitOpenImageConverter=files=>{
+    window.PDFToolkitSetImageFiles(files);
+    document.querySelectorAll('.panel').forEach(section=>section.classList.toggle('active',section.id==='panel-image-pdf'));
+    document.querySelectorAll('.tool-btn').forEach(tool=>tool.classList.toggle('active',tool.dataset.panel==='image-pdf'));
+    document.querySelectorAll('.mobile-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.tab==='tools'));
+    document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open');
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
 }
 if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();}
