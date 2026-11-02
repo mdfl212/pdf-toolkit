@@ -1,8 +1,8 @@
 import { detectFileFormat } from './file-detection.js';
 
 export function sanitizeDocxFilename(name) {
-  const base = String(name || 'document').replace(/\\.pdf$/i, '');
-  const safe = base.normalize('NFKC').replace(/[\\\\/:*?"<>|\\u0000-\\u001f]/g, '-').replace(/\\s+/g, ' ').trim();
+  const base = String(name || 'document').replace(/\.pdf$/i, '');
+  const safe = base.normalize('NFKC').replace(/[\\\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim();
   return (safe || 'document').slice(0, 140) + '.docx';
 }
 
@@ -27,7 +27,7 @@ export function reconstructPdfLines(items, styles = {}) {
       width: Math.max(0, Number(item.width) || 0),
       height: Math.max(1, Math.abs(Number(item.height) || size)),
       size: Math.max(5, Math.min(96, size)),
-      font: /^[\\w ,.'-]{1,60}$/.test(String(style.fontFamily || '')) ? style.fontFamily : undefined,
+      font: /^[\w ,.'-]{1,60}$/.test(String(style.fontFamily || '')) ? style.fontFamily : undefined,
       bold: /bold|black|heavy|demi/i.test(fontLabel),
       italics: /italic|oblique/i.test(fontLabel)
     };
@@ -49,7 +49,7 @@ export function reconstructPdfLines(items, styles = {}) {
       let prefix = '';
       if (previous) {
         const gap = item.x - (previous.x + previous.width);
-        if (gap > Math.max(1.5, previous.height * 0.18) && !/\\s$/.test(text) && !/^[,.;:!?%)\\]}]/.test(item.text)) prefix = ' ';
+        if (gap > Math.max(1.5, previous.height * 0.18) && !/\s$/.test(text) && !/^[,.;:!?%)\]}]/.test(item.text)) prefix = ' ';
       }
       text += prefix + item.text;
       runs.push({ ...item, text: prefix + item.text });
@@ -170,7 +170,7 @@ function formatSize(bytes) {
   return Number.isFinite(bytes) ? (bytes < 1048576 ? (bytes / 1024).toFixed(1) + ' KB' : (bytes / 1048576).toFixed(2) + ' MB') : 'Size unavailable';
 }
 async function validatePdf(file) {
-  if (!file || (!/\\.pdf$/i.test(file.name) && file.type !== 'application/pdf')) throw new Error('Choose a PDF file.');
+  if (!file || (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf')) throw new Error('Choose a PDF file.');
   const detection = await detectFileFormat(file);
   if (!detection.isPdf) throw new Error('This file does not contain a valid PDF signature.');
 }
@@ -268,7 +268,7 @@ async function convert() {
     status('Building editable Word document…');
     $('pdf-docx-progress-label').textContent = 'Generating DOCX file…';
     const document = new api.Document({
-      title: selectedFile.name.replace(/\\.pdf$/i, ''),
+      title: selectedFile.name.replace(/\.pdf$/i, ''),
       sections
     });
     const blob = await api.Packer.toBlob(document);
