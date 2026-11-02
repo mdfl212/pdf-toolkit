@@ -106,6 +106,12 @@ The following conversion and analysis tools are currently **WIP / troubleshootin
 
 These labels are status warnings only. The tools remain accessible so they can be tested and troubleshot. Earlier tools, including the Batch 2 image ↔ PDF workflows, are not included in this WIP designation.
 
+### OCR & Searchable PDF — Work in progress
+
+**OCR is currently WIP / troubleshooting only.** The tool remains available so its behavior can be tested, but recognition quality and edge cases have not yet been validated as reliable across different scans and document layouts. Do not treat OCR output as production-ready. Always compare the searchable text against the original page image before relying on it, particularly for names, medical terms, numbers, decimal points, tables, and units.
+
+The OCR workflow still runs locally in the browser and is intended to add a searchable text layer while preserving the original page artwork. The WIP designation is a reliability warning, not a claim that the feature is unavailable. Keep the original PDF and verify the output before using it as a source for study, clinical, legal, or other consequential work.
+
 ### Word (DOCX) to PDF notes
 
 - **Word (DOCX) to PDF** uses docx-preview to render a DOCX document in the browser, then opens the browser's native print dialog. Choose **Save as PDF** to create the PDF. The resulting PDF retains selectable/searchable text because the browser prints rendered HTML text rather than rasterizing every page.
@@ -142,7 +148,8 @@ These labels are status warnings only. The tools remain accessible so they can b
 
 ### OCR notes
 
-- **OCR & Searchable PDF** uses Tesseract.js in the browser to recognize English text on selected pages or page ranges and adds a transparent text layer over the original pages.
+- **Status: WIP / troubleshooting only.** OCR is still being evaluated and should not be considered production-ready. Review every output against the original scan before relying on recognized text.
+- **OCR & Searchable PDF** currently uses Tesseract.js in the browser to recognize English text on selected pages or page ranges and adds a transparent text layer over the original pages.
 - Pages that already contain a usable selectable text layer are skipped to reduce duplicate text. OCR output must be reviewed; scan quality, skew, small print, tables, and handwriting can reduce accuracy.
 - OCR rendering is capped at approximately 18 million pixels per page to reduce browser memory failures on unusually large pages. When the cap applies, the effective resolution may be lower than the selected scale.
 - Automatic page segmentation is a best-effort recognition mode, not reliable table reconstruction. Numeric tables and multi-column pages should be checked visually against the original; the current tool creates a searchable text layer and does not rebuild editable table cells.
