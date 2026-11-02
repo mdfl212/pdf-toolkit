@@ -9,15 +9,23 @@ function file(name, bytes, type='') {
 }
 function zip(names) {
   const enc=new TextEncoder();
-  const records=names.map(name=>{
-    const n=enc.encode(name),b=new Uint8Array(46+n.length),v=new DataView(b.buffer);
-    v.setUint32(0,0x02014b50,true);v.setUint16(28,n.length,true);b.set(n,46);return b;
-  });
-  const size=records.reduce((a,b)=>a+b.length,0),dir=new Uint8Array(size);
-  let p=0;for(const b of records){dir.set(b,p);p+=b.length;}
+  const locals=[],central=[];
+  let localOffset=0;
+  for(const name of names) {
+    const n=enc.encode(name);
+    const local=new Uint8Array(30+n.length),lv=new DataView(local.buffer);
+    lv.setUint32(0,0x04034b50,true);lv.setUint16(26,n.length,true);local.set(n,30);
+    locals.push(local);
+    const record=new Uint8Array(46+n.length),cv=new DataView(record.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(28,n.length,true);cv.setUint32(42,localOffset,true);record.set(n,46);
+    central.push(record);localOffset+=local.length;
+  }
+  const size=central.reduce((a,b)=>a+b.length,0),dir=new Uint8Array(size);
+  let p=0;for(const b of central){dir.set(b,p);p+=b.length;}
   const end=new Uint8Array(22),v=new DataView(end.buffer);
-  v.setUint32(0,0x06054b50,true);v.setUint16(8,records.length,true);v.setUint16(10,records.length,true);v.setUint32(12,size,true);
-  return new Blob([dir,end]);
+  v.setUint32(0,0x06054b50,true);v.setUint16(8,names.length,true);v.setUint16(10,names.length,true);
+  v.setUint32(12,size,true);v.setUint32(16,localOffset,true);
+  return new Blob([...locals,dir,end]);
 }
 
 test('PDF signature overrides a misleading extension',async()=>{
@@ -39,7 +47,8 @@ test('identifies DOCX, XLSX, and PPTX from ZIP package entries',async t=>{
   const cases=[
     ['notes.docx',['[Content_Types].xml','word/document.xml'],'docx'],
     ['data.xlsx',['[Content_Types].xml','xl/workbook.xml'],'xlsx'],
-    ['slides.pptx',['[Content_Types].xml','ppt/presentation.xml'],'pptx']
+    ['slides.pptx',['[Content_Types].xml','ppt/presentation.xml'],'pptx'],
+    ['notes.odt',['content.xml','META-INF/manifest.xml'],'odt']
   ];
   for(const [name,entries,expected] of cases) await t.test(name,async()=>{
     const r=await detectFileFormat(file(name,await zip(entries).arrayBuffer()));assert.equal(r.format,expected);
