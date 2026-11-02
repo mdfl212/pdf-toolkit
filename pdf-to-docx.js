@@ -44,12 +44,15 @@ export function reconstructPdfLines(items, styles = {}) {
   return lines.map(line => {
     line.items.sort((a, b) => a.x - b.x);
     let text = '', previous = null;
+    const runs = [];
     for (const item of line.items) {
+      let prefix = '';
       if (previous) {
         const gap = item.x - (previous.x + previous.width);
-        if (gap > Math.max(1.5, previous.height * 0.18) && !/\\s$/.test(text) && !/^[,.;:!?%)\\]}]/.test(item.text)) text += ' ';
+        if (gap > Math.max(1.5, previous.height * 0.18) && !/\\s$/.test(text) && !/^[,.;:!?%)\\]}]/.test(item.text)) prefix = ' ';
       }
-      text += item.text;
+      text += prefix + item.text;
+      runs.push({ ...item, text: prefix + item.text });
       previous = item;
     }
     const sizes = line.items.map(item => item.size);
@@ -59,7 +62,7 @@ export function reconstructPdfLines(items, styles = {}) {
       bold: line.items.filter(item => item.bold).length > line.items.length / 2,
       italics: line.items.filter(item => item.italics).length > line.items.length / 2,
       font: line.items.find(item => item.font)?.font,
-      runs: line.items
+      runs
     };
   }).filter(line => line.text);
 }
