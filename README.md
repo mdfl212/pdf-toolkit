@@ -93,6 +93,19 @@ Pin frequently used tools with the star on a tool card. Search covers tool names
 - **PDF to Images** exports selected pages as PNG or JPEG, with standard/high/very high/maximum resolution choices. It previews and offers individual downloads for the first 24 selected pages; the ZIP contains every selected page.
 - Both directions run locally in the browser. Large images, high resolutions, or very long PDFs can consume substantial memory. The original files are not modified.
 
+### Work-in-progress tools (Batches 3–6)
+
+The following conversion and analysis tools are currently **WIP / troubleshooting only**. They are present in the interface, but their behavior has not yet been validated as reliable. Do not treat them as production-ready; verify outputs against the source document and report problems before relying on them.
+
+| Batch | Tool | Current status |
+|---|---|---|
+| 3 | Word (DOCX) to PDF | WIP — troubleshooting required |
+| 4 | PDF to editable DOCX | WIP — troubleshooting required |
+| 5 | Additional formats to PDF (XLSX, PPTX, ODT, RTF, HTML, TXT) | WIP — troubleshooting required |
+| 6 | Smart Document Assistant | WIP — troubleshooting required |
+
+These labels are status warnings only. The tools remain accessible so they can be tested and troubleshot. Earlier tools, including the Batch 2 image ↔ PDF workflows, are not included in this WIP designation.
+
 ### Word (DOCX) to PDF notes
 
 - **Word (DOCX) to PDF** uses docx-preview to render a DOCX document in the browser, then opens the browser's native print dialog. Choose **Save as PDF** to create the PDF. The resulting PDF retains selectable/searchable text because the browser prints rendered HTML text rather than rasterizing every page.
