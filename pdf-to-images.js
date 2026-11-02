@@ -3,7 +3,7 @@
   const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
   const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
   const $ = id => document.getElementById(id);
-  let file = null, busy = false, cancelled = false;
+  let file = null, busy = false, cancelled = false, previewUrls = [];
 
   function addUI() {
     if ($('panel-pdf-images')) return;
@@ -38,6 +38,7 @@
       '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><button type="button" class="btn btn-primary" id="pdf-images-run" disabled>Convert &amp; download ZIP</button><button type="button" class="btn btn-secondary" id="pdf-images-cancel" disabled>Cancel</button></div>',
       '<div class="progress-bar" id="pdf-images-progress-wrap" style="display:none"><div class="fill" id="pdf-images-progress-fill"></div></div>',
       '<div id="pdf-images-status" class="note" role="status" aria-live="polite" style="display:none;margin:0"></div>',
+      '<div id="pdf-images-preview" class="pdf-images-preview" style="display:none"></div>',
       '<div id="pdf-images-result" class="note" style="display:none;margin:0"></div></div>'
     ].join('');
     const before = $('panel-compress');
@@ -82,6 +83,7 @@
     $('pdf-images-drop').style.display = 'none';
     $('pdf-images-run').disabled = busy;
     $('pdf-images-result').style.display = 'none';
+    clearPreviews();
     status('');
   }
   window.PDFToolkitSetPdfImagesFile = setFile;
@@ -93,6 +95,7 @@
     $('pdf-images-drop').style.display = '';
     $('pdf-images-run').disabled = true;
     $('pdf-images-result').style.display = 'none';
+    clearPreviews();
     status('');
     progress(0, false);
   }
@@ -114,6 +117,22 @@
     lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
     return lib;
   }
+  function clearPreviews() {
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    previewUrls = [];
+    const preview = $('pdf-images-preview');
+    if (preview) { preview.replaceChildren(); preview.style.display = 'none'; }
+  }
+  function addPagePreview(blob, pageNumber, baseName, extension) {
+    const preview = $('pdf-images-preview');
+    if (!preview || pageNumber > 24) return;
+    const url = URL.createObjectURL(blob); previewUrls.push(url);
+    const card = document.createElement('article'); card.className = 'pdf-images-preview-card';
+    const image = document.createElement('img'); image.src = url; image.alt = 'Preview of PDF page ' + pageNumber;
+    const caption = document.createElement('span'); caption.textContent = 'Page ' + pageNumber;
+    const link = document.createElement('a'); link.href = url; link.download = baseName + '-page-' + String(pageNumber).padStart(4, '0') + '.' + extension; link.textContent = 'Download image';
+    card.append(image, caption, link); preview.append(card); preview.style.display = 'grid';
+  }
   function canvasBlob(canvas, mime, quality) {
     return new Promise((resolve, reject) => {
       canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Could not encode the page image.')), mime, quality);
@@ -124,7 +143,7 @@
   }
   async function run() {
     if (!file || busy) return;
-    cancelled = false; setBusy(true); progress(0); $('pdf-images-result').style.display = 'none';
+    cancelled = false; setBusy(true); progress(0); $('pdf-images-result').style.display = 'none'; clearPreviews();
     let documentProxy = null, canvas = null;
     try {
       if (!window.JSZip) throw new Error('ZIP library did not load. Refresh the page and try again.');
@@ -163,6 +182,7 @@
         if (cancelled) throw new Error('Conversion cancelled.');
         const blob = await canvasBlob(canvas, mime, format === 'jpeg' ? quality : undefined);
         zip.file(baseName + '-page-' + String(pageNumber).padStart(4, '0') + '.' + extension, blob);
+        addPagePreview(blob, pageNumber, baseName, extension);
         canvas.width = 0; canvas.height = 0;
         progress((i + 1) / pages.length * 85);
       }
@@ -178,7 +198,7 @@
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       progress(100);
-      $('pdf-images-result').textContent = 'ZIP created with ' + pages.length + ' image(s) in ' + (format === 'jpeg' ? 'JPEG' : 'PNG') + ' format. Page numbers are included in each filename. Review the images before sharing or uploading them.';
+      $('pdf-images-result').textContent = 'ZIP created with ' + pages.length + ' image(s) in ' + (format === 'jpeg' ? 'JPEG' : 'PNG') + ' format. Preview and download the first ' + Math.min(24, pages.length) + ' page image(s) individually below; the ZIP contains every selected page.';
       $('pdf-images-result').style.display = 'block';
       status('ZIP download started.');
     } catch (error) {
