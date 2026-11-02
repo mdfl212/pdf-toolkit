@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   browser:
-    name: \${{ matrix.browser }} browser smoke
+    name: ${{ matrix.browser }} browser smoke
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -24,10 +24,10 @@ jobs:
       - name: Install browser test dependencies
         run: npm install --no-save playwright jszip pptxgenjs
       - name: Install browser
-        run: npx playwright install --with-deps \${{ matrix.browser }}
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run existing unit tests
         run: node --experimental-default-type=module --test tests/*.test.mjs
       - name: Run Batch 5 browser QA
         env:
-          BROWSER: \${{ matrix.browser }}
+          BROWSER: ${{ matrix.browser }}
         run: node --test tests/browser/*.browser.test.mjs
