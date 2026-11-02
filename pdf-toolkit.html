@@ -3466,9 +3466,11 @@
       title.textContent = results.length === 1 ? 'File detected' : 'Detected files';
       const pdfCount = results.filter(item => item.detection.isPdf).length;
       const imageFiles = results.filter(item => ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(item.detection.format) && item.detection.route.available).map(item => item.file);
+      const docxCount = results.filter(item => item.detection.format === 'docx' && item.detection.route.available).length;
       summary.textContent = results.length + ' file' + (results.length === 1 ? '' : 's') +
         ' inspected locally · ' + pdfCount + ' PDF' + (pdfCount === 1 ? '' : 's') + ' ready to open' +
-        (imageFiles.length ? ' · ' + imageFiles.length + ' image' + (imageFiles.length === 1 ? '' : 's') + ' ready to convert' : '');
+        (imageFiles.length ? ' · ' + imageFiles.length + ' image' + (imageFiles.length === 1 ? '' : 's') + ' ready to convert' : '') +
+        (docxCount ? ' · ' + docxCount + ' DOCX document' + (docxCount === 1 ? '' : 's') + ' ready to convert' : '');
       section.querySelector('#workspace-convert-images')?.remove();
       if (imageFiles.length) {
         const convertAll = document.createElement('button');
@@ -3514,6 +3516,13 @@
           button.className = 'btn btn-primary btn-sm workspace-detection-action';
           button.textContent = 'Open PDF';
           button.addEventListener('click', () => setActiveDocument(file, detection));
+          row.append(button);
+        } else if (detection.format === 'docx' && detection.route.available) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-primary btn-sm workspace-detection-action';
+          button.textContent = 'Convert DOCX';
+          button.addEventListener('click', () => window.PDFToolkitOpenDocxConverter?.(file));
           row.append(button);
         } else if (detection.route.available && ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(detection.format)) {
           const button = document.createElement('button');
