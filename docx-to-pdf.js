@@ -1,3 +1,4 @@
+import { detectFileFormat } from './file-detection.js';
 export function sanitizePdfFilename(name) {
   const base = String(name || 'document').replace(/\.[^.]+$/, '');
   const safe = base.normalize('NFKC').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim();
@@ -82,10 +83,8 @@ function formatSize(bytes) {
 async function validateDocx(file) {
   if (!file || !/\.docx$/i.test(file.name)) throw new Error('Choose a .docx Word document. Legacy .doc files are not supported.');
   if (file.size < 22) throw new Error('This file is too small to be a valid DOCX document.');
-  const bytes = new Uint8Array(await file.slice(0, 4).arrayBuffer());
-  if (!(bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04)) {
-    throw new Error('The file does not have a valid DOCX ZIP package signature. Check that it is a genuine .docx file.');
-  }
+  const detection = await detectFileFormat(file);
+  if (detection.format !== 'docx') throw new Error('This file is not a recognized Word DOCX package. Check that it is a genuine .docx document.');
   return true;
 }
 function clearPreview() {
@@ -152,18 +151,18 @@ async function renderDocument() {
 function printDocument() {
   if (!rendered || rendering || printInProgress) return;
   printInProgress = true;
+  const previousTitle = document.title;
+  document.title = sanitizePdfFilename(selectedFile?.name).replace(/\.pdf$/i, '');
   document.body.classList.add('printing-docx');
   setStatus('In the print dialog, choose Save as PDF as the destination. Disable browser headers and footers if you do not want them.');
   const cleanup = () => {
     document.body.classList.remove('printing-docx');
+    document.title = previousTitle;
     printInProgress = false;
     window.removeEventListener('afterprint', cleanup);
   };
   window.addEventListener('afterprint', cleanup, { once: true });
   window.print();
-  setTimeout(() => {
-    if (printInProgress) cleanup();
-  }, 1200);
 }
 function clearFile() {
   if (rendering) return;
