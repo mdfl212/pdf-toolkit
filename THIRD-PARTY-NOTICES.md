@@ -41,5 +41,5 @@ A copy of the license is included at `licenses/docx-preview-Apache-2.0.txt`.
 
 ## docx
 
-This project loads the browser build of `docx` 9.15.1 from jsDelivr to generate editable Office Open XML documents. Copyright (c) docx contributors. Licensed under the MIT License. A copy is included at `licenses/docx-MIT.txt`.
+This project loads the browser build of `docx` 9.15.1 from jsDelivr to generate editable Office Open XML documents. Copyright (c) 2016 Dolan. Licensed under the MIT License. A copy is included at `licenses/docx-MIT.txt`.
 Source: https://github.com/dolanmiu/docx
