@@ -31,3 +31,11 @@ Version 2.0. See <https://github.com/qpdf/qpdf> and
 The qpdf runtime and WebAssembly file are fetched from jsDelivr when the
 repair engine is first used. PDF document bytes are passed to the local
 Web Worker and are not uploaded to the CDN.
+## docx-preview
+
+This project loads docx-preview 0.4.1 from jsDelivr at runtime.
+Copyright (c) 2016-2023 Volodymyr Baydalka.
+Licensed under the Apache License, Version 2.0.
+Source: https://github.com/VolodymyrBaydalka/docxjs
+License: https://www.apache.org/licenses/LICENSE-2.0
+
