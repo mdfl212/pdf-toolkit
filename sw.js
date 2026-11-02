@@ -8,7 +8,7 @@ const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', '.
   'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/WMFJS.bundle.js',
   'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/EMFJS.bundle.js',
   'https://esm.sh/@office-kit/pptx@0.28.0?bundle',
-  'https://esm.sh/@office-kit/pptx-preview@0.28.0?bundle',
+  'https://esm.sh/@office-kit/pptx-preview@0.21.0?bundle',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',

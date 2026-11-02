@@ -301,7 +301,7 @@ async function renderXlsx(file, target) {
 async function renderPptx(file, target) {
   const [core, preview] = await Promise.all([
     import('https://esm.sh/@office-kit/pptx@0.28.0?bundle'),
-    import('https://esm.sh/@office-kit/pptx-preview@0.28.0?bundle')
+    import('https://esm.sh/@office-kit/pptx-preview@0.21.0?bundle')
   ]);
   const presentation = await core.loadPresentation(await file.arrayBuffer());
   const slides = core.getSlides(presentation);

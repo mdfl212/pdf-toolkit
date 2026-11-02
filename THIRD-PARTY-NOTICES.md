@@ -55,4 +55,4 @@ The RTF to PDF workflow loads rtf.js 3.0.9 from jsDelivr to render RTF content l
 
 ## Office Kit PPTX renderer
 
-The PowerPoint to PDF workflow loads @office-kit/pptx and @office-kit/pptx-preview 0.28.0 from esm.sh to render slides locally in the browser. Licensed under the MIT License. Source: https://github.com/office-kit/pptx.
+The PowerPoint to PDF workflow loads @office-kit/pptx and @office-kit/pptx-preview 0.21.0 from esm.sh to render slides locally in the browser. Licensed under the MIT License. Source: https://github.com/office-kit/pptx.
