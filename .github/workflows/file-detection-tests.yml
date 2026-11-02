@@ -6,6 +6,7 @@ on:
     paths:
       - 'file-detection.js'
       - 'image-to-pdf.js'
+      - 'docx-to-pdf.js'
       - 'pdf-to-images.js'
       - 'tests/**'
       - '.github/workflows/file-detection-tests.yml'
