@@ -102,7 +102,7 @@ test('Batch 5 browser conversion smoke and compatibility pass',{timeout:900000},
     const buf=Buffer.from([0xff,0xfe,...Buffer.from('QA UTF16 LINE ONE\nQA UTF16 LINE TWO','utf16le')]);
     await uploadAndRender(payload('qa-text.txt',buf,'text/plain'),/QA UTF16 LINE ONE/);
     assert.equal(await page.locator('#additional-pdf-preview pre').innerText(),'QA UTF16 LINE ONE\nQA UTF16 LINE TWO');
-    await page.locator('#additional-pdf-print').click(); await page.waitForSelector('#additional-pdf-print-frame');
+    await page.locator('#additional-pdf-print').click(); await page.waitForSelector('#additional-pdf-print-frame',{state:'attached'});
     const srcdoc=await page.locator('#additional-pdf-print-frame').getAttribute('srcdoc');
     assert.match(srcdoc,/QA UTF16 LINE ONE/); assert.match(srcdoc,/default-src/); await clear();
   });
