@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {tokenize,splitIntoSentences,reconstructPageText,extractiveSummary,extractKeyTerms,rankQuestionEvidence,buildStudyPrompts,formatAssistantMarkdown} from '../smart-document-assistant.js';
+const pages=[{page:1,text:'Acute leukemia is a malignant disorder of blood-forming cells. It commonly presents with fatigue, fever, and bleeding. Diagnosis requires blood studies and bone marrow evaluation.'},{page:2,text:'Treatment depends on leukemia subtype and risk classification. Chemotherapy is a major treatment approach. Tumor lysis syndrome is a potentially serious complication after treatment begins.'}];
+test('tokenization normalizes words and removes punctuation',()=>assert.deepEqual(tokenize('Tumor-lysis syndrome, 2026!'),['tumor-lysis','syndrome','2026']));
+test('sentence splitting preserves source sentences',()=>assert.equal(splitIntoSentences(pages[0].text).length,3));
+test('page text reconstruction orders lines and inserts spaces from coordinates',()=>{const items=[{str:'second',transform:[1,0,0,10,40,80],width:30,height:10},{str:'first',transform:[1,0,0,10,0,80],width:25,height:10},{str:'next line',transform:[1,0,0,10,0,60],width:50,height:10}];assert.equal(reconstructPageText(items),'first second\nnext line');});
+test('extractive summary returns source sentences with page citations',()=>{const summary=extractiveSummary(pages,4);assert.ok(summary.length>0);assert.ok(summary.every(item=>pages.some(page=>page.page===item.page&&page.text.includes(item.text))));});
+test('key topics favor repeated terms across pages',()=>assert.ok(extractKeyTerms(pages,10).some(item=>item.term==='leukemia')));
+test('question evidence ranks relevant source sentences and keeps page numbers',()=>{const evidence=rankQuestionEvidence(pages,'What are the symptoms of acute leukemia?',3);assert.ok(evidence.length>0);assert.equal(evidence[0].page,1);assert.match(evidence[0].text,/fatigue|fever|bleeding/i);});
+test('unsupported question returns no evidence',()=>assert.deepEqual(rankQuestionEvidence(pages,'What is the capital of France?'),[]));
+test('study prompts are generic review prompts',()=>assert.match(buildStudyPrompts([{term:'leukemia'}])[0],/Define leukemia/));
+test('Markdown export includes citations and evidence framing',()=>{const result={fileName:'lecture.pdf',pageCount:2,textPages:2,emptyPages:0,summary:[{text:'A source sentence.',page:1}],terms:[{term:'leukemia'}],outline:[],prompts:['Define leukemia.']};const md=formatAssistantMarkdown(result,'What is leukemia?',[{text:'Leukemia is a disorder.',page:1}]);assert.match(md,/PDF p\. 1/);assert.match(md,/Matching source evidence/);assert.match(md,/Generated locally/);});
