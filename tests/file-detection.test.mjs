@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { detectFileFormat, formatFileSize } from '../file-detection.js';
 
 function file(name, bytes, type='') {
-  const blob=new Blob([bytes],{type});
+  const payload = Array.isArray(bytes) ? new Uint8Array(bytes) : bytes;
+  const blob=new Blob([payload],{type});
   Object.defineProperty(blob,'name',{value:name});
   return blob;
 }
