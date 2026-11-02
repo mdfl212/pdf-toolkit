@@ -52,7 +52,7 @@ test('identifies DOCX, XLSX, and PPTX from ZIP package entries',async t=>{
     ['notes.odt',['content.xml','META-INF/manifest.xml'],'odt']
   ];
   for(const [name,entries,expected] of cases) await t.test(name,async()=>{
-    const r=await detectFileFormat(file(name,await zip(entries).arrayBuffer()));assert.equal(r.format,expected);if(expected==='docx')assert.equal(r.route.available,true);
+    const r=await detectFileFormat(file(name,await zip(entries).arrayBuffer()));assert.equal(r.format,expected);if(['docx','xlsx','pptx','odt'].includes(expected))assert.equal(r.route.available,true);
   });
 });
 test('keeps legacy binary DOC files outside the DOCX converter route',async()=>{
@@ -63,6 +63,10 @@ test('detects RTF, HTML, and TXT',async()=>{
   assert.equal((await detectFileFormat(file('note.rtf','{\\rtf1 Hello}'))).format,'rtf');
   assert.equal((await detectFileFormat(file('page.dat','<!doctype html><html></html>'))).format,'html');
   assert.equal((await detectFileFormat(file('notes.txt','Plain UTF-8 notes'))).format,'txt');
+  for (const name of ['data.xlsx','slides.pptx','notes.odt','note.rtf','page.html','notes.txt']) {
+    const r=await detectFileFormat(file(name, name.endsWith('.rtf') ? '{\\rtf1 hi}' : name.endsWith('.html') ? '<html><body>hi</body></html>' : name.endsWith('.txt') ? 'hi' : name.endsWith('.odt') ? await zip(['content.xml','META-INF/manifest.xml']).arrayBuffer() : await zip(['[Content_Types].xml',name.endsWith('.xlsx') ? 'xl/workbook.xml' : 'ppt/presentation.xml']).arrayBuffer()));
+    assert.equal(r.route.available,true,name);
+  }
 });
 test('does not trust a false PDF extension',async()=>{
   const r=await detectFileFormat(file('fake.pdf','not a PDF'));assert.equal(r.format,'unknown');assert.match(r.warning,/filename suggests/i);

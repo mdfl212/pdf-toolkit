@@ -1,8 +1,14 @@
 /* PDF Toolkit service worker. */
-const CACHE = 'pdf-toolkit-v10';
-const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js', './file-detection.js', './image-to-pdf.js', './docx-to-pdf.js', './pdf-to-docx.js',
+const CACHE = 'pdf-toolkit-v11';
+const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js', './file-detection.js', './image-to-pdf.js', './docx-to-pdf.js', './pdf-to-docx.js', './additional-formats-to-pdf.js',
   'https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js',
   'https://cdn.jsdelivr.net/npm/docx@9.15.1/dist/index.iife.js',
+  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/RTFJS.bundle.js',
+  'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/WMFJS.bundle.js',
+  'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/EMFJS.bundle.js',
+  'https://esm.sh/@office-kit/pptx@0.28.0?bundle',
+  'https://esm.sh/@office-kit/pptx-preview@0.21.0?bundle',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs',
@@ -74,7 +80,7 @@ self.addEventListener('fetch', event => {
     if (hit) return hit;
     try {
       const res = await fetch(event.request);
-      if (res.ok && (event.request.url.startsWith(self.location.origin) || /cdn.jsdelivr.net|cdnjs.cloudflare.com|tessdata.projectnaptha.com/.test(event.request.url))) {
+      if (res.ok && (event.request.url.startsWith(self.location.origin) || /cdn.jsdelivr.net|cdn.sheetjs.com|cdnjs.cloudflare.com|esm.sh|tessdata.projectnaptha.com/.test(event.request.url))) {
         try { await cache.put(event.request, res.clone()); } catch (_) {}
       }
       return res;

@@ -9,6 +9,7 @@ on:
       - 'docx-to-pdf.js'
       - 'pdf-to-docx.js'
       - 'pdf-to-images.js'
+      - 'additional-formats-to-pdf.js'
       - 'tests/**'
       - '.github/workflows/file-detection-tests.yml'
   pull_request:

@@ -43,3 +43,16 @@ A copy of the license is included at `licenses/docx-preview-Apache-2.0.txt`.
 
 This project loads the browser build of `docx` 9.15.1 from jsDelivr to generate editable Office Open XML documents. Copyright (c) 2016 Dolan. Licensed under the MIT License. A copy is included at `licenses/docx-MIT.txt`.
 Source: https://github.com/dolanmiu/docx
+
+
+## SheetJS Community Edition
+
+The XLSX to PDF workflow loads SheetJS Community Edition 0.20.3 from the official SheetJS CDN to read workbook data locally in the browser. Licensed under the Apache License, Version 2.0. Source and license: https://git.sheetjs.com/SheetJS/sheetjs and https://www.apache.org/licenses/LICENSE-2.0.
+
+## rtf.js
+
+The RTF to PDF workflow loads rtf.js 3.0.9 from jsDelivr to render RTF content locally in the browser. Copyright (c) 2015 Thomas Bluemel. Licensed under the MIT License. Source: https://github.com/tbluemel/rtf.js.
+
+## Office Kit PPTX renderer
+
+The PowerPoint to PDF workflow loads @office-kit/pptx and @office-kit/pptx-preview 0.21.0 from esm.sh to render slides locally in the browser. Licensed under the MIT License. Source: https://github.com/office-kit/pptx.
