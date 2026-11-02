@@ -1,0 +1,25 @@
+name: Smart file detection tests
+
+on:
+  push:
+    branches: [main, feature/smart-file-detection]
+    paths:
+      - 'file-detection.js'
+      - 'tests/file-detection.test.mjs'
+      - '.github/workflows/file-detection-tests.yml'
+  pull_request:
+    paths:
+      - 'file-detection.js'
+      - 'tests/file-detection.test.mjs'
+      - '.github/workflows/file-detection-tests.yml'
+
+jobs:
+  file-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run file format detection tests
+        run: node --experimental-default-type=module --test tests/file-detection.test.mjs
