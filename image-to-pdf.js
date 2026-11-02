@@ -91,8 +91,8 @@ async function createPdf(){
   if(!window.PDFLib?.PDFDocument){setStatus('The PDF creation library did not load. Refresh the page and try again.',true);return;}
   busy=true;$('image-pdf-run').disabled=true;$('image-pdf-clear').disabled=true;$('image-pdf-add').disabled=true;
   $('image-pdf-progress-wrap').style.display='block';$('image-pdf-result').hidden=true;
-  const pdf=await window.PDFLib.PDFDocument.create();
   try{
+    const pdf=await window.PDFLib.PDFDocument.create();
     const size=$('image-pdf-size').value,fit=$('image-pdf-fit').value,margin=Number($('image-pdf-margin').value);
     for(let index=0;index<items.length;index++){
       const item=items[index];setStatus('Preparing image '+(index+1)+' of '+items.length+': '+item.file.name);
@@ -125,6 +125,8 @@ function init(){
   $('image-pdf-clear').addEventListener('click',()=>{items.forEach(item=>releaseUrl(item.previewUrl));items=[];setStatus('');$('image-pdf-result').hidden=true;renderItems();});
   $('image-pdf-run').addEventListener('click',createPdf);renderItems();
 }
-window.PDFToolkitSetImageFiles=files=>{if(document.getElementById('panel-image-pdf'))addFiles(files);};
-window.PDFToolkitOpenImageConverter=files=>{window.PDFToolkitSetImageFiles(files);document.querySelector('[data-panel="image-pdf"]')?.click();};
+if(typeof window!=='undefined'){
+  window.PDFToolkitSetImageFiles=files=>{if(document.getElementById('panel-image-pdf'))addFiles(files);};
+  window.PDFToolkitOpenImageConverter=files=>{window.PDFToolkitSetImageFiles(files);document.querySelector('[data-panel="image-pdf"]')?.click();};
+}
 if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();}
