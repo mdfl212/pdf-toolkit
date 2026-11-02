@@ -34,6 +34,7 @@
   <script src="./blank-pages.js" defer></script>
   <script src="./text-extract.js" defer></script>
   <script src="./pdf-to-images.js" defer></script>
+  <script type="module" src="./image-to-pdf.js"></script>
   <script src="./figure-images.js" defer></script>
   <style>
     :root {
@@ -1904,6 +1905,29 @@
       .workspace-card small, .category-copy small { font-size: .74rem; }
       .category-count { font-size: .68rem; }
     }
+    .image-pdf-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:16px 0 10px; color:var(--text-muted); font-size:.82rem; }
+    .image-pdf-list { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+    .image-pdf-item { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--surface); min-width:0; }
+    .image-pdf-item > img { width:76px; height:62px; flex:0 0 76px; object-fit:contain; border-radius:6px; background:var(--surface2); }
+    .image-pdf-item-info { display:flex; flex:1; flex-direction:column; gap:3px; min-width:0; }
+    .image-pdf-item-info strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.86rem; }
+    .image-pdf-item-info span { color:var(--text-muted); font-size:.72rem; }
+    .image-pdf-item-actions { display:flex; gap:5px; flex:0 0 auto; }
+    .image-pdf-controls { display:flex; flex-wrap:wrap; gap:14px; margin:16px 0; }
+    .image-pdf-controls .control-group { flex:1 1 180px; }
+    .image-pdf-run-row { margin:14px 0; }
+    .pdf-images-preview { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:14px 0; }
+    .pdf-images-preview-card { display:flex; flex-direction:column; gap:6px; min-width:0; padding:9px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+    .pdf-images-preview-card img { width:100%; height:170px; object-fit:contain; background:var(--surface2); border-radius:6px; }
+    .pdf-images-preview-card span { color:var(--text-muted); font-size:.76rem; }
+    .pdf-images-preview-card a { color:var(--accent); font-size:.76rem; text-decoration:none; }
+    #image-pdf-status[data-error="true"] { border-color:var(--danger); }
+    @media (max-width:600px) {
+      .image-pdf-item { align-items:flex-start; flex-wrap:wrap; }
+      .image-pdf-item-info { flex-basis:calc(100% - 100px); }
+      .image-pdf-item-actions { margin-left:88px; }
+      .image-pdf-toolbar { align-items:flex-start; flex-direction:column; }
+    }
     .workspace-detection-results { margin:-4px 0 24px; border:1px solid var(--border); border-radius:13px; background:var(--surface); overflow:hidden; }
     .workspace-detection-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border); }
     .workspace-detection-head h2 { margin:0; font-size:1.05rem; }
@@ -3188,7 +3212,8 @@
       { id:'metadata', name:'PDF Metadata', category:'inspect', icon:'ⓘ', description:'View document information and properties.' },
       { id:'repair', name:'Repair PDF', category:'inspect', icon:'🩹', description:'Rebuild recoverable PDF structure before editing or extracting pages.' },
       { id:'figure-images', name:'Extract Figures', category:'advanced', icon:'▧', description:'Extract images and figures from a PDF.' },
-      { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'▧', description:'Convert PDF pages to image files.' },
+      { id:'image-pdf', name:'Images to PDF', category:'advanced', icon:'image', description:'Combine, preview and reorder images into one PDF.' },
+      { id:'pdf-images', name:'PDF to Images', category:'advanced', icon:'image', description:'Export selected PDF pages as PNG or JPEG images.' },
       { id:'batch', name:'Batch Processor', category:'advanced', icon:'▦', description:'Run multiple PDF operations in one batch.' }
     ];
     const toolCategories = [
@@ -3198,7 +3223,7 @@
       { id:'compress', name:'Compress & Optimize', description:'Reduce file size and optimize PDFs.' },
       { id:'protect', name:'Protect & Manage', description:'Set passwords and add watermarks.' },
       { id:'inspect', name:'Inspect & Analyze', description:'View PDF details and structure.' },
-      { id:'advanced', name:'Advanced Tools', description:'Batch processing and image extraction.' }
+      { id:'advanced', name:'Advanced Tools', description:'Image conversion, batch processing and extraction.' }
     ];
     const favoriteTools = new Set(JSON.parse(localStorage.getItem('pdf-toolkit-favorites') || '[]'));
     const recentTools = JSON.parse(localStorage.getItem('pdf-toolkit-recents') || '[]');
@@ -3230,7 +3255,7 @@
       return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name] || iconPaths.chapters}</g></svg>`;
     }
     function toolIconSvg(id) {
-      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'pdf-images':'images', batch:'batch' };
+      const names = { chapters:'chapters', split:'split', 'text-extract':'text', merge:'merge', reorder:'reorder', rotate:'rotate', delete:'delete', bookmarks:'bookmark', 'blank-pages':'blank', ocr:'ocr', compress:'compress', watermark:'watermark', security:'security', metadata:'metadata', repair:'repair', 'figure-images':'image', 'image-pdf':'image', 'pdf-images':'images', batch:'batch' };
       return svgIcon(names[id] || 'chapters');
     }
     function categoryIconSvg(id) {
@@ -3405,8 +3430,18 @@
       section.hidden = false;
       title.textContent = results.length === 1 ? 'File detected' : 'Detected files';
       const pdfCount = results.filter(item => item.detection.isPdf).length;
+      const imageFiles = results.filter(item => ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(item.detection.format) && item.detection.route.available).map(item => item.file);
       summary.textContent = results.length + ' file' + (results.length === 1 ? '' : 's') +
-        ' inspected locally · ' + pdfCount + ' PDF' + (pdfCount === 1 ? '' : 's') + ' ready to open';
+        ' inspected locally · ' + pdfCount + ' PDF' + (pdfCount === 1 ? '' : 's') + ' ready to open' +
+        (imageFiles.length ? ' · ' + imageFiles.length + ' image' + (imageFiles.length === 1 ? '' : 's') + ' ready to convert' : '');
+      section.querySelector('#workspace-convert-images')?.remove();
+      if (imageFiles.length) {
+        const convertAll = document.createElement('button');
+        convertAll.type = 'button'; convertAll.id = 'workspace-convert-images';
+        convertAll.className = 'btn btn-primary btn-sm'; convertAll.textContent = 'Combine images into PDF';
+        convertAll.addEventListener('click', () => window.PDFToolkitOpenImageConverter?.(imageFiles));
+        section.querySelector('.workspace-detection-head').insertBefore(convertAll, section.querySelector('#workspace-detection-clear'));
+      }
 
       for (const item of results) {
         const { file, detection } = item;
@@ -3426,6 +3461,7 @@
         const status = document.createElement('span');
         status.className = 'workspace-detection-status';
         if (detection.isPdf) status.textContent = 'Verified PDF · ready to open in your existing workspace';
+        else if (detection.route.available) status.textContent = 'Recognized · ' + detection.route.label + ' is ready to use locally';
         else if (detection.route.batch) status.textContent = 'Recognized · ' + detection.route.label + ' is planned for ' + detection.route.batch;
         else if (detection.format === 'zip') status.textContent = 'ZIP archive recognized, but its document type is not supported yet';
         else status.textContent = 'Format not recognized · no conversion route is available';
@@ -3444,10 +3480,17 @@
           button.textContent = 'Open PDF';
           button.addEventListener('click', () => setActiveDocument(file, detection));
           row.append(button);
+        } else if (detection.route.available && ['jpeg','png','webp','gif','bmp','tiff','heic'].includes(detection.format)) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-primary btn-sm workspace-detection-action';
+          button.textContent = 'Convert image';
+          button.addEventListener('click', () => window.PDFToolkitOpenImageConverter?.([file]));
+          row.append(button);
         } else {
           const phase = document.createElement('span');
           phase.className = 'workspace-detection-phase';
-          phase.textContent = detection.route.batch || 'Unsupported';
+          phase.textContent = detection.route.batch || (detection.route.available ? 'Ready' : 'Unsupported');
           row.append(phase);
         }
         list.append(row);
