@@ -72,7 +72,7 @@ Smaller, syllabus-scoped sources usually work better than one giant book file.
 
 ## Tools in the app
 
-The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified and routed to the conversion workflows that are currently available. Images can now be combined into a PDF or PDF pages exported as images; Word conversion is planned for Batch 3 and other document formats for a later batch. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
+The app opens to a **document workspace** with smart local file detection, common tasks, recently used tools, favorites, and search. Drop or select a document to identify its format from its content and file signature. Verified PDFs open directly in the existing PDF workspace; recognized image, Word, text, and Office formats are identified and routed to the conversion workflows that are currently available. Images can now be combined into a PDF or PDF pages exported as images. DOCX files can be rendered locally and sent to the browser's native Print / Save as PDF workflow; legacy DOC and other document formats remain outside this batch. Upload a PDF once from the workspace homepage: its preview and source file remain available while you switch tools, and supported tools preload that active document automatically. Use **Change PDF** to replace the working document. The source remains in the browser for the current session; each editing tool works from its own PDF instance so one tool's changes do not silently overwrite the shared source. Use the category navigation to find a task; the Chapter Extractor remains available for bookmark-based textbook splitting. Existing tools keep their browser-based processing flows.
 
 | Category | Tools |
 |----------|-------|
@@ -82,7 +82,7 @@ The app opens to a **document workspace** with smart local file detection, commo
 | **Compress & Optimize** | Compress PDF |
 | **Protect & Manage** | Password Protect; Watermark |
 | **Inspect & Analyze** | PDF Metadata |
-| **Advanced Tools** | Images to PDF; PDF to Images; Batch Processor; Extract Figures |
+| **Advanced Tools** | Word (DOCX) to PDF; Images to PDF; PDF to Images; Batch Processor; Extract Figures |
 
 Pin frequently used tools with the star on a tool card. Search covers tool names and descriptions; recent tools and favorites are saved in this browser.
 
@@ -92,6 +92,13 @@ Pin frequently used tools with the star on a tool card. Search covers tool names
 - JPEG and PNG files are embedded directly. Other recognized image formats are decoded by the browser and converted to PNG before being embedded; HEIC/HEIF and TIFF decoding depends on browser support.
 - **PDF to Images** exports selected pages as PNG or JPEG, with standard/high/very high/maximum resolution choices. It previews and offers individual downloads for the first 24 selected pages; the ZIP contains every selected page.
 - Both directions run locally in the browser. Large images, high resolutions, or very long PDFs can consume substantial memory. The original files are not modified.
+
+### Word (DOCX) to PDF notes
+
+- **Word (DOCX) to PDF** uses docx-preview to render a DOCX document in the browser, then opens the browser's native print dialog. Choose **Save as PDF** to create the PDF. The resulting PDF retains selectable/searchable text because the browser prints rendered HTML text rather than rasterizing every page.
+- The document is processed locally; it is not uploaded to a conversion server. The DOCX renderer is loaded from a pinned CDN version and is cached by the service worker after it has been fetched once.
+- DOCX layout is not guaranteed to match Microsoft Word exactly. Pagination, fonts, floating objects, advanced tables, tracked changes, and unsupported Word features can differ. Review the preview and the saved PDF.
+- The browser controls the final Save as PDF action; the app cannot silently create a file from the native print dialog. Legacy .doc files are not supported by this batch.
 
 ### OCR notes
 
@@ -148,8 +155,8 @@ Install as an app (PWA) when served over HTTPS for offline use of cached librari
 
 ### Smart file detection tests
 
-Run the format-detection unit tests with Node.js:
+Run the browser utility unit tests with Node.js:
 
 ```bash
-node --experimental-default-type=module --test tests/file-detection.test.mjs
+node --experimental-default-type=module --test tests/*.test.mjs
 ```
