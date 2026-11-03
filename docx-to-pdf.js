@@ -41,7 +41,8 @@ export async function inspectDocxFonts(zip, fontCheck = () => true) {
   });
   return { fonts, unavailable };
 }
-\nconst $ = id => document.getElementById(id);
+
+const $ = id => document.getElementById(id);
 let selectedFile = null, rendering = false, rendered = false, printInProgress = false;
 let renderToken = 0;
 let rendererLoadPromise = null;
