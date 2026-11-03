@@ -114,11 +114,11 @@ The OCR workflow still runs locally in the browser and is intended to add a sear
 
 ### Word (DOCX) to PDF notes
 
-- **Word (DOCX) to PDF** uses docx-preview to render a DOCX document in the browser, then opens the browser's native print dialog. Choose **Save as PDF** to create the PDF. The resulting PDF retains selectable/searchable text because the browser prints rendered HTML text rather than rasterizing every page.
-- The document is processed locally; it is not uploaded to a conversion server. JSZip 3.10.1 and docx-preview 0.4.1 are bundled in the repository and cached as local app-shell assets by the service worker. The app tries the bundled renderer first and uses the pinned CDN only as a recovery fallback if a local asset is unavailable.
-- DOCX layout is not guaranteed to match Microsoft Word exactly. Pagination, fonts, floating objects, advanced tables, tracked changes, and unsupported Word features can differ. Review the preview and the saved PDF.
-- The browser controls the final Save as PDF action; the app cannot silently create a file from the native print dialog. Legacy .doc files are not supported by this batch.
-
+- **Word (DOCX) to PDF** currently uses docx-preview in the browser and the browser's native print engine. Choose **Save as PDF** in the print dialog. Output text remains selectable/searchable; pages are not intentionally rasterized.
+- Processing stays on the device. JSZip 3.10.1 and docx-preview 0.4.1 are bundled locally, with pinned CDN recovery fallbacks.
+- Before rendering, the converter inspects font declarations in the DOCX package (document, styles, font table, and theme parts). After rendering, it reports fonts that the active browser appears unable to resolve. This is a warning only: browser font checks cannot prove exact font metrics, and a font may still be substituted. Install the original font where licensed and rerender when fidelity matters. The converter never globally forces Consolas or another font; it respects each document's own font declarations as far as the renderer/browser supports them.
+- This is a **browser-rendered conversion, not a Word- or LibreOffice-grade renderer**. Pagination, floating objects, SmartArt, equations, complex tables, tracked changes, embedded fonts, and Word-only features may differ. Inspect every page, especially line wrapping, diagrams, tables, headers, and footers.
+- The browser controls the final Save as PDF action; the app cannot silently retrieve or post-process the PDF created by the print dialog. For documents requiring high-fidelity reproduction, use a desktop/server renderer such as LibreOffice and compare the result with the source. Legacy .doc files are not supported.
 ### Additional formats to PDF notes
 
 - **XLSX**: each worksheet is rendered as a printable table using cached cell values. Formulas are not recalculated, and charts, drawings, macros, and exact Excel print settings are not preserved. Workbooks larger than 250,000 printable cells are rejected to protect browser memory.
