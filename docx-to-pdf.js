@@ -151,7 +151,8 @@ function addPanel() {
     '<div class="docx-pdf-filebar" id="docx-pdf-filebar" hidden><div><strong id="docx-pdf-filename"></strong><span id="docx-pdf-filemeta"></span></div><button class="btn btn-secondary btn-sm" id="docx-pdf-change" type="button">Change file</button></div>',
     '<div class="docx-pdf-actions"><button class="btn btn-primary" id="docx-pdf-render" type="button" disabled>Prepare document preview</button><button class="btn btn-secondary" id="docx-pdf-print" type="button" disabled>Print / Save as PDF</button><button class="btn btn-secondary btn-sm" id="docx-pdf-clear" type="button" disabled>Clear</button></div>',
     '<div class="docx-pdf-progress" id="docx-pdf-progress" hidden><span class="docx-pdf-spinner"></span><span>Rendering Word document…</span></div>',
-    '<div class="note" id="docx-pdf-status" role="status" aria-live="polite" hidden></div>',\n    '<div class="note" id="docx-pdf-font-report" hidden></div>',
+    '<div class="note" id="docx-pdf-status" role="status" aria-live="polite" hidden></div>',
+    '<div class="note" id="docx-pdf-font-report" hidden></div>',
     '<div class="docx-pdf-preview-heading" id="docx-pdf-preview-heading" hidden><strong>Document preview</strong><span id="docx-pdf-page-count"></span></div>',
     '<div id="docx-pdf-style-host" class="docx-pdf-style-host"></div><div id="docx-pdf-preview" class="docx-pdf-preview" aria-label="Rendered Word document preview"></div>',
     '<div class="note docx-pdf-note"><strong>Conversion limits:</strong> This browser-only workflow uses docx-preview and the browser print engine, not Microsoft Word or LibreOffice. It preserves selectable text but cannot guarantee Word-identical pagination, floating objects, SmartArt, equations, tracked changes, or complex tables. Review font warnings and every page before sharing. For high-fidelity conversion, use a desktop/server renderer such as LibreOffice. Legacy .doc files are not supported.</div>'
@@ -283,7 +284,8 @@ function clearFile() {
   selectedFile = null;
   clearPreview();
   $('docx-pdf-input').value = '';
-  $('docx-pdf-filebar').hidden = true;\n  if ($('docx-pdf-font-report')) { $('docx-pdf-font-report').hidden = true; $('docx-pdf-font-report').textContent = ''; }
+  $('docx-pdf-filebar').hidden = true;
+  if ($('docx-pdf-font-report')) { $('docx-pdf-font-report').hidden = true; $('docx-pdf-font-report').textContent = ''; }
   $('docx-pdf-render').disabled = true;
   $('docx-pdf-clear').disabled = true;
   setStatus('');
