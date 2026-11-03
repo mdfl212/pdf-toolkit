@@ -1,7 +1,6 @@
 /* PDF Toolkit service worker. */
-const CACHE = 'pdf-toolkit-v12';
-const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js', './file-detection.js', './image-to-pdf.js', './docx-to-pdf.js', './pdf-to-docx.js', './additional-formats-to-pdf.js', './smart-document-assistant.js',
-  'https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js',
+const CACHE = 'pdf-toolkit-v13';
+const SHELL = ['./', './pdf-toolkit.html', './mobile-process.js', './ocr.js', './security.js', './blank-pages.js', './text-extract.js', './pdf-to-images.js', './figure-images.js', './file-detection.js', './image-to-pdf.js', './docx-to-pdf.js', './vendor/jszip-3.10.1.min.js', './vendor/docx-preview-0.4.1.min.js', './pdf-to-docx.js', './additional-formats-to-pdf.js', './smart-document-assistant.js',
   'https://cdn.jsdelivr.net/npm/docx@9.15.1/dist/index.iife.js',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/rtf.js@3.0.9/dist/RTFJS.bundle.js',
