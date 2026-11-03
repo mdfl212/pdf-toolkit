@@ -89,6 +89,10 @@ function setBusy(value) {
   $('pdf-docx-progress').hidden = !value;
 }
 function showPanel() {
+  if (typeof window.PDFToolkitOpenTool === 'function') {
+    window.PDFToolkitOpenTool('pdf-docx');
+    return;
+  }
   document.querySelectorAll('.panel').forEach(panel => panel.classList.toggle('active', panel.id === 'panel-pdf-docx'));
   document.querySelectorAll('.tool-btn').forEach(button => button.classList.toggle('active', button.dataset.panel === 'pdf-docx'));
   document.querySelectorAll('.mobile-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'tools'));
