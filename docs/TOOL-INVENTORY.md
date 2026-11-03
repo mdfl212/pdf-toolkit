@@ -1,83 +1,131 @@
 # PDF Toolkit tool inventory
 
-Audit basis: `pdf-toolkit.html` tool catalog and navigation, the page's registered panels and handlers, script imports, and the current README. This is an inventory of the current repository state, not a claim that every listed tool is production-ready.
+**Audit basis:** `main` source reviewed 2026-11-03. This records registered tools and code entry points; it is not a certification that every feature has passed end-to-end QA.
 
-## Existing tool catalog
+## Summary
 
-| Category | Tool | Registry ID | Current status / notes |
-|---|---|---|---|
-| Split & Extract | Chapter Extractor | `chapters` | Implemented; bookmark-based chapter extraction |
-| Split & Extract | Split / Extract Pages | `split` | Implemented; page ranges and individual-page splitting |
-| Split & Extract | Extract Text | `text-extract` | Implemented; extracts selectable PDF text |
-| Merge & Organize | Merge PDFs | `merge` | Implemented |
-| Merge & Organize | Reorder Pages | `reorder` | Implemented |
-| Merge & Organize | Rotate Pages | `rotate` | Implemented |
-| Merge & Organize | Delete Pages | `delete` | Implemented |
-| Merge & Organize | Bookmark Manager | `bookmarks` | Implemented; inspect/edit outline and write bookmarks |
-| Merge & Organize | Remove Blank Pages | `blank-pages` | Implemented via separate module |
-| OCR & Searchability | OCR & Searchable PDF | `ocr` | Available, explicitly marked WIP in UI and README |
-| Compress & Optimize | Compress PDF | `compress` | Implemented; basic optimization and image-based stronger compression have different trade-offs |
-| Protect & Manage | Watermark | `watermark` | Implemented |
-| Protect & Manage | Password Protect | `security` | Implemented via separate security module |
-| Inspect & Analyze | PDF Metadata | `metadata` | Implemented; metadata inspection/editing |
-| Inspect & Analyze | Smart Document Assistant | `assistant` | Available, marked WIP; local extractive analysis, not generative AI |
-| Inspect & Analyze | Repair PDF | `repair` | Available; repair path uses qpdf where available; retain this as diagnostic/recovery rather than general editing |
-| Advanced Tools | Extract Figures | `figure-images` | Implemented via separate module |
-| Advanced Tools | Word (DOCX) to PDF | `docx-pdf` | Available, marked WIP; browser renderer + native print/save as PDF |
-| Advanced Tools | Additional formats to PDF | `additional-formats` | Available, marked WIP; XLSX, PPTX, ODT, RTF, HTML and TXT |
-| Advanced Tools | PDF to editable DOCX | `pdf-docx` | Available, marked WIP; reconstructs editable text, not original layout |
-| Advanced Tools | Images to PDF | `image-pdf` | Implemented via separate module |
-| Advanced Tools | PDF to Images | `pdf-images` | Implemented via separate module |
-| Advanced Tools | Batch Processor | `batch` | Implemented; multi-operation batch workflow |
+- **23 tools** in **7 categories**.
+- **5 tools are explicitly marked WIP / troubleshooting** in the catalog: OCR, Smart Document Assistant, DOCX to PDF, Additional formats to PDF, and PDF to editable DOCX.
+- The category-based hybrid workspace already exists. It includes category navigation, tool search, Common Tasks, favorites, recent tools, tool cards, and a shared active-PDF workspace.
+- The catalog is declared in `toolCatalog` in `pdf-toolkit.html`. Some tool panels are injected by separately loaded JavaScript modules.
 
-**Current catalog count: 22 tools** across the seven categories.
+## Complete tool catalog
+
+| Category | Tool | Registry ID | Implementation entry point | Status / notes |
+|---|---|---|---|---|
+| Split & Extract | Chapter Extractor | `chapters` | `pdf-toolkit.html` | Bookmark-based chapter extraction |
+| Split & Extract | Split / Extract Pages | `split` | `pdf-toolkit.html` | Page ranges and individual-page splitting |
+| Split & Extract | Extract Text | `text-extract` | `text-extract.js` | Extracts existing selectable text; does not OCR scans |
+| Merge & Organize | Merge PDFs | `merge` | `pdf-toolkit.html` | Combines PDFs |
+| Merge & Organize | Reorder Pages | `reorder` | `pdf-toolkit.html` | Reorders pages |
+| Merge & Organize | Rotate Pages | `rotate` | `pdf-toolkit.html` | Rotates selected pages or the document |
+| Merge & Organize | Delete Pages | `delete` | `pdf-toolkit.html` | Removes selected pages |
+| Merge & Organize | Bookmark Manager | `bookmarks` | `pdf-toolkit.html` | Inspects and edits the PDF outline |
+| Merge & Organize | Remove Blank Pages | `blank-pages` | `blank-pages.js` | Detects and removes blank pages |
+| OCR & Searchability | OCR & Searchable PDF | `ocr` | `ocr.js` | **WIP** — recognition accuracy and edge cases need validation |
+| Compress & Optimize | Compress PDF | `compress` | `pdf-toolkit.html` | Basic optimization and stronger image-based compression; stronger mode may rasterize pages and lose text/features |
+| Protect & Manage | Watermark | `watermark` | `pdf-toolkit.html` | Applies text watermark |
+| Protect & Manage | Password Protect | `security` | `security.js` | Password protection workflow |
+| Inspect & Analyze | PDF Metadata | `metadata` | `pdf-toolkit.html` | Views document properties |
+| Inspect & Analyze | Smart Document Assistant | `assistant` | `smart-document-assistant.js` + panel in `pdf-toolkit.html` | **WIP** — local extractive summary and source-sentence evidence, not generative AI |
+| Inspect & Analyze | Repair PDF | `repair` | `pdf-toolkit.html` | Attempts structural repair/rewrite of recoverable PDFs |
+| Advanced Tools | Extract Figures | `figure-images` | `figure-images.js` | Extracts images/figures from PDF pages |
+| Advanced Tools | Word (DOCX) to PDF | `docx-pdf` | `docx-to-pdf.js` | **WIP** — browser rendering and native Print/Save as PDF, not Word/LibreOffice-grade rendering |
+| Advanced Tools | Additional formats to PDF | `additional-formats` | `additional-formats-to-pdf.js` | **WIP** — XLSX, PPTX, ODT, RTF, HTML, and TXT browser-rendering workflows |
+| Advanced Tools | PDF to editable DOCX | `pdf-docx` | `pdf-to-docx.js` | **WIP** — reconstructs editable paragraphs; does not recover original DOCX layout |
+| Advanced Tools | Images to PDF | `image-pdf` | `image-to-pdf.js` | Combines images into a PDF |
+| Advanced Tools | PDF to Images | `pdf-images` | `pdf-to-images.js` | Exports PDF pages as PNG/JPEG |
+| Advanced Tools | Batch Processor | `batch` | `pdf-toolkit.html` | Runs supported operations in a batch workflow |
+
+## Category counts
+
+| Category | Count |
+|---|---:|
+| Split & Extract | 3 |
+| Merge & Organize | 6 |
+| OCR & Searchability | 1 |
+| Compress & Optimize | 1 |
+| Protect & Manage | 2 |
+| Inspect & Analyze | 3 |
+| Advanced Tools | 7 |
+| **Total** | **23** |
 
 ## Existing discovery/navigation features
 
-The current page already contains the proposed hybrid navigation foundation:
+The current workspace already implements:
 
-- Seven category filters, with a sidebar and mobile category navigation.
-- Homepage tool search across tool names/descriptions.
-- Tool cards with descriptions and favorite toggles.
-- Favorites and the five most recently used tools stored in browser local storage.
-- Common-task/document workspace entry point and upload-once PDF workspace.
-- Shared active PDF is passed into supported tools without making each tool own the source upload.
+- Seven categories in `toolCategories`, with desktop and mobile category navigation.
+- A central `toolCatalog` containing the 23 entries above.
+- Search across tool names, descriptions, and category names.
+- Common Tasks shortcuts (currently Chapter Extractor, OCR, Compress, and Merge).
+- Favorites and a five-item recent-tools list saved in browser local storage.
+- Category counts and descriptive tool cards.
+- A shared active-PDF workspace for compatible tools.
 
-Therefore, the category-based reorganization described in the project proposal is already substantially present in the current code. A second navigation rewrite would duplicate existing work and add regression risk. The next UI work should be targeted polish and coverage, not replacing this architecture.
+**Conclusion:** Do not rebuild the navigation from scratch. Refine and validate the existing hybrid workspace.
 
-## Category mapping decisions
+## Category mapping and distinctions
 
-- **Repair PDF** remains under **Inspect & Analyze** because its current purpose is diagnosis/recovery of damaged structure, not routine page editing.
-- **Extract Figures** remains under **Advanced Tools** because it extracts embedded visual assets rather than reorganizing PDF pages.
-- **PDF/DOCX and other format conversions** remain under **Advanced Tools** because they are specialized format workflows.
-- **Batch Processor** remains under **Advanced Tools**. A future batch capability can be exposed as a homepage shortcut without creating a duplicate tool entry.
-- **OCR** stays in its own category. Its WIP label must remain visible until accuracy and edge-case validation is complete.
+- **Extract Text** reads text already present in a PDF text layer; **OCR** recognizes text from scanned/image-only pages. These are complementary.
+- **Chapter Extractor** derives chapter ranges from existing bookmarks; **Bookmark Manager** inspects and edits the outline.
+- **Repair PDF** stays under **Inspect & Analyze** because it is a diagnostic/recovery workflow, even though it changes the file.
+- **Extract Figures** stays under **Advanced Tools** because it extracts visual assets rather than reorganizing pages.
+- Format conversions and Batch Processor stay under **Advanced Tools**.
 
-## Proposed functions not currently represented as standalone tools
+## Proposed functions not currently represented as standalone catalog tools
 
-These were mentioned in the earlier category proposal but are **not present as standalone entries in the current tool catalog**. They should not be advertised as available until implemented and tested:
+The earlier category proposal mentioned the following, but there is no dedicated catalog entry for them in the audited source. Do not advertise them as available until implemented and tested:
 
-- Insert pages from another PDF.
-- Create a new PDF from a blank page / insert blank pages.
-- Linearize / fast-web-view optimization.
-- Flatten forms/annotations.
+- Insert pages from another PDF or create/insert blank pages.
+- Linearize / Fast Web View optimization.
+- Flatten forms or annotations.
 - Remove arbitrary unused PDF objects.
 - Dedicated batch compression.
 - Standalone metadata removal.
-- A distinct PDF structural-validation report beyond the existing metadata/repair flows.
+- A distinct PDF structural-validation report beyond existing metadata/repair workflows.
 
-Some related functionality may be achievable indirectly in existing workflows; this list means there is no dedicated catalog entry or verified standalone workflow for it.
+Related functionality may be achievable indirectly; this list means there is no dedicated standalone tool entry confirmed by the catalog.
 
-## Recommended next actions
+## Audit findings and recommended follow-up
 
-1. Preserve the existing category/search/favorites/recent-tools architecture.
-2. Add automated coverage that verifies every catalog ID resolves to a usable panel or registered external module, and every tool has a valid category, description, and status.
-3. Run browser smoke tests for all 22 tools, including shared active-file handoff and mobile navigation.
-4. Prioritize reliability testing for the tools marked WIP: OCR, DOCX to PDF, additional formats to PDF, PDF to DOCX, and Smart Document Assistant.
-5. After those checks, consider small UI improvements: clearer WIP labels, category counts, keyboard-accessible search, and a visible Common Tasks section.
+### 1. Consolidate tool metadata
 
-## Source files observed
+The central catalog and categories are in `pdf-toolkit.html`, while several modules independently inject sidebar buttons and panels. This creates two navigation metadata sources: the central catalog and module-created buttons.
 
-- `pdf-toolkit.html` — tool catalog, categories, navigation, tool cards, shared workspace and many PDF panels.
-- `mobile-process.js`, `ocr.js`, `security.js`, `blank-pages.js`, `text-extract.js`, `pdf-to-images.js`, `image-to-pdf.js`, `docx-to-pdf.js`, `pdf-to-docx.js`, `additional-formats-to-pdf.js`, `smart-document-assistant.js`, `figure-images.js` — separately loaded processing/conversion modules.
-- `README.md` — current user-facing feature inventory and WIP caveats.
+**Recommendation:** Gradually move tool metadata (ID, category, title, description, icon, readiness, and entry point) into one registry contract. Preserve existing panel IDs and processing functions during migration.
+
+### 2. Centralize panel navigation
+
+Some modules attach their own click handlers and manually toggle active panels, while the main page also has a central `showPanel()`. This can lead to inconsistent navigation state, recent-tool tracking, keyboard behavior, or active-document handoff.
+
+**Recommendation:** Route all tool launches through one central panel activation contract/event. Keep processing logic untouched during this refactor.
+
+### 3. Keep readiness labels evidence-based
+
+The five WIP labels should remain until each tool passes documented tests with representative files. A tool being accessible is not proof of production readiness. The README also describes OCR and conversion limitations that should remain visible to users.
+
+### 4. Add registry/navigation tests
+
+The README documents Node tests for smart file detection, but no equivalent test is documented for catalog/category consistency and navigation registration.
+
+**Recommendation:** Add automated checks that:
+- Every catalog ID is unique and references a valid category.
+- Every catalog item has a name, description, and valid status.
+- Every item resolves to a static panel or an explicitly registered module-created panel.
+- Category counts match the catalog.
+- Tool launching records recent use and preserves the shared active PDF where supported.
+
+Then run browser smoke tests across desktop/mobile for all 23 tools.
+
+## Recommended sequence
+
+1. Preserve the existing seven categories and 23 IDs.
+2. Add catalog and panel-registration consistency tests.
+3. Centralize panel activation and recent-tool tracking.
+4. Improve category descriptions and Common Tasks based on real workflows.
+5. Validate the five WIP tools with representative documents before changing their status.
+6. Only then consider adding the proposed standalone tools above.
+
+## Scope and limitations
+
+“Listed without WIP label” means only that the catalog does not mark the tool WIP. It is not a guarantee of comprehensive regression, security, or cross-browser validation. This audit reviewed the catalog, source entry points, navigation handlers, and README notes; it did not execute every tool against a test corpus.
