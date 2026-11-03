@@ -77,6 +77,10 @@ function clearPreview() {
   $('additional-pdf-print').disabled = true;
 }
 function showPanel() {
+  if (typeof window.PDFToolkitOpenTool === 'function') {
+    window.PDFToolkitOpenTool('additional-formats');
+    return;
+  }
   document.querySelectorAll('.panel').forEach(panel => panel.classList.toggle('active', panel.id === 'panel-additional-formats'));
   document.querySelectorAll('.tool-btn').forEach(button => button.classList.toggle('active', button.dataset.panel === 'additional-formats'));
   document.querySelectorAll('.mobile-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'tools'));
