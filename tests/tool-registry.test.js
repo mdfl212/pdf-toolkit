@@ -18,7 +18,7 @@ const staticPanels = new Set([...html.matchAll(/id="panel-([^"]+)"/g)].map(([, i
 
 // These tools create their panel in a separately loaded module at runtime.
 const modulePanels = new Set([
-  'text-extract', 'blank-pages', 'security', 'pdf-images', 'image-pdf',
+  'text-extract', 'blank-pages', 'security', 'ocr', 'pdf-images', 'image-pdf',
   'docx-pdf', 'pdf-docx', 'additional-formats', 'figure-images'
 ]);
 
