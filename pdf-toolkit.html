@@ -3439,13 +3439,6 @@
       document.getElementById('favorite-nav').innerHTML = favorites.map(tool => `<button class="tool-btn" type="button" data-panel="${tool.id}">${favoriteIconSvg(true)}<span>${tool.name}${tool.status ? ` <span class="tool-status">${tool.status}</span>` : ''}</span></button>`).join('');
     }
 
-    function openTool(id) {
-      recordRecentTool(id);
-      const injected = document.querySelector(`.tool-btn[data-panel="${id}"]`);
-      if (injected && id !== 'compress') { injected.click(); return; }
-      showPanel(id);
-    }
-
     function recordRecentTool(id) {
       if (!toolCatalog.some(tool => tool.id === id)) return;
       const next = [id, ...recentTools.filter(item => item !== id)].slice(0, 5);
@@ -3712,11 +3705,32 @@
         t.classList.toggle('active', t.dataset.tab === tab);
       });
     }
-    window.PDFToolkitOpenSmartAssistant = () => showPanel('assistant');
+    // Single navigation entry point for catalog cards, sidebar tools, mobile tools,
+    // and module-created navigation buttons. Keep processing logic in each tool module.
+    function openTool(id) {
+      if (!toolCatalog.some(tool => tool.id === id)) return false;
+      showPanel(id);
+      document.querySelector('.mobile-tools-sheet.open')?.classList.remove('open');
+      document.getElementById('mobile-tools-sheet')?.setAttribute('aria-hidden', 'true');
+      window.dispatchEvent(new CustomEvent('pdf-toolkit:tool-open', {
+        detail: { toolId: id, activeFile: state.activeFile || null }
+      }));
+      return true;
+    }
+    window.PDFToolkitOpenTool = openTool;
+    window.PDFToolkitOpenSmartAssistant = () => openTool('assistant');
 
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-      btn.addEventListener('click', () => showPanel(btn.dataset.panel));
-    });
+    // Capture clicks from legacy modules before their local handlers can toggle panels
+    // independently. This keeps active state, recents, and mobile navigation consistent.
+    document.addEventListener('click', event => {
+      const trigger = event.target.closest('.tool-btn[data-panel], .mobile-tool-card[data-panel], [data-open-tool]');
+      if (!trigger) return;
+      const id = trigger.dataset.panel || trigger.dataset.openTool;
+      if (!id || !toolCatalog.some(tool => tool.id === id)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openTool(id);
+    }, true);
 
     // Mobile bottom tabs
     document.querySelectorAll('.mobile-tab').forEach(tabBtn => {
