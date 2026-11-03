@@ -200,10 +200,12 @@ Install as an app (PWA) when served over HTTPS for offline use of cached librari
 - Provided as-is for personal study workflows.
 
 
-### Smart file detection tests
+### Automated tests
 
-Run the browser utility unit tests with Node.js:
+Run the browser utility and tool registry tests with Node.js:
 
 ```bash
 node --experimental-default-type=module --test tests/*.test.mjs
 ```
+
+The registry checks verify that all 23 catalog entries have unique IDs, valid categories, and a known static or module-created panel, and that the workspace exposes one central tool-opening API. These checks validate source registration; they do not replace browser smoke tests of each PDF operation.
