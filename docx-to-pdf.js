@@ -4,6 +4,12 @@ export function sanitizePdfFilename(name) {
   const safe = base.normalize('NFKC').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim();
   return (safe || 'document').slice(0, 140) + '.pdf';
 }
+export function isDocxRendererReady(docx, jszip) {
+  return !!jszip && typeof docx?.renderAsync === 'function';
+}
+export function hasRenderedDocxPages(container) {
+  return countRenderedDocxPages(container) > 0;
+}
 export function countRenderedDocxPages(container) {
   if (!container || typeof container.querySelectorAll !== 'function') return 0;
   const pages = container.querySelectorAll('.docx-wrapper > section.docx, .docx-wrapper > .docx, section.docx');
@@ -12,6 +18,57 @@ export function countRenderedDocxPages(container) {
 const $ = id => document.getElementById(id);
 let selectedFile = null, rendering = false, rendered = false, printInProgress = false;
 let renderToken = 0;
+let rendererLoadPromise = null;
+const DOCX_RENDER_TIMEOUT_MS = 45000;
+const FONT_READY_TIMEOUT_MS = 8000;
+
+function withTimeout(promise, milliseconds, label) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(label + ' timed out after ' + Math.round(milliseconds / 1000) + ' seconds.')), milliseconds);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      script.remove();
+      reject(new Error('Timed out loading ' + src));
+    }, 12000);
+    script.src = src;
+    script.async = true;
+    script.onload = () => { clearTimeout(timer); resolve(); };
+    script.onerror = () => {
+      clearTimeout(timer);
+      script.remove();
+      reject(new Error('Could not load ' + src));
+    };
+    document.head.append(script);
+  });
+}
+async function ensureDocxRenderer() {
+  if (isDocxRendererReady(window.docx, window.JSZip)) return;
+  if (rendererLoadPromise) return rendererLoadPromise;
+  rendererLoadPromise = (async () => {
+    if (!window.JSZip) {
+      try { await loadScript('./vendor/jszip-3.10.1.min.js'); } catch (_) {}
+      if (!window.JSZip) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    }
+    if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+      try { await loadScript('./vendor/docx-preview-0.4.1.min.js'); } catch (_) {}
+      if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+        await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js');
+      }
+    }
+    if (!isDocxRendererReady(window.docx, window.JSZip)) {
+      throw new Error('The rendering scripts loaded, but the required docx.renderAsync or JSZip API is unavailable.');
+    }
+  })().finally(() => { rendererLoadPromise = null; });
+  return rendererLoadPromise;
+}
 
 function setStatus(message, error = false) {
   const node = $('docx-pdf-status');
@@ -113,14 +170,19 @@ async function setFile(file) {
 async function renderDocument() {
   if (!selectedFile || rendering) return;
   const token = ++renderToken;
-  if (!window.docx || typeof window.docx.renderAsync !== 'function') {
-    setStatus('The Word rendering library did not load. Connect to the internet, refresh the app, and try again. The document itself is not uploaded.', true);
-    return;
-  }
-  setBusy(true); clearPreview();
-  setStatus('Reading and laying out the Word document locally…');
+  setBusy(true);
+  clearPreview();
+  setStatus('Loading the local Word rendering engine…');
   try {
-    await window.docx.renderAsync(selectedFile, $('docx-pdf-preview'), $('docx-pdf-style-host'), {
+    await ensureDocxRenderer();
+    if (token !== renderToken) return;
+    setStatus('Reading and laying out the Word document locally…');
+
+    // Render into detached containers first. A timed-out or late render cannot
+    // leave a half-rendered preview visible or accidentally enable printing.
+    const stagingPreview = document.createElement('div');
+    const stagingStyles = document.createElement('div');
+    await withTimeout(window.docx.renderAsync(selectedFile, stagingPreview, stagingStyles, {
       className: 'docx',
       inWrapper: true,
       breakPages: true,
@@ -132,18 +194,31 @@ async function renderDocument() {
       renderAltChunks: false,
       renderChanges: false,
       useBase64URL: true
-    });
+    }), DOCX_RENDER_TIMEOUT_MS, 'Word document rendering');
     if (token !== renderToken) return;
-    if (document.fonts?.ready) await document.fonts.ready;
-    const pages = countRenderedDocxPages($('docx-pdf-preview'));
+    const pages = countRenderedDocxPages(stagingPreview);
+    if (!pages) throw new Error('The renderer finished but did not produce any document pages.');
+
+    const styleHost = $('docx-pdf-style-host');
+    styleHost.replaceChildren(...Array.from(stagingStyles.childNodes));
+    if (document.fonts?.ready) {
+      setStatus('Applying document fonts and preparing the preview…');
+      await withTimeout(document.fonts.ready, FONT_READY_TIMEOUT_MS, 'Document font loading');
+    }
+    if (token !== renderToken) return;
+
+    const preview = $('docx-pdf-preview');
+    preview.replaceChildren(...Array.from(stagingPreview.childNodes));
     rendered = true;
     $('docx-pdf-preview-heading').hidden = false;
-    $('docx-pdf-page-count').textContent = pages ? pages + ' rendered page' + (pages === 1 ? '' : 's') : 'Preview rendered';
+    $('docx-pdf-page-count').textContent = pages + ' rendered page' + (pages === 1 ? '' : 's');
     $('docx-pdf-print').disabled = false;
     setStatus('Preview ready. Review the pages, then choose Print / Save as PDF. Browser pagination and Word layout may differ.');
   } catch (error) {
-    clearPreview();
-    setStatus('Could not render this DOCX: ' + (error?.message || String(error)) + '. The file may be damaged or use unsupported Word features.', true);
+    if (token === renderToken) {
+      clearPreview();
+      setStatus('Could not prepare the DOCX preview: ' + (error?.message || String(error)) + ' Your document remains on this device. Check your connection if the local renderer could not be loaded, then refresh and retry.', true);
+    }
   } finally {
     if (token === renderToken) setBusy(false);
   }

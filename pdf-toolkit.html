@@ -27,7 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;1,0..60,300;1,0..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="./vendor/jszip-3.10.1.min.js"></script>
   <script src="./mobile-process.js" defer></script>
   <script src="./ocr.js" defer></script>
   <script src="./security.js" defer></script>
@@ -35,7 +35,6 @@
   <script src="./text-extract.js" defer></script>
   <script src="./pdf-to-images.js" defer></script>
   <script type="module" src="./image-to-pdf.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js" defer></script>
   <script type="module" src="./docx-to-pdf.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@9.15.1/dist/index.iife.js" defer></script>
   <script type="module" src="./pdf-to-docx.js"></script>
@@ -1944,6 +1943,7 @@
     .docx-pdf-filebar span,.docx-pdf-preview-heading span { color:var(--text-muted); font-size:.76rem; }
     .docx-pdf-actions { display:flex; flex-wrap:wrap; gap:9px; margin:14px 0; }
     .docx-pdf-progress { display:flex; align-items:center; gap:10px; padding:12px 0; color:var(--text-muted); }
+    .docx-pdf-progress[hidden] { display:none !important; }
     .docx-pdf-spinner { width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:docx-pdf-spin .8s linear infinite; }
     @keyframes docx-pdf-spin { to { transform:rotate(360deg); } }
     .docx-pdf-preview-heading { display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px; }

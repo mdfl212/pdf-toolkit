@@ -115,7 +115,7 @@ The OCR workflow still runs locally in the browser and is intended to add a sear
 ### Word (DOCX) to PDF notes
 
 - **Word (DOCX) to PDF** uses docx-preview to render a DOCX document in the browser, then opens the browser's native print dialog. Choose **Save as PDF** to create the PDF. The resulting PDF retains selectable/searchable text because the browser prints rendered HTML text rather than rasterizing every page.
-- The document is processed locally; it is not uploaded to a conversion server. The DOCX renderer is loaded from a pinned CDN version and is cached by the service worker after it has been fetched once.
+- The document is processed locally; it is not uploaded to a conversion server. JSZip 3.10.1 and docx-preview 0.4.1 are bundled in the repository and cached as local app-shell assets by the service worker. The app tries the bundled renderer first and uses the pinned CDN only as a recovery fallback if a local asset is unavailable.
 - DOCX layout is not guaranteed to match Microsoft Word exactly. Pagination, fonts, floating objects, advanced tables, tracked changes, and unsupported Word features can differ. Review the preview and the saved PDF.
 - The browser controls the final Save as PDF action; the app cannot silently create a file from the native print dialog. Legacy .doc files are not supported by this batch.
 
