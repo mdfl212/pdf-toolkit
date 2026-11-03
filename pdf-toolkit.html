@@ -3439,13 +3439,6 @@
       document.getElementById('favorite-nav').innerHTML = favorites.map(tool => `<button class="tool-btn" type="button" data-panel="${tool.id}">${favoriteIconSvg(true)}<span>${tool.name}${tool.status ? ` <span class="tool-status">${tool.status}</span>` : ''}</span></button>`).join('');
     }
 
-    function openTool(id) {
-      recordRecentTool(id);
-      const injected = document.querySelector(`.tool-btn[data-panel="${id}"]`);
-      if (injected && id !== 'compress') { injected.click(); return; }
-      showPanel(id);
-    }
-
     function recordRecentTool(id) {
       if (!toolCatalog.some(tool => tool.id === id)) return;
       const next = [id, ...recentTools.filter(item => item !== id)].slice(0, 5);
