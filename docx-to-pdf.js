@@ -34,10 +34,18 @@ function withTimeout(promise, milliseconds, label) {
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      script.remove();
+      reject(new Error('Timed out loading ' + src));
+    }, 12000);
     script.src = src;
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => { script.remove(); reject(new Error('Could not load ' + src)); };
+    script.onload = () => { clearTimeout(timer); resolve(); };
+    script.onerror = () => {
+      clearTimeout(timer);
+      script.remove();
+      reject(new Error('Could not load ' + src));
+    };
     document.head.append(script);
   });
 }
@@ -46,20 +54,17 @@ async function ensureDocxRenderer() {
   if (rendererLoadPromise) return rendererLoadPromise;
   rendererLoadPromise = (async () => {
     if (!window.JSZip) {
-      try { await loadScript('./vendor/jszip-3.10.1.min.js'); }
-      catch (_) { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'); }
+      try { await loadScript('./vendor/jszip-3.10.1.min.js'); } catch (_) {}
+      if (!window.JSZip) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
     }
     if (!window.docx || typeof window.docx.renderAsync !== 'function') {
-      try { await loadScript('./vendor/docx-preview-0.4.1.min.js'); }
-      catch (localError) {
-        try { await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js'); }
-        catch (cdnError) {
-          throw new Error('The local DOCX renderer could not be loaded, and the CDN fallback also failed. Check that the app has been refreshed after updating, or reconnect to the internet. (' + (cdnError?.message || localError?.message || 'unknown load error') + ')');
-        }
+      try { await loadScript('./vendor/docx-preview-0.4.1.min.js'); } catch (_) {}
+      if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+        await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js');
       }
     }
     if (!isDocxRendererReady(window.docx, window.JSZip)) {
-      throw new Error('The DOCX rendering library loaded, but its required renderAsync or JSZip API is unavailable.');
+      throw new Error('The rendering scripts loaded, but the required docx.renderAsync or JSZip API is unavailable.');
     }
   })().finally(() => { rendererLoadPromise = null; });
   return rendererLoadPromise;
