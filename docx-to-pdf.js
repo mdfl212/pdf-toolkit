@@ -205,6 +205,22 @@ async function renderDocument() {
   try {
     await ensureDocxRenderer();
     if (token !== renderToken) return;
+    setStatus('Inspecting document fonts and layout resources…');
+    let fontAudit = { fonts: [], unavailable: [] };
+    try {
+      if (window.JSZip?.loadAsync) {
+        const zip = await window.JSZip.loadAsync(selectedFile);
+        fontAudit = await inspectDocxFonts(zip, descriptor =>
+          document.fonts?.check ? document.fonts.check(descriptor) : true
+        );
+      } else {
+        // Font diagnostics are best-effort and must never block DOCX rendering.
+        console.warn('DOCX font audit skipped: JSZip is unavailable.');
+      }
+    } catch (auditError) {
+      console.warn('DOCX font audit could not be completed:', auditError);
+    }
+    if (token !== renderToken) return;
     setStatus('Reading and laying out the Word document locally…');
 
     // Render into detached containers first. A timed-out or late render cannot
