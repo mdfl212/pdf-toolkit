@@ -178,6 +178,7 @@ function clearPreview() {
   if (styles) styles.replaceChildren();
   rendered = false;
   $('docx-pdf-preview-heading').hidden = true;
+  if ($('docx-pdf-font-report')) { $('docx-pdf-font-report').hidden = true; $('docx-pdf-font-report').textContent = ''; }
   $('docx-pdf-print').disabled = true;
 }
 async function setFile(file) {
