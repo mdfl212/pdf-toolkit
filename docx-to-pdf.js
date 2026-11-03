@@ -15,7 +15,33 @@ export function countRenderedDocxPages(container) {
   const pages = container.querySelectorAll('.docx-wrapper > section.docx, .docx-wrapper > .docx, section.docx');
   return pages.length;
 }
-const $ = id => document.getElementById(id);
+
+// Extract explicitly declared Word fonts without changing the source document.
+export function extractDocxFontNames(xmlDocuments) {
+  const names = new Set();
+  const sources = Array.isArray(xmlDocuments) ? xmlDocuments : [xmlDocuments];
+  for (const source of sources) {
+    const xml = String(source || '');
+    for (const match of xml.matchAll(/<w:font\b[^>]*\bw:name=["']([^"']+)["']/gi)) names.add(match[1].trim());
+    for (const match of xml.matchAll(/\bw:(?:ascii|hAnsi|eastAsia|cs)=["']([^"']+)["']/gi)) names.add(match[1].trim());
+  }
+  return [...names].filter(Boolean).sort((a,b) => a.localeCompare(b));
+}
+export async function inspectDocxFonts(zip, fontCheck = () => true) {
+  const xmlParts = [];
+  for (const path of ['word/document.xml','word/styles.xml','word/fontTable.xml','word/theme/theme1.xml']) {
+    const entry = zip?.file?.(path);
+    if (entry) {
+      try { xmlParts.push(await entry.async('string')); } catch (_) {}
+    }
+  }
+  const fonts = extractDocxFontNames(xmlParts);
+  const unavailable = fonts.filter(name => {
+    try { return !fontCheck('12px "' + name.replace(/["\\\\]/g, '') + '"'); } catch (_) { return false; }
+  });
+  return { fonts, unavailable };
+}
+\nconst $ = id => document.getElementById(id);
 let selectedFile = null, rendering = false, rendered = false, printInProgress = false;
 let renderToken = 0;
 let rendererLoadPromise = null;
@@ -124,10 +150,10 @@ function addPanel() {
     '<div class="docx-pdf-filebar" id="docx-pdf-filebar" hidden><div><strong id="docx-pdf-filename"></strong><span id="docx-pdf-filemeta"></span></div><button class="btn btn-secondary btn-sm" id="docx-pdf-change" type="button">Change file</button></div>',
     '<div class="docx-pdf-actions"><button class="btn btn-primary" id="docx-pdf-render" type="button" disabled>Prepare document preview</button><button class="btn btn-secondary" id="docx-pdf-print" type="button" disabled>Print / Save as PDF</button><button class="btn btn-secondary btn-sm" id="docx-pdf-clear" type="button" disabled>Clear</button></div>',
     '<div class="docx-pdf-progress" id="docx-pdf-progress" hidden><span class="docx-pdf-spinner"></span><span>Rendering Word document…</span></div>',
-    '<div class="note" id="docx-pdf-status" role="status" aria-live="polite" hidden></div>',
+    '<div class="note" id="docx-pdf-status" role="status" aria-live="polite" hidden></div>',\n    '<div class="note" id="docx-pdf-font-report" hidden></div>',
     '<div class="docx-pdf-preview-heading" id="docx-pdf-preview-heading" hidden><strong>Document preview</strong><span id="docx-pdf-page-count"></span></div>',
     '<div id="docx-pdf-style-host" class="docx-pdf-style-host"></div><div id="docx-pdf-preview" class="docx-pdf-preview" aria-label="Rendered Word document preview"></div>',
-    '<div class="note docx-pdf-note"><strong>Important:</strong> This uses the browser’s native print engine to create a text-based PDF; choose <em>Save as PDF</em> in the print dialog. Layout can differ from Microsoft Word, especially with unusual fonts, floating objects, complex tables, tracked changes, or documents relying on Word-only features. Check the preview and saved PDF before sharing. Legacy .doc files are not supported in this batch.</div>'
+    '<div class="note docx-pdf-note"><strong>Conversion limits:</strong> This browser-only workflow uses docx-preview and the browser print engine, not Microsoft Word or LibreOffice. It preserves selectable text but cannot guarantee Word-identical pagination, floating objects, SmartArt, equations, tracked changes, or complex tables. Review font warnings and every page before sharing. For high-fidelity conversion, use a desktop/server renderer such as LibreOffice. Legacy .doc files are not supported.</div>'
   ].join('');
   const anchor = $('panel-pdf-images') || $('panel-compress');
   if (anchor?.parentNode) anchor.parentNode.insertBefore(panel, anchor);
@@ -213,7 +239,18 @@ async function renderDocument() {
     $('docx-pdf-preview-heading').hidden = false;
     $('docx-pdf-page-count').textContent = pages + ' rendered page' + (pages === 1 ? '' : 's');
     $('docx-pdf-print').disabled = false;
-    setStatus('Preview ready. Review the pages, then choose Print / Save as PDF. Browser pagination and Word layout may differ.');
+    const report = $('docx-pdf-font-report');
+    if (fontAudit.fonts.length) {
+      const unavailable = fontAudit.unavailable;
+      report.hidden = false;
+      report.textContent = unavailable.length
+        ? 'Font check: ' + fontAudit.fonts.length + ' declared font(s) found. These may be unavailable in this browser/device: ' + unavailable.join(', ') + '. The browser may substitute fonts, changing line wrapping and pagination. Install the original fonts where licensed, then render again.'
+        : 'Font check: ' + fontAudit.fonts.length + ' declared font(s) found. No missing-font warning was reported by this browser. This does not guarantee exact Word font metrics or identical pagination.';
+    } else {
+      report.hidden = false;
+      report.textContent = 'Font check: no explicit font declarations were detected in the inspected DOCX parts. The renderer/browser default font handling will apply.';
+    }
+    setStatus('Preview ready. Review page breaks, tables, diagrams, and font warnings before saving. Browser rendering is not identical to Microsoft Word or Google Docs.');
   } catch (error) {
     if (token === renderToken) {
       clearPreview();
@@ -245,7 +282,7 @@ function clearFile() {
   selectedFile = null;
   clearPreview();
   $('docx-pdf-input').value = '';
-  $('docx-pdf-filebar').hidden = true;
+  $('docx-pdf-filebar').hidden = true;\n  if ($('docx-pdf-font-report')) { $('docx-pdf-font-report').hidden = true; $('docx-pdf-font-report').textContent = ''; }
   $('docx-pdf-render').disabled = true;
   $('docx-pdf-clear').disabled = true;
   setStatus('');
